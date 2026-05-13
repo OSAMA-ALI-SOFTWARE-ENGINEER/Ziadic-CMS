@@ -1,0 +1,166 @@
+@import 'tailwindcss';
+@import '@fontsource/inter/300.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/marcellus/400.css';
+
+@font-face {
+  font-family: 'Fa Brands 400';
+  src: url('/assets/fonts/fa-brands-400.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --inter-font-family: Inter, sans-serif;
+  --primary-color-80: #e11a1dcc;
+  --body-background-color: #fff0de;
+  --marcellus-font-family: Marcellus, serif;
+  --primary-color: #e11a1d;
+  --white: #fff;
+  --pink: #ff939a;
+  --yellow: #ffd15c;
+  --black: #000;
+  --coral: #ff854b;
+  --green: #43a574;
+  --white-80: #fffc;
+  --border-color: #5328221a;
+  --button-border: #fff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--body-background-color);
+  color: var(--primary-color-80);
+  font-family: var(--inter-font-family);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--primary-color);
+  font-family: var(--marcellus-font-family);
+  font-weight: 400;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: clamp(54px, 7vw, 94px);
+  line-height: 1.04;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1.17;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 1350px;
+  margin-inline: auto;
+  padding-inline: 15px;
+}
+
+.section {
+  padding-block: 100px;
+}
+
+.style-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--yellow);
+  border-radius: 8px;
+  background: var(--yellow);
+  color: #031634;
+  padding: 16px 30px;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+.style-button:hover {
+  border-color: #ffd15ccc;
+  background: #ffd15ccc;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--yellow);
+  border-radius: 8px;
+  color: var(--primary-color);
+  padding: 16px 30px;
+  font-size: 18px;
+  font-weight: 500;
+  overflow: hidden;
+  position: relative;
+}
+
+.section-title {
+  position: relative;
+  z-index: 6;
+  max-width: 832px;
+  margin: 0 auto 16px;
+  overflow: hidden;
+}
+
+@media (max-width: 991px) {
+  body {
+    font-size: 17px;
+    line-height: 27px;
+  }
+
+  .section {
+    padding-block: 80px;
+  }
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-block: 64px;
+  }
+}
+
+@media (max-width: 479px) {
+  body {
+    font-size: 16px;
+    line-height: 26px;
+  }
+
+  .style-button,
+  .primary-button {
+    width: 100%;
+  }
+}

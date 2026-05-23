@@ -11,11 +11,11 @@ class Tag extends Model
 
     public function listings(): BelongsToMany
     {
-        return $this->belongsToMany(Listing::class);
+        return $this->belongsToMany(Listing::class, 'listing_tag');
     }
 
     public function posts(): BelongsToMany
     {
-        return $this->belongsToMany(Post::class);
+        return $this->belongsToMany(Post::class, 'post_tag');
     }
 }

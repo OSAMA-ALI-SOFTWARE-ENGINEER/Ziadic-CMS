@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AboutPage from '@/pages/AboutPage.vue'
 import HomePage from '@/pages/HomePage.vue'
+import ListingsPage from '@/pages/ListingsPage.vue'
 import LegacyRoutePage from '@/pages/LegacyRoutePage.vue'
 
 const legacyRoutes = [
@@ -39,13 +40,6 @@ const legacyRoutes = [
     title: 'Blog | Zaidic',
     legacyPath: '/legacy/detail_blogs.html',
     loadingLabel: 'Loading Blog...',
-  },
-  {
-    path: 'listings',
-    name: 'listings',
-    title: 'Listings | Zaidic',
-    legacyPath: '/legacy/template-pages/listings.html',
-    loadingLabel: 'Loading Listings...',
   },
   {
     path: 'blogs',
@@ -147,6 +141,14 @@ const router = createRouter({
           meta: {
             title: 'About Us | Zaidic',
             legacyFullPage: true,
+          },
+        },
+        {
+          path: 'listings',
+          name: 'listings',
+          component: ListingsPage,
+          meta: {
+            title: 'Listings | Zaidic',
           },
         },
         ...legacyRoutes.map((route) => ({

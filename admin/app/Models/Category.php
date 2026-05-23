@@ -50,7 +50,7 @@ class Category extends Model
 
     public function listings(): BelongsToMany
     {
-        return $this->belongsToMany(Listing::class);
+        return $this->belongsToMany(Listing::class, 'listing_category');
     }
 
     public function posts(): HasMany

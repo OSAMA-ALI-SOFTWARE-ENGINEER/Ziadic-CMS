@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { fetchPublicCatalog, fetchPublicListings, type PublicCatalog, type PublicListing } from '@/services/listings'
 
 const props = withDefaults(
   defineProps<{
@@ -21,6 +22,7 @@ const isMobileNavOpen = ref(false)
 const isPreloaderVisible = ref(true)
 const legacyRoot = ref<HTMLElement | null>(null)
 const router = useRouter()
+const route = useRoute()
 let inlineScripts: string[] = []
 let webflowPageId = ''
 let webflowSiteId = ''
@@ -31,6 +33,10 @@ type ListingStaticData = {
   slug: string
   title: string
   category: string
+  categorySlug?: string
+  country?: string
+  countryIso2?: string
+  citySlug?: string
   image: string
   location: string
   days: string
@@ -41,6 +47,17 @@ type ListingStaticData = {
   detailsParagraphs?: string[]
   facilities?: string[]
   gallery?: string[]
+  phone?: string
+  email?: string
+  websiteUrl?: string
+  seoTitle?: string
+  seoDescription?: string
+}
+
+type FilterState = {
+  country: string
+  city: string
+  category: string
 }
 
 type CityStaticData = {
@@ -224,6 +241,18 @@ const listingDetails: Record<string, ListingStaticData> = {
     hours: '06:00 AM - 10:00 PM',
     summary:
       'A casual city listing with a relaxed atmosphere, useful amenities, and convenient access for visitors.',
+  },
+}
+
+let cmsListingDetails: Record<string, ListingStaticData> = {}
+let publicCatalog: PublicCatalog = {
+  countries: [],
+  cities: [],
+  categories: [],
+  popular: {
+    countries: [],
+    cities: [],
+    categories: [],
   },
 }
 
@@ -509,7 +538,7 @@ function fallbackListing(slug: string): ListingStaticData {
     slug,
     title: titleizeSlug(slug || 'featured-listing'),
     category: 'Featured Listing',
-    image: listingDetails['bursa-modern-art-museum'].image,
+    image: listingBySlug('bursa-modern-art-museum')?.image ?? listingDetails['bursa-modern-art-museum'].image,
     location: '234 Culinary Street, Foodie Haven, Izmir, Turkey',
     days: 'Monday - Saturday',
     hours: '08:00 AM - 09:00 PM',
@@ -543,7 +572,7 @@ function fallbackCityCategory(slug: string): CityCategoryStaticData {
     title: titleizeSlug(slug || 'category'),
     summary:
       'At Zaidic, businesses, services, and experiences come together to create a dynamic tapestry of urban life. Navigate through.',
-    listingSlugs: Object.keys(listingDetails).slice(0, 1),
+    listingSlugs: Object.keys(listingsData()).slice(0, 1),
   }
 }
 
@@ -605,14 +634,230 @@ function escapeHtml(value: string) {
   return escapeHost.innerHTML
 }
 
+function listingsData() {
+  // Prioritize CMS data when available to avoid stale static data (with missing citySlug/countryIso2) interfering with filters
+  return Object.keys(cmsListingDetails).length > 0 ? cmsListingDetails : listingDetails
+}
+
+function listingBySlug(slug: string) {
+  return listingsData()[slug]
+}
+
+function normalizeAssetUrl(value?: string | null) {
+  if (!value) return ''
+  if (/^https?:\/\//.test(value) || value.startsWith('/')) return value
+  return `${import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'}/${value.replace(/^\/+/, '')}`
+}
+
+function mapCmsListing(listing: PublicListing): ListingStaticData {
+  const fallbackImage = listingDetails['bursa-modern-art-museum'].image
+  const image = normalizeAssetUrl(listing.image) || fallbackImage
+  const gallery = (listing.gallery || []).map(normalizeAssetUrl).filter(Boolean)
+  const detailsParagraphs = listing.details_paragraphs?.length
+    ? listing.details_paragraphs
+    : [listing.description, listing.summary].filter(Boolean) as string[]
+
+  return {
+    slug: listing.slug,
+    title: listing.title,
+    category: listing.category || listing.categories?.[0]?.name || 'Featured Listing',
+    categorySlug: listing.categories?.[0]?.slug,
+    country: listing.country?.name,
+    countryIso2: listing.country?.iso2,
+    citySlug: listing.city_slug || undefined,
+    image,
+    location: listing.location || listing.city || 'Location available soon',
+    days: listing.days || 'Monday - Saturday',
+    hours: listing.hours || '06:00 AM - 10:00 PM',
+    summary: listing.summary || listing.description || 'A featured Zaidic listing managed from the CMS.',
+    contactAddress: listing.contact_address || listing.location || listing.city || undefined,
+    detailsTitle: listing.details_title || `${listing.title} Details`,
+    detailsParagraphs,
+    facilities: listing.facilities?.length ? listing.facilities : ['Helpful Staff', 'Easy Access', 'Visitor Friendly'],
+    gallery: gallery.length ? gallery : [image],
+    phone: listing.phone || undefined,
+    email: listing.email || undefined,
+    websiteUrl: listing.website_url || undefined,
+    seoTitle: listing.seo?.title || undefined,
+    seoDescription: listing.seo?.description || undefined,
+  }
+}
+
+async function loadCmsListings() {
+  try {
+    const [catalog, listings] = await Promise.all([fetchPublicCatalog(), fetchPublicListings()])
+    publicCatalog = catalog
+    cmsListingDetails = listings.reduce<Record<string, ListingStaticData>>((collection, listing) => {
+      collection[listing.slug] = mapCmsListing(listing)
+      return collection
+    }, {})
+  } catch {
+    cmsListingDetails = {}
+    publicCatalog = fallbackCatalog()
+  }
+}
+
+function fallbackCatalog(): PublicCatalog {
+  const listings = Object.values(listingDetails)
+  const categoryMap = new Map<string, number>()
+
+  listings.forEach((listing) => {
+    const slug = listing.categorySlug || slugify(listing.category)
+    categoryMap.set(slug, (categoryMap.get(slug) || 0) + 1)
+  })
+
+  const categories = Array.from(categoryMap.entries()).map(([slug, count], index) => ({
+    id: index + 1,
+    name: titleizeSlug(slug),
+    slug,
+    places_count: count,
+  }))
+
+  return {
+    countries: [],
+    cities: [],
+    categories,
+    popular: {
+      countries: [],
+      cities: [],
+      categories: categories.map((category) => ({
+        type: 'category',
+        label: category.name,
+        value: category.slug,
+        places_count: category.places_count,
+      })),
+    },
+  }
+}
+
+function currentFilters(): FilterState {
+  const query = new URLSearchParams(window.location.search)
+  return {
+    country: query.get('country') || '',
+    city: query.get('city') || '',
+    category: query.get('category') || '',
+  }
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function listingMatchesFilters(listing: ListingStaticData, filters: FilterState) {
+  const listingCategory = listing.categorySlug || slugify(listing.category)
+
+  return (
+    (!filters.country || listing.countryIso2 === filters.country) &&
+    (!filters.city || listing.citySlug === filters.city) &&
+    (!filters.category || listingCategory === filters.category)
+  )
+}
+
+function filteredListings(filters = currentFilters()) {
+  return Object.values(listingsData()).filter((listing) => listingMatchesFilters(listing, filters))
+}
+
+function filterUrl(filters: Partial<FilterState>) {
+  const params = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value)
+  })
+
+  const query = params.toString()
+  return query ? `/listings?${query}` : '/listings'
+}
+
+function cityOptionsFor(countryIso2: string) {
+  if (!countryIso2) return []
+  return publicCatalog.cities.filter((city) => city.country?.iso2 === countryIso2)
+}
+
 function hideEmptyStates(root: HTMLElement) {
   root.querySelectorAll<HTMLElement>('.w-dyn-empty').forEach((element) => {
     element.style.display = 'none'
   })
 }
 
+function renderDynamicFilters(root: HTMLElement) {
+  if (!['/listings', '/cities'].includes(window.location.pathname.replace(/\/$/, ''))) return
+  if (root.querySelector('.dynamic-listing-filters')) return
+
+  const filters = currentFilters()
+  const cities = cityOptionsFor(filters.country)
+  const selectedCountry = publicCatalog.countries.find((country) => country.iso2 === filters.country)
+  const selectedCity = publicCatalog.cities.find((city) => city.slug === filters.city)
+  const selectedCategory = publicCatalog.categories.find((category) => category.slug === filters.category)
+  const count = filteredListings(filters).length
+  const host = root.querySelector<HTMLElement>('.listings-page-wrapper, .cities-wrapper, .pages-title-wrap')
+
+  if (!host) return
+
+  const filter = document.createElement('section')
+  filter.className = 'dynamic-listing-filters'
+  filter.innerHTML = `
+    <div class="dynamic-listing-filters__header">
+      <div>
+        <strong>Find places</strong>
+        <span>${count} place${count === 1 ? '' : 's'} found${selectedCountry ? ` in ${escapeHtml(selectedCountry.name)}` : ''}${selectedCity ? `, ${escapeHtml(selectedCity.name)}` : ''}${selectedCategory ? ` for ${escapeHtml(selectedCategory.name)}` : ''}</span>
+      </div>
+      <a href="/listings" class="dynamic-listing-filters__reset">Reset filters</a>
+    </div>
+    <div class="dynamic-listing-filters__grid">
+      <label>
+        <span>Country</span>
+        <select class="dynamic-listing-filters__select dynamic-listing-filters__country">
+          <option value="">Select country</option>
+          ${publicCatalog.countries.map((country) => `<option value="${escapeHtml(country.iso2)}" ${country.iso2 === filters.country ? 'selected' : ''}>${escapeHtml(country.name)} (${country.places_count})</option>`).join('')}
+        </select>
+      </label>
+      <label class="${filters.country ? '' : 'is-disabled'}">
+        <span>City</span>
+        <select class="dynamic-listing-filters__select dynamic-listing-filters__city" ${filters.country ? '' : 'disabled'}>
+          <option value="">${filters.country ? 'All cities' : 'Select country first'}</option>
+          ${cities.map((city) => `<option value="${escapeHtml(city.slug)}" ${city.slug === filters.city ? 'selected' : ''}>${escapeHtml(city.name)} (${city.places_count})</option>`).join('')}
+        </select>
+      </label>
+      <label>
+        <span>Category</span>
+        <select class="dynamic-listing-filters__select dynamic-listing-filters__category">
+          <option value="">All categories</option>
+          ${publicCatalog.categories.map((category) => `<option value="${escapeHtml(category.slug)}" ${category.slug === filters.category ? 'selected' : ''}>${escapeHtml(category.name)} (${category.places_count})</option>`).join('')}
+        </select>
+      </label>
+    </div>
+  `
+
+  host.parentElement?.insertBefore(filter, host.nextSibling)
+}
+
+function initializeDynamicFilters() {
+  const root = legacyRoot.value
+  if (!root) return
+
+  root.querySelectorAll<HTMLSelectElement>('.dynamic-listing-filters select').forEach((select, index) => {
+    select.addEventListener('change', () => {
+      const filters = currentFilters()
+      const key = (['country', 'city', 'category'] as const)[index]
+      if (!key) return
+
+      filters[key] = select.value
+
+      if (key === 'country') {
+        filters.city = ''
+      }
+
+      router.push(filterUrl(filters))
+    })
+  })
+}
+
 function listingSamplesFor(category?: string) {
-  const listings = Object.values(listingDetails)
+  const listings = Object.values(listingsData())
   if (!category || category.toLowerCase() === 'all') return listings
 
   const normalized = category.toLowerCase()
@@ -621,6 +866,10 @@ function listingSamplesFor(category?: string) {
 }
 
 function fillListingCard(card: HTMLElement, listing: ListingStaticData) {
+  card.style.display = ''
+  card.dataset.country = listing.countryIso2 || ''
+  card.dataset.city = listing.citySlug || ''
+  card.dataset.category = listing.categorySlug || slugify(listing.category)
   const links = card.querySelectorAll<HTMLAnchorElement>('a[href]')
   links.forEach((link) => link.setAttribute('href', `/listings/${listing.slug}`))
   setImage(card.querySelector<HTMLImageElement>('img.w-dyn-bind-empty'), listing.image, listing.title)
@@ -635,7 +884,7 @@ function hydrateListingDetail(root: HTMLElement) {
   const slug = getRouteSlug('listings')
   if (!slug) return
 
-  const listing = listingDetails[slug] ?? fallbackListing(slug)
+  const listing = listingBySlug(slug) ?? fallbackListing(slug)
   setElementText(root.querySelector('.page-banner-title.w-dyn-bind-empty'), listing.title)
   setElementText(root.querySelector('.page-link-text.w-dyn-bind-empty'), listing.title)
   setElementText(root.querySelector('.section-title.listing'), listing.title)
@@ -675,13 +924,197 @@ function hydrateListingDetail(root: HTMLElement) {
   })
 }
 
+function hydrateListingsIndex(root: HTMLElement) {
+  if (!['/listings', '/cities'].includes(window.location.pathname.replace(/\/$/, ''))) return
+
+  const filters = currentFilters()
+  const listings = filteredListings(filters)
+  const selectedCategory = publicCatalog.categories.find((category) => category.slug === filters.category)
+  const selectedCity = publicCatalog.cities.find((city) => city.slug === filters.city)
+  const selectedCountry = publicCatalog.countries.find((country) => country.iso2 === filters.country)
+  const titleParts = [selectedCategory?.name, selectedCity?.name, selectedCountry?.name].filter(Boolean)
+  const title = titleParts.length ? `${titleParts.join(' / ')} Places` : 'Listings'
+
+  setElementText(root.querySelector('.page-banner-title'), title)
+  setElementText(root.querySelector('.page-link-text'), title)
+  setElementText(root.querySelector('.section-title.cities-page, .section-title.listing'), titleParts.length ? title : 'Discover Abundance of Listings.')
+  renderDynamicFilters(root)
+
+  root.querySelectorAll<HTMLElement>('.listings-page-collection-item, .listings-content-slide').forEach((card, index) => {
+    const listing = listings[index]
+    if (!listing) {
+      card.style.display = 'none'
+      return
+    }
+
+    fillListingCard(card, listing)
+  })
+
+  if (!listings.length) {
+    showListingEmptyState(root)
+  }
+}
+
+function showListingEmptyState(root: HTMLElement) {
+  const wrapper = root.querySelector<HTMLElement>('.listings-page-wrapper, .cities-wrapper')
+  if (!wrapper || root.querySelector('.dynamic-listing-empty')) return
+
+  const empty = document.createElement('div')
+  empty.className = 'dynamic-listing-empty'
+  empty.textContent = 'No places found for this filter.'
+  wrapper.appendChild(empty)
+}
+
+function hydrateCityCards(root: HTMLElement) {
+  const path = window.location.pathname.replace(/\/$/, '')
+  if (!['/', '/cities'].includes(path)) return
+
+  const filters = currentFilters()
+  const cities = filters.country ? cityOptionsFor(filters.country) : publicCatalog.cities
+
+  root.querySelectorAll<HTMLElement>('.cities-collection-item, .cities-page-collection-item').forEach((card, index) => {
+    const city = cities[index]
+
+    if (!city) {
+      card.style.display = 'none'
+      return
+    }
+
+    card.style.display = ''
+    card.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
+      link.setAttribute('href', filterUrl({ country: city.country?.iso2, city: city.slug }))
+    })
+    setElementText(card.querySelector('.cities-name-v2, .cities-page-name'), city.name)
+
+    // Update place counts - try multiple selectors and text matching approaches
+    const countFields = Array.from(
+      card.querySelectorAll<HTMLElement>('.cities-places, [class*="places"], [class*="place-count"]')
+    ).slice(0, 2)
+
+    if (countFields.length > 0) {
+      setElementsText(countFields, [String(city.places_count), city.places_count === 1 ? 'Place' : 'Places'])
+    } else {
+      // Fallback: search all text nodes for "place" or "places" and replace them
+      updateTextNodesInElement(card, city.places_count)
+    }
+  })
+}
+
+function updateTextNodesInElement(element: HTMLElement, placesCount: number) {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node: Node) {
+        const text = (node as Text).textContent || ''
+        // Only update nodes that contain a number followed by "place" or "places"
+        if (/\d+\s*place(s)?/i.test(text)) {
+          return NodeFilter.FILTER_ACCEPT
+        }
+        return NodeFilter.FILTER_REJECT
+      }
+    } as NodeFilter
+  )
+
+  let node = walker.nextNode() as Text | null
+  while (node) {
+    const text = node.textContent || ''
+    // Replace patterns like "2 places", "2places", "1 place", etc.
+    const updated = text.replace(
+      /(\d+)\s*place(s)?/i,
+      `${placesCount} ${placesCount === 1 ? 'place' : 'places'}`
+    )
+    if (updated !== text) {
+      node.textContent = updated
+    }
+    node = walker.nextNode() as Text | null
+  }
+}
+
+function hydrateCategoryLinks(root: HTMLElement) {
+  const categoryLinks = root.querySelectorAll<HTMLAnchorElement>('a[href*="city-categories"], a[href*="detail_city-categories"]')
+  categoryLinks.forEach((link) => {
+    const href = link.getAttribute('href') || ''
+    const slug = href.split('/').pop()?.replace(/\.html$/, '') || ''
+    const categorySlug = slug === 'detail_city-categories' ? 'arts-and-culture' : slug
+
+    link.setAttribute('href', filterUrl({ category: categorySlug }))
+  })
+
+  // Fix old listing template page links to go to /listings instead
+  root.querySelectorAll<HTMLAnchorElement>('a[href*="/template-pages/listings"], a[href*="detail_listings"]').forEach(
+    (link) => {
+      link.setAttribute('href', '/listings')
+    }
+  )
+
+  root.querySelectorAll<HTMLElement>('.listings-page-tab-link').forEach((tab) => {
+    const label = tab.textContent?.trim()
+    if (!label || label.toLowerCase() === 'all') return
+    const category = publicCatalog.categories.find((item) => item.name.toLowerCase() === label.toLowerCase())
+    if (!category) return
+
+    tab.classList.add('dynamic-category-tab')
+    if (tab instanceof HTMLAnchorElement) {
+      tab.setAttribute('href', filterUrl({ category: category.slug }))
+    }
+  })
+}
+
+function hydratePopularItems(root: HTMLElement) {
+  // Hydrate popular categories
+  root.querySelectorAll<HTMLElement>('.categories-main .categories-single, .categories-single').forEach((card, index) => {
+    const popularCategory = publicCatalog.popular.categories[index]
+    const fallbackCategory = publicCatalog.categories[index]
+    if (!popularCategory && !fallbackCategory) return
+
+    const label = popularCategory?.label ?? fallbackCategory?.name ?? ''
+    const value = popularCategory?.value ?? fallbackCategory?.slug ?? ''
+    const count = popularCategory?.places_count ?? fallbackCategory?.places_count ?? 0
+    if (!label || !value) return
+
+    card.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => link.setAttribute('href', filterUrl({ category: value })))
+    setElementText(card.querySelector('.categories-title, h3, .categories-text'), label)
+    const details = card.querySelector<HTMLElement>('.categories-details, p')
+    if (details) details.textContent = `${count} place${count === 1 ? '' : 's'} available.`
+  })
+
+  // Hydrate popular countries (if section exists)
+  root.querySelectorAll<HTMLElement>('.countries-popular-item, .countries-single').forEach((card, index) => {
+    const popularCountry = publicCatalog.popular.countries[index]
+    if (!popularCountry) return
+
+    card.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) =>
+      link.setAttribute('href', filterUrl({ country: popularCountry.value }))
+    )
+    setElementText(card.querySelector('[class*="country-name"], h3, .countries-text'), popularCountry.label)
+    const details = card.querySelector<HTMLElement>('[class*="detail"], p')
+    if (details)
+      details.textContent = `${popularCountry.places_count} place${popularCountry.places_count === 1 ? '' : 's'} available.`
+  })
+
+  // Hydrate popular cities (if section exists)
+  root.querySelectorAll<HTMLElement>('.cities-popular-item').forEach((card, index) => {
+    const popularCity = publicCatalog.popular.cities[index]
+    if (!popularCity) return
+
+    card.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) =>
+      link.setAttribute('href', filterUrl({ country: popularCity.country, city: popularCity.value }))
+    )
+    setElementText(card.querySelector('[class*="city-name"], h3, .cities-text'), popularCity.label)
+    const details = card.querySelector<HTMLElement>('[class*="detail"], p')
+    if (details)
+      details.textContent = `${popularCity.places_count} place${popularCity.places_count === 1 ? '' : 's'} available.`
+  })
+}
+
 function hydrateCityDetail(root: HTMLElement) {
   const slug = getRouteSlug('cities')
   if (!slug) return
 
   const city = cityDetails[slug] ?? fallbackCity(slug)
-  const cityListings = city.listingSlugs.map((listingSlug) => listingDetails[listingSlug]).filter(Boolean)
-  const featuredListings = cityListings.length ? cityListings : Object.values(listingDetails).slice(0, 1)
+  const cityListings = city.listingSlugs.map((listingSlug) => listingBySlug(listingSlug)).filter(Boolean)
+  const featuredListings = cityListings.length ? cityListings : Object.values(listingsData()).slice(0, 1)
 
   setElementText(root.querySelector('.page-banner-title.w-dyn-bind-empty'), city.title)
   setElementText(root.querySelector('.page-link-text.w-dyn-bind-empty'), city.title)
@@ -697,7 +1130,7 @@ function hydrateCityCategoryDetail(root: HTMLElement) {
   if (!slug) return
 
   const category = cityCategoryDetails[slug] ?? fallbackCityCategory(slug)
-  const categoryListings = category.listingSlugs.map((listingSlug) => listingDetails[listingSlug]).filter(Boolean)
+  const categoryListings = category.listingSlugs.map((listingSlug) => listingBySlug(listingSlug)).filter(Boolean)
   const samples = categoryListings.length ? categoryListings : listingSamplesFor(category.title)
 
   setElementText(root.querySelector('.page-banner-title'), category.title)
@@ -773,6 +1206,10 @@ function hydrateTeamDetail(root: HTMLElement) {
 }
 
 function hydrateStaticDetailData(root: HTMLElement) {
+  hydrateListingsIndex(root)
+  hydrateCityCards(root)
+  hydrateCategoryLinks(root)
+  hydratePopularItems(root)
   hydrateListingDetail(root)
   hydrateCityDetail(root)
   hydrateCityCategoryDetail(root)
@@ -844,10 +1281,10 @@ function resolveLegacyRoute(href: string) {
     'template-pages/contact-us': '/contact',
     'template-pages/pricing': '/pricing',
     'template-pages/services': '/services',
-    'template-pages/cities': '/cities',
+    'template-pages/cities': '/listings',
     'template-pages/add-listing': '/add-listing',
     'search': '/search',
-    'detail_city-categories': '/city-categories/arts-and-culture',
+    'detail_city-categories': '/listings?category=arts-and-culture',
     'detail_cities': '/cities/vlore-al',
     'detail_listings': '/listings/bursa-modern-art-museum',
     'detail_blogs': '/blogs/diverse-communities-celebrating-the-tapestry-of-city-life',
@@ -859,11 +1296,11 @@ function resolveLegacyRoute(href: string) {
   }
 
   if (/^city-categories\/[^/]+$/.test(normalized)) {
-    return `/${normalized}`
+    return filterUrl({ category: normalized.split('/').pop() })
   }
 
   if (/^cities\/[^/]+$/.test(normalized)) {
-    return `/${normalized}`
+    return filterUrl({ city: normalized.split('/').pop() })
   }
 
   if (/^listings\/[^/]+$/.test(normalized)) {
@@ -1245,6 +1682,13 @@ function handleLegacyClick(event: MouseEvent) {
   }
 
   if (blogFilterLabel) {
+    const tabRoute = anchor ? resolveLegacyRoute(anchor.getAttribute('href') ?? '') : undefined
+    if (blogFilterLabel.classList.contains('dynamic-category-tab') && tabRoute?.startsWith('/listings')) {
+      event.preventDefault()
+      void router.push(tabRoute)
+      return
+    }
+
     handleBlogFilterClick(blogFilterLabel, event)
     return
   }
@@ -1497,6 +1941,7 @@ onMounted(async () => {
     appendStylesheet('/css/normalize.css')
     appendStylesheet('/css/webflow.css')
     appendStylesheet('/css/kukaqka.webflow.css')
+    await loadCmsListings()
 
     const response = await fetch(props.legacyPath)
     if (!response.ok) {
@@ -1506,6 +1951,7 @@ onMounted(async () => {
     legacyMarkup.value = extractHomeMarkup(await response.text())
     isLoading.value = false
     await nextTick()
+    initializeDynamicFilters()
     await initializeWebflow()
     runInlineScripts()
     syncMobileMenuAttributes()
@@ -1519,6 +1965,17 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+// Re-hydrate city cards when filter query parameters change
+watch(
+  () => [route.query.country, route.query.city, route.query.category],
+  () => {
+    const root = legacyRoot.value
+    if (root && window.location.pathname === '/') {
+      hydrateCityCards(root)
+    }
+  }
+)
 
 onBeforeUnmount(() => {
   window.clearTimeout(preloaderTimer)
@@ -1717,5 +2174,106 @@ onBeforeUnmount(() => {
 
 .legacy-home--preloader-hidden :deep(.preeloader) {
   pointer-events: none;
+}
+
+:deep(.dynamic-listing-filters) {
+  width: min(100%, 1120px);
+  margin: 34px auto 20px;
+  border: 1px solid rgb(83 40 34 / 12%);
+  border-radius: 18px;
+  background: #fff8ee;
+  box-shadow: 0 18px 50px rgb(83 40 34 / 8%);
+  padding: 22px;
+}
+
+:deep(.dynamic-listing-filters__header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+:deep(.dynamic-listing-filters__header strong) {
+  display: block;
+  color: #532822;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+:deep(.dynamic-listing-filters__header span) {
+  display: block;
+  margin-top: 5px;
+  color: rgb(83 40 34 / 70%);
+  font-size: 15px;
+}
+
+:deep(.dynamic-listing-filters__reset) {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 10px;
+  background: #ffd15c;
+  color: #532822;
+  padding: 0 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+:deep(.dynamic-listing-filters__grid) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+:deep(.dynamic-listing-filters label) {
+  display: grid;
+  gap: 8px;
+  color: #532822;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+:deep(.dynamic-listing-filters label.is-disabled) {
+  opacity: 0.55;
+}
+
+:deep(.dynamic-listing-filters select) {
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid rgb(83 40 34 / 14%);
+  border-radius: 12px;
+  background: #fff;
+  color: #532822;
+  padding: 0 14px;
+  font: inherit;
+}
+
+:deep(.dynamic-listing-filters select:focus) {
+  border-color: #ff939a;
+  outline: 3px solid rgb(255 147 154 / 24%);
+}
+
+:deep(.dynamic-listing-empty) {
+  margin: 24px auto;
+  border: 1px dashed rgb(83 40 34 / 20%);
+  border-radius: 16px;
+  background: #fff8ee;
+  color: #532822;
+  padding: 30px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+@media screen and (max-width: 767px) {
+  :deep(.dynamic-listing-filters__header) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :deep(.dynamic-listing-filters__grid) {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

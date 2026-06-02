@@ -14,6 +14,7 @@ import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.vue'
 import RolesPage from '@/pages/RolesPage.vue'
 import SettingsPage from '@/pages/SettingsPage.vue'
 import SignupPage from '@/pages/auth/SignupPage.vue'
+import SubscriptionsPage from '@/pages/SubscriptionsPage.vue'
 import UsersPage from '@/pages/UsersPage.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -131,6 +132,14 @@ const router = createRouter({
           component: PaymentsPage,
           meta: {
             title: 'Payments | Kukaqka CMS',
+          },
+        },
+        {
+          path: 'subscriptions',
+          name: 'subscriptions',
+          component: SubscriptionsPage,
+          meta: {
+            title: 'Subscriptions | Kukaqka CMS',
           },
         },
         {

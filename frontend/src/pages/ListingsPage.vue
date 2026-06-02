@@ -14,10 +14,16 @@ const catalog = ref<PublicCatalog>({
 })
 const listings = ref<PublicListing[]>([])
 const isLoading = ref(true)
+const loadError = ref('')
 
-const selectedCountry = computed(() => (route.query.country as string) || '')
-const selectedCity = computed(() => (route.query.city as string) || '')
-const selectedCategory = computed(() => (route.query.category as string) || '')
+function queryValue(key: string) {
+  const value = route.query[key]
+  return Array.isArray(value) ? value[0] || '' : value || ''
+}
+
+const selectedCountry = computed(() => queryValue('country'))
+const selectedCity = computed(() => queryValue('city'))
+const selectedCategory = computed(() => queryValue('category'))
 
 const availableCities = computed(() => {
   if (!selectedCountry.value) return []
@@ -50,12 +56,16 @@ const placesCount = computed(() => listings.value.length)
 
 async function fetchListings() {
   isLoading.value = true
+  loadError.value = ''
   try {
     listings.value = await fetchPublicListings({
       country: selectedCountry.value || undefined,
       city: selectedCity.value || undefined,
       category: selectedCategory.value || undefined,
     })
+  } catch {
+    listings.value = []
+    loadError.value = 'Unable to load listings. Please try again.'
   } finally {
     isLoading.value = false
   }
@@ -78,11 +88,41 @@ function resetFilters() {
   router.push({ path: '/listings' })
 }
 
+function normalizeFilterQuery() {
+  if (!selectedCountry.value && selectedCity.value) {
+    const city = catalog.value.cities.find((item) => item.slug === selectedCity.value)
+    if (city?.country?.iso2) {
+      router.replace({
+        query: {
+          ...route.query,
+          country: city.country.iso2,
+        },
+      })
+    }
+  }
+
+  if (selectedCountry.value && selectedCity.value) {
+    const cityBelongsToCountry = catalog.value.cities.some(
+      (city) => city.slug === selectedCity.value && city.country?.iso2 === selectedCountry.value,
+    )
+    if (!cityBelongsToCountry) {
+      const query = { ...route.query }
+      delete query.city
+      router.replace({ path: '/listings', query })
+    }
+  }
+}
+
 watch([selectedCountry, selectedCity, selectedCategory], fetchListings)
 
 onMounted(async () => {
-  const [catalogData] = await Promise.all([fetchPublicCatalog(), fetchListings()])
-  catalog.value = catalogData
+  try {
+    catalog.value = await fetchPublicCatalog()
+    normalizeFilterQuery()
+    await fetchListings()
+  } catch {
+    loadError.value = 'Unable to load listing filters. Please refresh the page.'
+  }
 })
 </script>
 
@@ -171,6 +211,10 @@ onMounted(async () => {
           <p>Loading listings...</p>
         </div>
 
+        <div v-else-if="loadError" class="dynamic-listing-empty">
+          <p>{{ loadError }}</p>
+        </div>
+
         <div v-else-if="placesCount === 0" class="dynamic-listing-empty">
           <p>No places found for this filter.</p>
           <p class="empty-help-text">Try adjusting your filters or selecting a different category.</p>
@@ -184,14 +228,34 @@ onMounted(async () => {
               :to="`/listings/${listing.slug}`"
               class="listings-page-collection-item listing-card"
             >
+              <div class="listing-card-inner-bg" aria-hidden="true"></div>
+
+              <div class="listing-card-image-wrap">
               <div class="listing-card-image">
                 <img v-if="listing.image" :src="listing.image" :alt="listing.title" />
                 <div v-if="!listing.image" class="listing-card-placeholder">No image</div>
                 <div v-if="listing.category" class="listing-category-badge">{{ listing.category }}</div>
               </div>
+              </div>
+
               <div class="listing-card-content">
                 <h3 class="listing-card-title">{{ listing.title }}</h3>
-                <p v-if="listing.contact_address" class="listing-card-address">{{ listing.contact_address }}</p>
+                <p v-if="listing.contact_address" class="listing-card-address">
+                  <span class="listing-card-address-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 22C12 22 19 15.75 19 10.5C19 6.35786 15.866 3 12 3C8.13401 3 5 6.35786 5 10.5C5 15.75 12 22 12 22Z"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <circle cx="12" cy="10.5" r="2.5" stroke="currentColor" stroke-width="1.8" />
+                    </svg>
+                  </span>
+                  <span>{{ listing.contact_address }}</span>
+                </p>
+
                 <p v-if="listing.days && listing.hours" class="listing-card-hours">
                   {{ listing.days }} / {{ listing.hours }}
                 </p>
@@ -211,24 +275,41 @@ onMounted(async () => {
 
 /* Page Banner Section */
 .page-section {
-  padding: 60px 20px;
-  background: linear-gradient(135deg, #c41e3a 0%, #a01729 100%);
-  border-bottom: none;
+  background-image: url('/images/All-Bg.png');
+  background-position: 50%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  padding: 84px 20px;
+  position: relative;
+  isolation: isolate;
+}
+
+.page-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 147, 154, 0.85) 0%, rgba(255, 147, 154, 0.78) 100%);
+  z-index: -1;
 }
 
 .page-section-content {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   text-align: center;
 }
 
 .page-banner-title {
-  font-size: 48px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 24px 0;
-  line-height: 1.2;
-  font-family: Marcellus, serif;
+  width: 100%;
+  max-width: 960px;
+  color: var(--primary-color);
+  text-align: center;
+  margin: 0 auto 18px;
+  font-family: var(--marcellus-font-family, Marcellus, serif);
+  font-size: clamp(34px, 4.4vw, 62px);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .page-link-flex {
@@ -237,6 +318,13 @@ onMounted(async () => {
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
+  width: fit-content;
+  margin-inline: auto;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(6px);
+  border-radius: 999px;
+  padding: 9px 16px;
 }
 
 .page-link {
@@ -247,8 +335,8 @@ onMounted(async () => {
 }
 
 .page-link-text {
-  font-size: 16px;
-  color: #fff;
+  font-size: clamp(13px, 0.95vw, 16px);
+  color: var(--primary-color);
   font-weight: 500;
   transition: opacity 0.3s ease;
 }
@@ -260,7 +348,7 @@ onMounted(async () => {
 .divider-img {
   width: 24px;
   height: 24px;
-  color: #fff;
+  color: var(--primary-color);
   stroke: currentColor;
   flex-shrink: 0;
 }
@@ -302,15 +390,24 @@ onMounted(async () => {
 }
 
 .dynamic-listing-filters__reset {
-  color: #c41e3a;
+  color: var(--primary-color);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  border-bottom: 1px solid #c41e3a;
+  border-bottom: 1px solid var(--primary-color);
+  padding: 4px 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-block;
+  cursor: pointer;
 }
 
 .dynamic-listing-filters__reset:hover {
-  opacity: 0.8;
+  color: white;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-bottom: 1px solid var(--primary-color);
 }
 
 .dynamic-listing-filters__grid {
@@ -368,12 +465,15 @@ onMounted(async () => {
 }
 
 .section-title {
-  font-size: 42px;
+  font-size: clamp(28px, 3vw, 46px);
   font-weight: 400;
   color: #1a1a1a;
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 40px;
   font-family: Marcellus, serif;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 /* Loading State */
@@ -423,34 +523,63 @@ onMounted(async () => {
 
 .listings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 32px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 28px;
 }
 
 .listings-page-collection-item {
+  position: relative;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: block;
+  border-radius: 28px;
+  padding: 4px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 8px 22px rgba(30, 16, 6, 0.12);
+  transition: transform 0.32s ease, box-shadow 0.32s ease;
+}
+
+.listing-card {
+  background-color: var(--body-background-color);
 }
 
 .listings-page-collection-item:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 30px rgba(30, 16, 6, 0.18);
 }
 
-.listing-card {
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.listing-card-inner-bg {
+  z-index: 1;
+  position: absolute;
+  inset: 0;
+  background-color: var(--pink);
+  transform: translate3d(0, 101%, 0);
+  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+.listing-card-image-wrap,
+.listing-card-content {
+  position: relative;
+  z-index: 2;
+}
+
+.listings-page-collection-item:hover .listing-card-inner-bg {
+  transform: translate3d(0, 0, 0);
+}
+
+.listing-card-image-wrap {
+  padding: 0;
 }
 
 .listing-card-image {
   position: relative;
   width: 100%;
-  padding-bottom: 66.67%;
+  padding-bottom: 62%;
+  border-radius: 24px;
   overflow: hidden;
-  background-color: #f0f0f0;
+  background-color: #f5f5f5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -476,51 +605,85 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
 }
 
 .listings-page-collection-item:hover .listing-card-image img {
-  transform: scale(1.05);
+  transform: scale3d(1.016, 1.016, 1);
+}
+
+.listings-page-collection-item:focus-visible .listing-card-inner-bg {
+  transform: translate3d(0, 0, 0);
+}
+
+.listings-page-collection-item:focus-visible .listing-card-image img {
+  transform: scale3d(1.016, 1.016, 1);
 }
 
 .listing-category-badge {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  background-color: #c41e3a;
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  top: 20px;
+  left: 20px;
+  background-color: #fff;
+  color: #171717;
+  padding: 9px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .listing-card-content {
-  padding: 24px;
+  padding: 22px 22px 24px;
 }
 
 .listing-card-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 14px 0;
-  line-height: 1.3;
+  margin: 0 0 12px;
+  color: var(--black);
+  font-size: clamp(24px, 1.9vw, 34px);
+  font-weight: 400;
+  line-height: 1.15;
+  font-family: var(--marcellus-font-family, Marcellus, serif);
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .listing-card-address {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 12px 0;
-  line-height: 1.6;
+  margin: 0 0 12px;
+  color: var(--black);
+  font-size: clamp(14px, 0.98vw, 17px);
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.listing-card-address-icon {
+  color: var(--primary-color);
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-top: 2px;
+}
+
+.listing-card-address-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .listing-card-hours {
-  font-size: 13px;
-  color: #999;
+  font-size: clamp(12px, 0.84vw, 14px);
+  color: #6b7280;
   margin: 0;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .listing-container {
@@ -550,7 +713,7 @@ onMounted(async () => {
   }
 
   .listings-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 24px;
   }
 
@@ -561,11 +724,11 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .page-section {
-    padding: 40px 20px;
+    padding: 56px 20px;
   }
 
   .page-banner-title {
-    font-size: 32px;
+    font-size: clamp(30px, 7vw, 40px);
     margin-bottom: 16px;
   }
 
@@ -574,11 +737,11 @@ onMounted(async () => {
   }
 
   .page-link-text {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .section-title {
-    font-size: 24px;
+    font-size: 30px;
     margin-bottom: 32px;
   }
 
@@ -610,6 +773,14 @@ onMounted(async () => {
     gap: 20px;
   }
 
+  .listing-card-image-wrap {
+    padding: 0;
+  }
+
+  .listing-card-image {
+    border-radius: 20px;
+  }
+
   .listing-filters-section {
     padding: 24px 16px;
   }
@@ -627,11 +798,11 @@ onMounted(async () => {
   }
 
   .listing-card-title {
-    font-size: 16px;
+    font-size: 28px;
   }
 
   .listing-card-address {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .listing-card-hours {
@@ -641,11 +812,11 @@ onMounted(async () => {
 
 @media (max-width: 480px) {
   .page-section {
-    padding: 32px 16px;
+    padding: 44px 16px;
   }
 
   .page-banner-title {
-    font-size: 24px;
+    font-size: 28px;
     margin-bottom: 14px;
   }
 
@@ -659,8 +830,13 @@ onMounted(async () => {
   }
 
   .section-title {
-    font-size: 20px;
+    font-size: 24px;
     margin-bottom: 24px;
+  }
+
+  .page-link-flex {
+    gap: 8px;
+    padding: 8px 12px;
   }
 
   .dynamic-listing-filters {
@@ -711,11 +887,11 @@ onMounted(async () => {
   }
 
   .listing-card-content {
-    padding: 16px;
+    padding: 16px 14px 18px;
   }
 
   .listing-card-title {
-    font-size: 15px;
+    font-size: 24px;
     margin-bottom: 10px;
   }
 
@@ -725,7 +901,14 @@ onMounted(async () => {
   }
 
   .listing-card-hours {
-    font-size: 11px;
+    font-size: 10px;
+  }
+
+  .listing-category-badge {
+    top: 12px;
+    left: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
   }
 }
 </style>

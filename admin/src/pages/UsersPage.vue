@@ -44,7 +44,7 @@ function saveUser() {
     <template #header>
       <div>
         <h2 class="m-0 text-base font-semibold">Users & Roles</h2>
-        <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">Create users and assign Spatie roles.</p>
+        <p class="m-0 mt-1 text-sm text-(--admin-muted)">Create users and assign Spatie roles.</p>
       </div>
       <button class="primary-action" type="button" @click="openUser()"><i class="pi pi-user-plus"></i><span>Add user</span></button>
     </template>

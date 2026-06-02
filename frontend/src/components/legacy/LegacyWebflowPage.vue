@@ -20,6 +20,11 @@ const isLoading = ref(true)
 const loadError = ref('')
 const isMobileNavOpen = ref(false)
 const isPreloaderVisible = ref(true)
+const isSubscribeModalOpen = ref(false)
+const subscribeEmail = ref('')
+const subscribeSubmitting = ref(false)
+const subscribeFeedback = ref('')
+const subscribeFeedbackTone = ref<'success' | 'danger'>('success')
 const legacyRoot = ref<HTMLElement | null>(null)
 const router = useRouter()
 const route = useRoute()
@@ -710,6 +715,8 @@ function fallbackCatalog(): PublicCatalog {
     id: index + 1,
     name: titleizeSlug(slug),
     slug,
+    description: null,
+    icon: null,
     places_count: count,
   }))
 
@@ -775,6 +782,47 @@ function filterUrl(filters: Partial<FilterState>) {
 function cityOptionsFor(countryIso2: string) {
   if (!countryIso2) return []
   return publicCatalog.cities.filter((city) => city.country?.iso2 === countryIso2)
+}
+
+function liveCityCards(filters = currentFilters()) {
+  const cityIndex = new Map(publicCatalog.cities.map((city, index) => [city.slug, index]))
+  const liveCities = new Map<
+    string,
+    {
+      slug: string
+      name: string
+      countryIso2: string
+      placesCount: number
+      image: string
+    }
+  >()
+
+  filteredListings(filters).forEach((listing) => {
+    if (!listing.citySlug) return
+
+    const catalogCity = publicCatalog.cities.find((city) => city.slug === listing.citySlug)
+    const existing = liveCities.get(listing.citySlug)
+
+    if (existing) {
+      existing.placesCount += 1
+      if (!existing.image && listing.image) {
+        existing.image = listing.image
+      }
+      return
+    }
+
+    liveCities.set(listing.citySlug, {
+      slug: listing.citySlug,
+      name: catalogCity?.name || titleizeSlug(listing.citySlug),
+      countryIso2: listing.countryIso2 || catalogCity?.country?.iso2 || '',
+      placesCount: 1,
+      image: listing.image,
+    })
+  })
+
+  return Array.from(liveCities.values()).sort(
+    (left, right) => (cityIndex.get(left.slug) ?? Number.MAX_SAFE_INTEGER) - (cityIndex.get(right.slug) ?? Number.MAX_SAFE_INTEGER),
+  )
 }
 
 function hideEmptyStates(root: HTMLElement) {
@@ -966,11 +1014,11 @@ function showListingEmptyState(root: HTMLElement) {
 }
 
 function hydrateCityCards(root: HTMLElement) {
-  const path = window.location.pathname.replace(/\/$/, '')
+  const path = window.location.pathname.replace(/\/$/, '') || '/'
   if (!['/', '/cities'].includes(path)) return
 
   const filters = currentFilters()
-  const cities = filters.country ? cityOptionsFor(filters.country) : publicCatalog.cities
+  const cities = liveCityCards(filters)
 
   root.querySelectorAll<HTMLElement>('.cities-collection-item, .cities-page-collection-item').forEach((card, index) => {
     const city = cities[index]
@@ -982,20 +1030,34 @@ function hydrateCityCards(root: HTMLElement) {
 
     card.style.display = ''
     card.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
-      link.setAttribute('href', filterUrl({ country: city.country?.iso2, city: city.slug }))
+      link.setAttribute('href', filterUrl({ country: city.countryIso2, city: city.slug }))
     })
     setElementText(card.querySelector('.cities-name-v2, .cities-page-name'), city.name)
+    if (city.image) {
+      setImage(card.querySelector<HTMLImageElement>('.cities-img-v2, .cities-page-img'), city.image, city.name)
+    }
 
     // Update place counts - try multiple selectors and text matching approaches
     const countFields = Array.from(
       card.querySelectorAll<HTMLElement>('.cities-places, [class*="places"], [class*="place-count"]')
-    ).slice(0, 2)
+    )
+      .filter((element) => {
+        const className = typeof element.className === 'string' ? element.className : ''
+        return !/wrap/i.test(className) && element.children.length === 0
+      })
+      .slice(0, 2)
+
+    const placesCount = city.placesCount
 
     if (countFields.length > 0) {
-      setElementsText(countFields, [String(city.places_count), city.places_count === 1 ? 'Place' : 'Places'])
+      if (countFields.length === 1) {
+        setElementText(countFields[0], `${placesCount} ${placesCount === 1 ? 'Place' : 'Places'}`)
+      } else {
+        setElementsText(countFields, [String(placesCount), placesCount === 1 ? 'Place' : 'Places'])
+      }
     } else {
       // Fallback: search all text nodes for "place" or "places" and replace them
-      updateTextNodesInElement(card, city.places_count)
+      updateTextNodesInElement(card, placesCount)
     }
   })
 }
@@ -1230,6 +1292,11 @@ function extractHomeMarkup(html: string) {
     throw new Error('The exported home page wrapper was not found.')
   }
 
+  // A shared Vue header is rendered globally, so drop the embedded Webflow header.
+  pageWrapper.querySelector<HTMLElement>('.navbar.w-nav, .navbar')?.remove()
+  // A shared Vue footer is rendered globally, so drop the embedded Webflow footer.
+  pageWrapper.querySelector<HTMLElement>('section.footer, footer')?.remove()
+
   normalizeLegacyLinks(pageWrapper)
   normalizeLegacyAssetPaths(pageWrapper)
   hydrateStaticDetailData(pageWrapper)
@@ -1283,6 +1350,8 @@ function resolveLegacyRoute(href: string) {
     'template-pages/services': '/services',
     'template-pages/cities': '/listings',
     'template-pages/add-listing': '/add-listing',
+    'login': '/login',
+    'register': '/register',
     'search': '/search',
     'detail_city-categories': '/listings?category=arts-and-culture',
     'detail_cities': '/cities/vlore-al',
@@ -1448,6 +1517,63 @@ function toggleMobileMenu(event: Event) {
 function closeMobileMenu() {
   isMobileNavOpen.value = false
   syncMobileMenuAttributes()
+}
+
+function getApiBase(): string {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL
+  if (backendUrl) return backendUrl
+
+  const hostname = window.location.hostname
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8000'
+  }
+
+  return window.location.origin
+}
+
+function openSubscribeModal() {
+  isSubscribeModalOpen.value = true
+  subscribeFeedback.value = ''
+}
+
+function closeSubscribeModal() {
+  isSubscribeModalOpen.value = false
+  subscribeSubmitting.value = false
+}
+
+async function submitStickySubscribe() {
+  if (!subscribeEmail.value || subscribeSubmitting.value) return
+
+  subscribeSubmitting.value = true
+  subscribeFeedback.value = ''
+
+  try {
+    const response = await fetch(`${getApiBase()}/api/v1/public/newsletter/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        email: subscribeEmail.value,
+        source: 'sticky-bar',
+      }),
+    })
+
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      throw new Error(payload?.message || 'Unable to subscribe right now. Please try again.')
+    }
+
+    subscribeFeedbackTone.value = 'success'
+    subscribeFeedback.value = payload?.message || 'Subscribed successfully.'
+    subscribeEmail.value = ''
+  } catch (error) {
+    subscribeFeedbackTone.value = 'danger'
+    subscribeFeedback.value = error instanceof Error ? error.message : 'Unable to subscribe right now.'
+  } finally {
+    subscribeSubmitting.value = false
+  }
 }
 
 function closeDropdowns(except?: HTMLElement) {
@@ -1698,6 +1824,16 @@ function handleLegacyClick(event: MouseEvent) {
   }
 
   if (anchor) {
+    if (
+      anchor.classList.contains('top-nav-link') &&
+      anchor.closest('.navigation-content-wrap') &&
+      (anchor.textContent?.toLowerCase().includes('subscribe') || anchor.getAttribute('href')?.includes('pricing'))
+    ) {
+      event.preventDefault()
+      openSubscribeModal()
+      return
+    }
+
     const route = resolveLegacyRoute(anchor.getAttribute('href') ?? '')
     if (route && route !== '#') {
       event.preventDefault()
@@ -1734,6 +1870,7 @@ function handleLegacyKeydown(event: KeyboardEvent) {
   }
 
   if (event.key === 'Escape') {
+    closeSubscribeModal()
     closeMobileMenu()
     closeDropdowns()
   }
@@ -1837,7 +1974,6 @@ function initializeGsapAnimations() {
           '.section-details',
           '.section-title-wrap',
           '.section-title-wrap-left-v2',
-          '.page-section-wrapper',
           '.categories-main',
           '.cities-v2-content-single',
           '.magic-wrapper-v2',
@@ -1898,6 +2034,11 @@ function initializeGsapAnimations() {
           end: 'bottom top',
           scrub: true,
         },
+      })
+
+      // Keep page hero content visible even if scroll-trigger timing/order changes.
+      scopedElements('.page-section-wrapper').forEach((element) => {
+        gsap.set(element, { opacity: 1, y: 0, clearProps: 'transform' })
       })
     })
 
@@ -2003,15 +2144,42 @@ onBeforeUnmount(() => {
       aria-label="Close menu"
     ></button>
 
-    <div v-if="isLoading" class="legacy-home__loading">
-      <span>{{ props.loadingLabel }}</span>
-    </div>
-
-    <div v-else-if="loadError" class="legacy-home__error">
+    <div v-if="loadError" class="legacy-home__error">
       {{ loadError }}
     </div>
 
-    <div v-else v-html="legacyMarkup"></div>
+    <div v-else-if="!isLoading" v-html="legacyMarkup"></div>
+
+    <div v-if="isSubscribeModalOpen" class="legacy-subscribe-modal" role="dialog" aria-modal="true" aria-label="Subscribe to newsletter">
+      <button class="legacy-subscribe-modal__backdrop" type="button" aria-label="Close subscription popup" @click="closeSubscribeModal"></button>
+
+      <div class="legacy-subscribe-modal__panel">
+        <button class="legacy-subscribe-modal__close" type="button" aria-label="Close" @click="closeSubscribeModal">x</button>
+        <h3 class="legacy-subscribe-modal__title">Subscribe to Our Newsletter</h3>
+        <p class="legacy-subscribe-modal__text">Get updates from Zaidic directly in your inbox.</p>
+
+        <form class="legacy-subscribe-modal__form" @submit.prevent="submitStickySubscribe">
+          <input
+            v-model="subscribeEmail"
+            class="legacy-subscribe-modal__input"
+            type="email"
+            required
+            placeholder="Enter your email"
+          />
+          <button class="legacy-subscribe-modal__submit" type="submit" :disabled="subscribeSubmitting">
+            {{ subscribeSubmitting ? 'Subscribing...' : 'Subscribe' }}
+          </button>
+        </form>
+
+        <p
+          v-if="subscribeFeedback"
+          class="legacy-subscribe-modal__feedback"
+          :class="`legacy-subscribe-modal__feedback--${subscribeFeedbackTone}`"
+        >
+          {{ subscribeFeedback }}
+        </p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -2021,7 +2189,6 @@ onBeforeUnmount(() => {
   background: var(--body-background-color);
 }
 
-.legacy-home__loading,
 .legacy-home__error {
   display: grid;
   min-height: 100vh;
@@ -2029,6 +2196,106 @@ onBeforeUnmount(() => {
   color: var(--primary-color);
   font-family: var(--marcellus-font-family);
   font-size: 28px;
+}
+
+.legacy-subscribe-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.legacy-subscribe-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.legacy-subscribe-modal__panel {
+  position: relative;
+  width: min(100%, 460px);
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #f0ddd6;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22);
+  padding: 24px;
+  color: #532822;
+}
+
+.legacy-subscribe-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #f9ece8;
+  color: #532822;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.legacy-subscribe-modal__title {
+  margin: 0;
+  font-family: var(--marcellus-font-family);
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.legacy-subscribe-modal__text {
+  margin-top: 10px;
+  color: rgba(83, 40, 34, 0.8);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.legacy-subscribe-modal__form {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.legacy-subscribe-modal__input {
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #f0ddd6;
+  padding: 0 14px;
+  font-size: 15px;
+  color: #532822;
+}
+
+.legacy-subscribe-modal__submit {
+  height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--yellow);
+  color: #532822;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.legacy-subscribe-modal__submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.legacy-subscribe-modal__feedback {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.legacy-subscribe-modal__feedback--success {
+  color: #0d7f2b;
+}
+
+.legacy-subscribe-modal__feedback--danger {
+  color: #b42318;
 }
 
 :deep(.menu-button.w-nav-button) {
@@ -2164,6 +2431,18 @@ onBeforeUnmount(() => {
 :deep(.testimonial-slider) {
   position: relative;
   z-index: 1;
+}
+
+:deep(.cities-v2 .cities-img-wrap-v2) {
+  width: 100%;
+  aspect-ratio: 416 / 502;
+}
+
+:deep(.cities-v2 .cities-img-v2) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 :deep(.preeloader) {

@@ -57,6 +57,12 @@ export const useAuthStore = defineStore('auth', {
         const { data } = await api.post('/auth/login', payload)
         this.setSession(data.token, data.user)
       } catch {
+        const allowPreviewAuth = import.meta.env.VITE_ENABLE_PREVIEW_AUTH !== '0'
+
+        if (!allowPreviewAuth) {
+          throw new Error('Unable to sign in with backend. Please check API server and credentials.')
+        }
+
         const credential = staticCredentials.find(
           (item) => item.email === payload.email && item.password === payload.password,
         )

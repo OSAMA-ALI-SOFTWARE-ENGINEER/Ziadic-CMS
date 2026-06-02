@@ -601,6 +601,64 @@ input {
   color: var(--admin-primary-strong);
 }
 
+.global-search {
+  position: relative;
+  width: min(100%, 420px);
+  flex: 1;
+}
+
+.global-search__dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 80;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-panel);
+  box-shadow: var(--admin-shadow);
+  max-height: 360px;
+  overflow: auto;
+  padding: 6px;
+}
+
+.global-search__hint {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.global-search__item {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.global-search__item:hover {
+  background: var(--admin-soft);
+}
+
+.global-search__item-title {
+  color: var(--admin-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.global-search__item-meta {
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.3;
+  text-transform: capitalize;
+}
+
 .static-login-row {
   display: flex;
   align-items: center;
@@ -1061,6 +1119,12 @@ form.form {
   .cms-topbar {
     padding-left: 32px;
     padding-right: 32px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .global-search {
+    width: min(100%, 360px);
   }
 }
 

@@ -95,7 +95,10 @@ class DatabaseSeeder extends Seeder
         foreach ([
             ['country' => 'AL', 'name' => 'Vlore, AL', 'slug' => 'vlore-al'],
             ['country' => 'AL', 'name' => 'Tirana, AL', 'slug' => 'tirana-al'],
+            ['country' => 'AL', 'name' => 'Lushnje, AL', 'slug' => 'lushnje-al'],
+            ['country' => 'AL', 'name' => 'Shkoder, AL', 'slug' => 'shkoder-al'],
             ['country' => 'XK', 'name' => 'Prizren, KS', 'slug' => 'prizren-ks'],
+            ['country' => 'XK', 'name' => 'Ferizaj, KS', 'slug' => 'ferizaj-ks'],
             ['country' => 'MK', 'name' => 'Skopje, MK', 'slug' => 'skopje-mk'],
             ['country' => 'DE', 'name' => 'Berlin, DE', 'slug' => 'berlin-de'],
             ['country' => 'AT', 'name' => 'Salzburg, AT', 'slug' => 'salzburg-at'],
@@ -237,28 +240,108 @@ class DatabaseSeeder extends Seeder
 
     private function seedListings(User $admin, array $countries, array $categories, array $tags): void
     {
-        $city = City::query()->where('slug', 'vlore-al')->first();
-
-        $listing = Listing::query()->firstOrCreate(
-            ['slug' => 'bursa-modern-art-museum'],
+        $samples = [
             [
-                'owner_id' => $admin->id,
-                'city_id' => $city?->id,
+                'slug' => 'bursa-modern-art-museum',
                 'title' => 'Bursa Modern Art Museum',
-                'business_name' => 'Bursa Modern Art Museum',
+                'city' => 'tirana-al',
+                'category' => 'Arts and Culture',
+                'address' => '234 Gallery Street, Tirana, Albania',
                 'excerpt' => 'A polished cultural destination with contemporary exhibits.',
-                'description' => 'A CMS-managed listing ready for frontend API consumption.',
-                'address' => '234 Culinary Street, Foodie Haven',
-                'status' => 'published',
-                'is_featured' => true,
-                'published_at' => now(),
-                'approved_by' => $admin->id,
-                'approved_at' => now(),
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b2a_Listings1.png',
             ],
-        );
+            [
+                'slug' => 'the-gourmet-haven-restaurant',
+                'title' => 'The Gourmet Haven Restaurant',
+                'city' => 'shkoder-al',
+                'category' => 'Dining and Restaurants',
+                'address' => '18 Foodie Lane, Shkoder, Albania',
+                'excerpt' => 'A warm local restaurant with memorable service and city-friendly dining.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b28_Listings%202.png',
+            ],
+            [
+                'slug' => 'tranquil-sunny-spa-and-wellness',
+                'title' => 'Tranquil Sunny Spa and Wellness',
+                'city' => 'lushnje-al',
+                'category' => 'Sports and Fitness',
+                'address' => '101 Wellness Road, Lushnje, Albania',
+                'excerpt' => 'A restorative wellness place with calm treatments and fitness-friendly service.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b27_Listings%203.png',
+            ],
+            [
+                'slug' => 'sunset-grill-bar-restaurant',
+                'title' => 'Sunset Grill & Bar Restaurant',
+                'city' => 'vlore-al',
+                'category' => 'Dining and Restaurants',
+                'address' => '42 Coastal Avenue, Vlore, Albania',
+                'excerpt' => 'A casual food and evening spot close to the coast.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b17_Listings%2011.png',
+            ],
+            [
+                'slug' => 'verona-sunny-spa-and-beauty',
+                'title' => 'Verona Sunny Spa and Beauty',
+                'city' => 'berlin-de',
+                'category' => 'Shopping and Retail',
+                'address' => '8 Beauty Platz, Berlin, Germany',
+                'excerpt' => 'A beauty and retail destination with polished guest service.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b19_Listings10.png',
+            ],
+            [
+                'slug' => 'turkish-and-islamic-arts-museum',
+                'title' => 'Turkish and Islamic Arts Museum',
+                'city' => 'prizren-ks',
+                'category' => 'Wedding and Event Location',
+                'address' => '890 Heritage Street, Prizren, Kosovo',
+                'excerpt' => 'A distinctive cultural venue with elegant surroundings for memorable events.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b11_Listings%2012.png',
+            ],
+            [
+                'slug' => 'rome-performing-party-center',
+                'title' => 'Rome Performing Party Center',
+                'city' => 'salzburg-at',
+                'category' => 'Entertainment and Nightlife',
+                'address' => '9 Celebration Street, Salzburg, Austria',
+                'excerpt' => 'A lively entertainment venue for performances and city nights.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b21_Listings%206.png',
+            ],
+            [
+                'slug' => 'luzern-premium-car-rental',
+                'title' => 'Luzern Premium Car Rental',
+                'city' => 'luzern-ch',
+                'category' => 'Car Rental',
+                'address' => '12 Transit Way, Luzern, Switzerland',
+                'excerpt' => 'A convenient local car rental service for city and regional travel.',
+                'image' => 'https://cdn.prod.website-files.com/69dcdd3a161d4d87e4e259f3/69dcdd3a161d4d87e4e25b23_Listings%205.png',
+            ],
+        ];
 
-        $listing->categories()->syncWithoutDetaching([$categories['Arts and Culture']->id]);
-        $listing->tags()->syncWithoutDetaching([$tags['featured']->id, $tags['popular']->id]);
+        foreach ($samples as $sample) {
+            $city = City::query()->where('slug', $sample['city'])->first();
+
+            $listing = Listing::query()->updateOrCreate(
+                ['slug' => $sample['slug']],
+                [
+                    'owner_id' => $admin->id,
+                    'city_id' => $city?->id,
+                    'title' => $sample['title'],
+                    'business_name' => $sample['title'],
+                    'excerpt' => $sample['excerpt'],
+                    'description' => $sample['excerpt'].' This place is managed from the backend CMS and available through the public API.',
+                    'address' => $sample['address'],
+                    'status' => 'published',
+                    'is_featured' => true,
+                    'published_at' => now(),
+                    'approved_by' => $admin->id,
+                    'approved_at' => now(),
+                    'og_image' => $sample['image'],
+                    'seo_title' => $sample['title'],
+                    'seo_description' => $sample['excerpt'],
+                ],
+            );
+
+            $listing->categories()->sync([$categories[$sample['category']]->id]);
+            $listing->tags()->syncWithoutDetaching([$tags['featured']->id, $tags['popular']->id]);
+        }
     }
 
     private function seedPosts(User $admin, array $categories, array $tags): void

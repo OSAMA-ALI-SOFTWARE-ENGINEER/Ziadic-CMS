@@ -1,9 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AboutPage from '@/pages/AboutPage.vue'
 import HomePage from '@/pages/HomePage.vue'
 import ListingsPage from '@/pages/ListingsPage.vue'
 import LegacyRoutePage from '@/pages/LegacyRoutePage.vue'
+import LoginPage from '@/pages/auth/LoginPage.vue'
+import RegisterPage from '@/pages/auth/RegisterPage.vue'
+import BlogPage from '@/pages/BlogPage.vue'
+import BlogDetailPage from '@/pages/BlogDetailPage.vue'
 
 const legacyRoutes = [
   {
@@ -33,20 +38,6 @@ const legacyRoutes = [
     title: 'Team | Zaidic',
     legacyPath: '/legacy/detail_team.html',
     loadingLabel: 'Loading Team Member...',
-  },
-  {
-    path: 'blogs/:slug',
-    name: 'blog-detail',
-    title: 'Blog | Zaidic',
-    legacyPath: '/legacy/detail_blogs.html',
-    loadingLabel: 'Loading Blog...',
-  },
-  {
-    path: 'blogs',
-    name: 'blogs',
-    title: 'Blogs | Zaidic',
-    legacyPath: '/legacy/template-pages/blogs.html',
-    loadingLabel: 'Loading Blogs...',
   },
   {
     path: 'contact',
@@ -92,25 +83,38 @@ const legacyRoutes = [
   },
 ]
 
+function routeParam(value: unknown) {
+  return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '')
+}
+
 const legacyRedirects = [
   { path: '/index.html', redirect: '/' },
   { path: '/backup/home-v1.html', redirect: '/' },
+  {
+    path: '/city-categories/:slug',
+    redirect: (to: { params: Record<string, unknown> }) => ({
+      path: '/listings',
+      query: { category: routeParam(to.params.slug) },
+    }),
+  },
+  {
+    path: '/cities/:slug',
+    redirect: (to: { params: Record<string, unknown> }) => ({
+      path: '/listings',
+      query: { city: routeParam(to.params.slug) },
+    }),
+  },
   { path: '/template-pages/about-us.html', redirect: '/about' },
   { path: '/template-pages/listings.html', redirect: '/listings' },
-  { path: '/template-pages/blogs.html', redirect: '/blogs' },
   { path: '/template-pages/contact-us.html', redirect: '/contact' },
   { path: '/template-pages/pricing.html', redirect: '/pricing' },
   { path: '/template-pages/services.html', redirect: '/services' },
-  { path: '/template-pages/cities.html', redirect: '/cities' },
+  { path: '/template-pages/cities.html', redirect: '/listings' },
   { path: '/template-pages/add-listing.html', redirect: '/add-listing' },
   { path: '/search.html', redirect: '/search' },
-  { path: '/detail_city-categories.html', redirect: '/city-categories/arts-and-culture' },
+  { path: '/detail_city-categories.html', redirect: '/listings?category=arts-and-culture' },
   { path: '/detail_cities.html', redirect: '/cities/vlore-al' },
   { path: '/detail_listings.html', redirect: '/listings/bursa-modern-art-museum' },
-  {
-    path: '/detail_blogs.html',
-    redirect: '/blogs/diverse-communities-celebrating-the-tapestry-of-city-life',
-  },
   { path: '/detail_team.html', redirect: '/team/alexandra-rodriguez' },
 ]
 
@@ -121,6 +125,22 @@ const router = createRouter({
   },
   routes: [
     ...legacyRedirects,
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginPage,
+      meta: {
+        title: 'Login | Zaidic',
+      },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterPage,
+      meta: {
+        title: 'Sign Up | Zaidic',
+      },
+    },
     {
       path: '/',
       component: PublicLayout,
@@ -151,6 +171,22 @@ const router = createRouter({
             title: 'Listings | Zaidic',
           },
         },
+        {
+          path: 'blogs',
+          name: 'blogs',
+          component: BlogPage,
+          meta: {
+            title: 'Blog | Zaidic',
+          },
+        },
+        {
+          path: 'blogs/:slug',
+          name: 'blog-detail',
+          component: BlogDetailPage,
+          meta: {
+            title: 'Blog Post | Zaidic',
+          },
+        },
         ...legacyRoutes.map((route) => ({
           path: route.path,
           name: route.name,
@@ -167,8 +203,13 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   document.title = String(to.meta.title || 'Zaidic')
+
+  const authStore = useAuthStore()
+  if (authStore.token && !authStore.user) {
+    await authStore.fetchUser()
+  }
 })
 
 export default router

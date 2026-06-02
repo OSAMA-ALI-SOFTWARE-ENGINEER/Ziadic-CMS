@@ -35,6 +35,9 @@ api.interceptors.response.use(
       const auth = useAuthStore()
       auth.clearSession()
       ui.pushToast('Session expired. Please sign in again.', 'warning')
+      if (typeof window !== 'undefined' && !window.location.pathname.endsWith('/admin/login')) {
+        window.location.href = '/admin/login'
+      }
     } else if (error.response?.data?.message) {
       ui.pushToast(error.response.data.message, 'danger')
     }

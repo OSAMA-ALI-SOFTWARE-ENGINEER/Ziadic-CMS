@@ -11,6 +11,32 @@ use Laravel\Scout\Searchable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property int $id
+ * @property int|null $owner_id
+ * @property int|null $city_id
+ * @property string $title
+ * @property string $slug
+ * @property string|null $excerpt
+ * @property string|null $description
+ * @property string|null $business_name
+ * @property string|null $email
+ * @property string|null $phone
+ * @property string|null $website_url
+ * @property string|null $address
+ * @property float|string|null $latitude
+ * @property float|string|null $longitude
+ * @property string $status
+ * @property bool $is_featured
+ * @property string|null $seo_title
+ * @property string|null $seo_description
+ * @property string|null $seo_keywords
+ * @property string|null $og_image
+ * @property \Illuminate\Support\Carbon|null $published_at
+ * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class Listing extends Model implements HasMedia
 {
     use InteractsWithMedia;

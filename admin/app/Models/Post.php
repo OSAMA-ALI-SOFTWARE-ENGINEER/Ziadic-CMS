@@ -10,6 +10,19 @@ use Laravel\Scout\Searchable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property int $id
+ * @property int|null $author_id
+ * @property int|null $category_id
+ * @property string $title
+ * @property string $slug
+ * @property string|null $excerpt
+ * @property string|null $content
+ * @property string $status
+ * @property \Illuminate\Support\Carbon|null $published_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class Post extends Model implements HasMedia
 {
     use InteractsWithMedia;

@@ -18,5 +18,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function (User $user): ?bool {
             return $user->hasRole('super-admin') ? true : null;
         });
+
+        $this->registerRoutes();
+    }
+
+    protected function registerRoutes(): void
+    {
+        $this->loadRoutesFrom(base_path('routes/api.php'));
     }
 }

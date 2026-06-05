@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Process -Name \"php\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Move-Item -Path \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\\\\Http\" -Destination \"c:\\\\laragon\\\\www\\\\Ziadic\\\\app\\\\Http\")",
+      "PowerShell(Move-Item -Path \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\\\\database\" -Destination \"c:\\\\laragon\\\\www\\\\Ziadic\\\\database\")",
+      "Read(//c/laragon/www/Ziadic/admin/**)",
+      "PowerShell(php -l \"c:\\\\laragon\\\\www\\\\Ziadic\\\\app\\\\Http\\\\Controllers\\\\Admin\\\\UploadController.php\")",
+      "PowerShell(cd \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\"; php -r \"require 'vendor/autoload.php'; \\\\$class = 'App\\\\Http\\\\Controllers\\\\Admin\\\\UploadController'; echo class_exists\\(\\\\$class\\) ? 'Class exists' : 'Class does not exist';\")",
+      "Bash(curl -s http://localhost:8000/test-route)",
+      "PowerShell(php -l \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\\\\routes\\\\api.php\")",
+      "Bash(curl -s http://localhost:8000/simple-test)",
+      "PowerShell(Get-Process -Name \"php\", \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Move-Item -Path \"c:\\\\laragon\\\\www\\\\Ziadic\\\\app\" -Destination \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\\\\app\" -Force)",
+      "PowerShell(Move-Item -Path \"c:\\\\laragon\\\\www\\\\Ziadic\\\\database\" -Destination \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\\\\database\" -Force)",
+      "PowerShell(\"Folders moved\")",
+      "PowerShell(head -20)",
+      "Bash(curl -s http://localhost:8000/up)"
+    ]
+  }
+}

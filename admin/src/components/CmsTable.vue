@@ -12,10 +12,10 @@ defineProps<{
 
 <template>
   <section class="cms-card overflow-hidden">
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-(--admin-border) px-5 py-4">
       <div>
-        <h2 class="m-0 text-base font-semibold text-[var(--admin-ink)]">{{ title }}</h2>
-        <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">{{ description }}</p>
+        <h2 class="m-0 text-base font-semibold text-(--admin-ink)">{{ title }}</h2>
+        <p class="m-0 mt-1 text-sm text-(--admin-muted)">{{ description }}</p>
       </div>
       <button class="icon-button" type="button" aria-label="Open table filters">
         <i class="pi pi-filter" aria-hidden="true"></i>
@@ -23,32 +23,32 @@ defineProps<{
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] border-collapse text-left text-sm">
+      <table class="w-full min-w-190 border-collapse text-left text-sm">
         <thead>
-          <tr class="bg-[var(--admin-table-head)] text-xs uppercase text-[var(--admin-muted)]">
-            <th class="px-5 py-3 font-semibold">Title</th>
-            <th class="px-5 py-3 font-semibold">{{ mode === 'listings' ? 'Category' : 'Type' }}</th>
-            <th class="px-5 py-3 font-semibold">{{ mode === 'listings' ? 'City' : 'Author' }}</th>
-            <th class="px-5 py-3 font-semibold">Status</th>
-            <th class="px-5 py-3 font-semibold">Updated</th>
-            <th class="px-5 py-3 text-right font-semibold">Actions</th>
+          <tr class="bg-(--admin-table-head) text-xs font-semibold text-(--admin-muted)">
+            <th class="px-5 py-3">Title</th>
+            <th class="px-5 py-3">{{ mode === 'listings' ? 'Category' : 'Type' }}</th>
+            <th class="px-5 py-3">{{ mode === 'listings' ? 'City' : 'Author' }}</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3">Updated</th>
+            <th class="px-5 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.title" class="border-t border-[var(--admin-border)]">
-            <td class="px-5 py-4 font-medium text-[var(--admin-ink)]">{{ row.title }}</td>
-            <td class="px-5 py-4 text-[var(--admin-muted)]">
+          <tr v-for="row in rows" :key="row.title" class="border-t border-(--admin-border) transition-colors hover:bg-(--admin-soft)/40">
+            <td class="px-5 py-4 font-medium text-(--admin-ink)">{{ row.title }}</td>
+            <td class="px-5 py-4 text-(--admin-muted)">
               {{ mode === 'listings' ? (row as ListingRow).category : (row as ContentRow).type }}
             </td>
-            <td class="px-5 py-4 text-[var(--admin-muted)]">
+            <td class="px-5 py-4 text-(--admin-muted)">
               {{ mode === 'listings' ? (row as ListingRow).city : (row as ContentRow).author }}
             </td>
             <td class="px-5 py-4">
               <StatusBadge :label="row.status" :tone="row.tone" />
             </td>
-            <td class="px-5 py-4 text-[var(--admin-muted)]">{{ row.updatedAt }}</td>
+            <td class="px-5 py-4 text-(--admin-muted)">{{ row.updatedAt }}</td>
             <td class="px-5 py-4">
-              <div class="flex justify-end gap-2">
+              <div class="flex justify-end gap-1">
                 <button class="icon-button icon-button--sm" type="button" aria-label="Edit item">
                   <i class="pi pi-pencil" aria-hidden="true"></i>
                 </button>

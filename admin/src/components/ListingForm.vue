@@ -81,7 +81,7 @@ function submit() {
         v-for="(label, index) in stepLabels"
         :key="label"
         class="rounded-lg border px-3 py-2 text-sm font-semibold"
-        :class="step === index + 1 ? 'border-[var(--admin-primary)] bg-[var(--admin-soft)] text-[var(--admin-primary-strong)]' : 'border-[var(--admin-border)] text-[var(--admin-muted)]'"
+        :class="step === index + 1 ? 'border-(--admin-primary) bg-(--admin-soft) text-(--admin-primary-strong)' : 'border-(--admin-border) text-(--admin-muted)'"
       >
         {{ index + 1 }}. {{ label }}
       </li>
@@ -106,13 +106,13 @@ function submit() {
 
     <section v-if="step === 3" class="grid gap-4">
       <label class="dropzone">
-        <i class="pi pi-cloud-upload text-3xl text-[var(--admin-primary)]"></i>
+        <i class="pi pi-cloud-upload text-3xl text-(--admin-primary)"></i>
         <strong>Drop listing gallery files here</strong>
         <span>or click to browse and preview uploads</span>
         <input class="hidden" type="file" multiple accept="image/*" @change="handleFiles" />
       </label>
       <div v-if="previews.length" class="grid gap-3 sm:grid-cols-3">
-        <img v-for="preview in previews" :key="preview" :src="preview" class="aspect-[4/3] rounded-lg object-cover" alt="" />
+        <img v-for="preview in previews" :key="preview" :src="preview" class="aspect-4/3 rounded-lg object-cover" alt="" />
       </div>
     </section>
 
@@ -131,7 +131,7 @@ function submit() {
       </label>
     </section>
 
-    <div class="flex flex-wrap justify-between gap-3 border-t border-[var(--admin-border)] pt-5">
+    <div class="flex flex-wrap justify-between gap-3 border-t border-(--admin-border) pt-5">
       <button class="secondary-action" type="button" @click="step > 1 ? step-- : emit('cancel')">
         {{ step > 1 ? 'Back' : 'Cancel' }}
       </button>

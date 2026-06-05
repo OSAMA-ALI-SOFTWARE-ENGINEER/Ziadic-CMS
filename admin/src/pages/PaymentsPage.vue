@@ -1,40 +1,33 @@
-<script setup lang="ts">
-import StatusBadge from '@/components/StatusBadge.vue'
-
-const payments = [
-  { ref: 'PAY-1001', customer: 'Client Account', plan: 'Premium', amount: '$49.00', status: 'Paid', tone: 'success' as const },
-  { ref: 'PAY-1002', customer: 'Business Owner', plan: 'Business', amount: '$99.00', status: 'Pending', tone: 'warning' as const },
-  { ref: 'PAY-1003', customer: 'Client Account', plan: 'Free', amount: '$0.00', status: 'Cancelled', tone: 'neutral' as const },
-]
-</script>
+<script setup lang="ts"></script>
 
 <template>
-  <section class="cms-card overflow-hidden">
-    <div class="border-b border-[var(--admin-border)] px-5 py-4">
-      <h2 class="m-0 text-base font-semibold">Payments</h2>
-      <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">Transactions for listing plans and future subscriptions.</p>
+  <!-- Coming Soon Banner -->
+  <div class="cms-card relative overflow-hidden bg-linear-to-r from-(--admin-soft) to-transparent p-6">
+    <div class="absolute top-0 right-0 -z-10 h-32 w-32 rounded-full bg-(--admin-primary) opacity-10 blur-3xl"></div>
+    <div class="flex items-start gap-4">
+      <span class="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-linear-to-br from-(--admin-primary) to-(--admin-primary-strong) text-xl text-white shadow-lg">
+        <i class="pi pi-clock" aria-hidden="true"></i>
+      </span>
+      <div class="flex-1">
+        <h3 class="m-0 text-base font-semibold text-(--admin-ink)">Payment Integration Coming Soon</h3>
+        <p class="m-0 mt-1.5 text-sm text-(--admin-muted)">
+          We're integrating advanced payment processing, invoicing, and subscription management. This feature will be available soon with support for multiple payment gateways.
+        </p>
+        <div class="mt-3 flex gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-(--admin-primary)/10 px-3 py-1 text-xs font-medium text-(--admin-primary)">
+            <i class="pi pi-check" aria-hidden="true"></i>
+            Payment Processing
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-(--admin-primary)/10 px-3 py-1 text-xs font-medium text-(--admin-primary)">
+            <i class="pi pi-check" aria-hidden="true"></i>
+            Invoicing
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-(--admin-primary)/10 px-3 py-1 text-xs font-medium text-(--admin-primary)">
+            <i class="pi pi-check" aria-hidden="true"></i>
+            Subscriptions
+          </span>
+        </div>
+      </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[680px] text-left text-sm">
-        <thead class="bg-[var(--admin-table-head)] text-xs uppercase text-[var(--admin-muted)]">
-          <tr>
-            <th class="px-5 py-3">Reference</th>
-            <th class="px-5 py-3">Customer</th>
-            <th class="px-5 py-3">Plan</th>
-            <th class="px-5 py-3">Amount</th>
-            <th class="px-5 py-3">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="payment in payments" :key="payment.ref" class="border-t border-[var(--admin-border)]">
-            <td class="px-5 py-4 font-medium">{{ payment.ref }}</td>
-            <td class="px-5 py-4 text-[var(--admin-muted)]">{{ payment.customer }}</td>
-            <td class="px-5 py-4 text-[var(--admin-muted)]">{{ payment.plan }}</td>
-            <td class="px-5 py-4 font-medium">{{ payment.amount }}</td>
-            <td class="px-5 py-4"><StatusBadge :label="payment.status" :tone="payment.tone" /></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+  </div>
 </template>

@@ -42,7 +42,7 @@ function saveCategory() {
     <template #header>
       <div>
         <h2 class="m-0 text-base font-semibold">Categories & Subcategories</h2>
-        <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">Manage listing taxonomy and nested category structure.</p>
+        <p class="m-0 mt-1 text-sm text-(--admin-muted)">Manage listing taxonomy and nested category structure.</p>
       </div>
       <button class="primary-action" type="button" @click="openCategory()"><i class="pi pi-plus"></i><span>Add category</span></button>
     </template>

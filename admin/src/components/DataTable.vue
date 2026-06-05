@@ -53,36 +53,36 @@ function sortBy(key: keyof T) {
 
 <template>
   <section class="cms-card overflow-hidden">
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--admin-border)] px-5 py-4">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-(--admin-border) px-5 py-4">
       <slot name="header"></slot>
       <label class="relative block w-full max-w-[320px]">
-        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]" aria-hidden="true"></i>
-        <input v-model="search" class="cms-input pl-10" placeholder="Search..." @input="page = 1" />
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-(--admin-muted)" aria-hidden="true"></i>
+        <input v-model="search" class="cms-input pl-10 rounded-full" placeholder="Search..." @input="page = 1" />
       </label>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] border-collapse text-left text-sm">
-        <thead class="bg-[var(--admin-table-head)] text-xs uppercase text-[var(--admin-muted)]">
+      <table class="w-full min-w-190 border-collapse text-left text-sm">
+        <thead class="bg-(--admin-table-head) text-xs font-semibold text-(--admin-muted)">
           <tr>
             <th v-for="column in columns" :key="String(column.key)" class="px-5 py-3">
-              <button class="inline-flex items-center gap-2 border-0 bg-transparent p-0 text-xs font-semibold uppercase text-inherit" type="button" @click="sortBy(column.key)">
+              <button class="inline-flex items-center gap-2 border-0 bg-transparent p-0 text-xs font-semibold text-inherit transition-colors hover:text-(--admin-primary)" type="button" @click="sortBy(column.key)">
                 {{ column.label }}
-                <i class="pi pi-sort-alt text-[10px]" aria-hidden="true"></i>
+                <i :class="sortKey === column.key ? 'pi pi-sort-alt text-(--admin-primary)' : 'pi pi-sort-alt text-(--admin-muted)'" :style="sortDirection === 'desc' && sortKey === column.key ? { transform: 'scaleY(-1)' } : {}" class="text-[10px] transition-colors" aria-hidden="true"></i>
               </button>
             </th>
             <th class="px-5 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in paginatedRows" :key="JSON.stringify(row)" class="border-t border-[var(--admin-border)]">
+          <tr v-for="row in paginatedRows" :key="JSON.stringify(row)" class="border-t border-(--admin-border) transition-colors hover:bg-(--admin-soft)/40">
             <td v-for="column in columns" :key="String(column.key)" class="px-5 py-4">
               <slot :name="`cell-${String(column.key)}`" :row="row" :value="row[column.key]">
                 {{ row[column.key] }}
               </slot>
             </td>
             <td class="px-5 py-4">
-              <div class="flex justify-end gap-2">
+              <div class="flex justify-end gap-1">
                 <button class="icon-button icon-button--sm" type="button" aria-label="View" @click="emit('view', row)">
                   <i class="pi pi-eye" aria-hidden="true"></i>
                 </button>
@@ -99,7 +99,7 @@ function sortBy(key: keyof T) {
       </table>
     </div>
 
-    <div class="flex items-center justify-between gap-4 border-t border-[var(--admin-border)] px-5 py-4 text-sm text-[var(--admin-muted)]">
+    <div class="flex items-center justify-between gap-4 border-t border-(--admin-border) px-5 py-4 text-sm text-(--admin-muted)">
       <span>Page {{ page }} of {{ totalPages }}</span>
       <div class="flex gap-2">
         <button class="secondary-action" type="button" :disabled="page === 1" @click="page--">Previous</button>

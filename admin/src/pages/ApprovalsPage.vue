@@ -28,7 +28,7 @@ const columns: Array<{ key: keyof ListingRow; label: string }> = [
     <template #header>
       <div>
         <h2 class="m-0 text-base font-semibold">Approvals</h2>
-        <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">Approve or reject submitted listings.</p>
+        <p class="m-0 mt-1 text-sm text-(--admin-muted)">Approve or reject submitted listings.</p>
       </div>
     </template>
     <template #cell-status="{ row }">

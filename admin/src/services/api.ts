@@ -2,8 +2,33 @@ import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 
+// Auto-detect API URL based on current environment
+function getApiUrl(): string {
+  // First priority: environment variable
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+
+  // Second priority: auto-detect from window location
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location
+    const port = window.location.port ? `:${window.location.port}` : ''
+
+    // If running on localhost/127.0.0.1 on port 5173 (Vite dev), API is on port 8000
+    if ((hostname === 'localhost' || hostname === '127.0.0.1') && window.location.port === '5173') {
+      return `${protocol}//localhost:8000/api/v1`
+    }
+
+    // Otherwise assume API is on same domain/host
+    return `${protocol}//${hostname}${port}/api/v1`
+  }
+
+  // Fallback
+  return 'http://localhost:8000/api/v1'
+}
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1',
+  baseURL: getApiUrl(),
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -26,6 +51,15 @@ api.interceptors.response.use(
     const isSilentError = error.config?.headers?.['X-Silent-Error'] === '1' || error.config?.headers?.get?.('X-Silent-Error') === '1'
 
     if (isSilentError) {
+      return Promise.reject(error)
+    }
+
+    const url = error.config?.url || ''
+    const isSettingsEndpoint = url.includes('/admin/settings/') || url.includes('/admin/upload')
+    const is404 = error.response?.status === 404
+
+    // Suppress 404 errors for settings endpoints (mock API will handle them)
+    if (is404 && isSettingsEndpoint) {
       return Promise.reject(error)
     }
 

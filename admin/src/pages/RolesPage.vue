@@ -73,7 +73,7 @@ function saveRole() {
       <template #header>
         <div>
           <h2 class="m-0 text-base font-semibold">Roles & Permissions</h2>
-          <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">Temporary UI for Spatie role planning and testing.</p>
+          <p class="m-0 mt-1 text-sm text-(--admin-muted)">Temporary UI for Spatie role planning and testing.</p>
         </div>
         <button class="primary-action" type="button" @click="openRole()">
           <i class="pi pi-plus"></i>
@@ -87,9 +87,9 @@ function saveRole() {
 
     <aside class="cms-card p-5">
       <h2 class="m-0 text-base font-semibold">Permission groups</h2>
-      <p class="m-0 mt-1 text-sm text-[var(--admin-muted)]">These match the Laravel seed permissions.</p>
+      <p class="m-0 mt-1 text-sm text-(--admin-muted)">These match the Laravel seed permissions.</p>
       <div class="mt-5 grid gap-2">
-        <span v-for="permission in permissionGroups" :key="permission" class="rounded-lg bg-[var(--admin-soft)] px-3 py-2 text-sm text-[var(--admin-muted)]">
+        <span v-for="permission in permissionGroups" :key="permission" class="rounded-lg bg-(--admin-soft) px-3 py-2 text-sm text-(--admin-muted)">
           {{ permission }}
         </span>
       </div>

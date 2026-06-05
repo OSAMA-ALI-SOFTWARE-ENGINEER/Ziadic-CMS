@@ -18,12 +18,14 @@ use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\NewsletterSubscriberController;
 use App\Http\Controllers\Admin\GlobalSearchController;
 use App\Http\Controllers\NewsletterSubscriptionController;
 
-Route::prefix('v1')->group(function (): void {
+Route::prefix('api/v1')->group(function (): void {
     Route::get('health', fn() => ['status' => 'ok']);
 
     Route::get('public/countries', function () {
@@ -116,55 +118,64 @@ Route::prefix('v1')->group(function (): void {
     });
 });
 
-function publishedListingsScope(Builder $query): void
-{
-    $query->where('status', 'published');
+if (!function_exists('publishedListingsScope')) {
+    function publishedListingsScope(Builder $query): void
+    {
+        $query->where('status', 'published');
+    }
 }
 
-function cityPayload(City $city): array
-{
-    return [
-        'id' => (int) $city->getAttribute('id'),
-        'name' => (string) $city->getAttribute('name'),
-        'slug' => (string) $city->getAttribute('slug'),
-        'country_id' => (int) $city->getAttribute('country_id'),
-        'country' => $city->country ? [
-            'id' => (int) $city->country->getAttribute('id'),
-            'name' => (string) $city->country->getAttribute('name'),
-            'iso2' => $city->country->getAttribute('iso2'),
-        ] : null,
-        'places_count' => (int) ($city->getAttribute('places_count') ?? 0),
-    ];
+if (!function_exists('cityPayload')) {
+    function cityPayload(City $city): array
+    {
+        return [
+            'id' => (int) $city->getAttribute('id'),
+            'name' => (string) $city->getAttribute('name'),
+            'slug' => (string) $city->getAttribute('slug'),
+            'country_id' => (int) $city->getAttribute('country_id'),
+            'country' => $city->country ? [
+                'id' => (int) $city->country->getAttribute('id'),
+                'name' => (string) $city->country->getAttribute('name'),
+                'iso2' => $city->country->getAttribute('iso2'),
+            ] : null,
+            'places_count' => (int) ($city->getAttribute('places_count') ?? 0),
+        ];
+    }
 }
 
-function countryPayload(Country $country): array
-{
-    return [
-        'id' => (int) $country->getAttribute('id'),
-        'name' => (string) $country->getAttribute('name'),
-        'slug' => Str::slug((string) $country->getAttribute('name')),
-        'iso2' => $country->getAttribute('iso2'),
-        'iso3' => $country->getAttribute('iso3'),
-        'places_count' => (int) ($country->getAttribute('places_count') ?? 0),
-    ];
+if (!function_exists('countryPayload')) {
+    function countryPayload(Country $country): array
+    {
+        return [
+            'id' => (int) $country->getAttribute('id'),
+            'name' => (string) $country->getAttribute('name'),
+            'slug' => Str::slug((string) $country->getAttribute('name')),
+            'iso2' => $country->getAttribute('iso2'),
+            'iso3' => $country->getAttribute('iso3'),
+            'places_count' => (int) ($country->getAttribute('places_count') ?? 0),
+        ];
+    }
 }
 
-function countriesWithPlaceCounts(): Builder
-{
-    return Country::query()
-        ->where('is_active', true)
-        ->select(['id', 'name', 'iso2', 'iso3'])
-        ->selectSub(
-            Listing::query()
-                ->join('cities', 'listings.city_id', '=', 'cities.id')
-                ->selectRaw('count(*)')
-                ->whereColumn('cities.country_id', 'countries.id')
-                ->where('listings.status', 'published'),
-            'places_count',
-        );
+if (!function_exists('countriesWithPlaceCounts')) {
+    function countriesWithPlaceCounts(): Builder
+    {
+        return Country::query()
+            ->where('is_active', true)
+            ->select(['id', 'name', 'iso2', 'iso3'])
+            ->selectSub(
+                Listing::query()
+                    ->join('cities', 'listings.city_id', '=', 'cities.id')
+                    ->selectRaw('count(*)')
+                    ->whereColumn('cities.country_id', 'countries.id')
+                    ->where('listings.status', 'published'),
+                'places_count',
+            );
+    }
 }
 
-function publicListingPayload(Listing $listing): array
+if (!function_exists('publicListingPayload')) {
+    function publicListingPayload(Listing $listing): array
 {
     $featuredImage = $listing->images->firstWhere('is_featured', true) ?? $listing->images->sortBy('sort_order')->first();
     $gallery = $listing->images
@@ -224,10 +235,12 @@ function publicListingPayload(Listing $listing): array
         'is_featured' => (bool) $listing->getAttribute('is_featured'),
         'published_at' => $listing->getAttribute('published_at'),
     ];
+    }
 }
 
-function catalogPayload(): array
-{
+if (!function_exists('catalogPayload')) {
+    function catalogPayload(): array
+    {
     $countries = countriesWithPlaceCounts()
         ->orderBy('name')
         ->get()
@@ -263,59 +276,62 @@ function catalogPayload(): array
         'categories' => $categories,
         'popular' => popularPayload(),
     ];
+    }
 }
 
-function popularPayload(): array
-{
-    $countries = countriesWithPlaceCounts()
-        ->orderByDesc('places_count')
-        ->limit(6)
-        ->get()
-        ->map(fn(Country $country) => [
-            'type' => 'country',
-            'label' => (string) $country->getAttribute('name'),
-            'value' => $country->getAttribute('iso2'),
-            'places_count' => (int) ($country->getAttribute('places_count') ?? 0),
-        ]);
+if (!function_exists('popularPayload')) {
+    function popularPayload(): array
+    {
+        $countries = countriesWithPlaceCounts()
+            ->orderByDesc('places_count')
+            ->limit(6)
+            ->get()
+            ->map(fn(Country $country) => [
+                'type' => 'country',
+                'label' => (string) $country->getAttribute('name'),
+                'value' => $country->getAttribute('iso2'),
+                'places_count' => (int) ($country->getAttribute('places_count') ?? 0),
+            ]);
 
-    $cities = City::query()
-        ->with('country:id,name,iso2')
-        ->where('is_active', true)
-        ->withCount(['listings as places_count' => publishedListingsScope(...)])
-        ->orderByDesc('places_count')
-        ->limit(6)
-        ->get(['id', 'country_id', 'name', 'slug'])
-        ->map(fn(City $city) => [
-            'type' => 'city',
-            'label' => (string) $city->getAttribute('name'),
-            'value' => (string) $city->getAttribute('slug'),
-            'country' => $city->country?->getAttribute('iso2'),
-            'places_count' => (int) ($city->getAttribute('places_count') ?? 0),
-        ]);
+        $cities = City::query()
+            ->with('country:id,name,iso2')
+            ->where('is_active', true)
+            ->withCount(['listings as places_count' => publishedListingsScope(...)])
+            ->orderByDesc('places_count')
+            ->limit(6)
+            ->get(['id', 'country_id', 'name', 'slug'])
+            ->map(fn(City $city) => [
+                'type' => 'city',
+                'label' => (string) $city->getAttribute('name'),
+                'value' => (string) $city->getAttribute('slug'),
+                'country' => $city->country?->getAttribute('iso2'),
+                'places_count' => (int) ($city->getAttribute('places_count') ?? 0),
+            ]);
 
-    $categories = Category::query()
-        ->where('type', 'listing')
-        ->where('is_active', true)
-        ->withCount(['listings as places_count' => publishedListingsScope(...)])
-        ->orderByDesc('places_count')
-        ->limit(6)
-        ->get(['id', 'name', 'slug'])
-        ->map(fn(Category $category) => [
-            'type' => 'category',
-            'label' => (string) $category->getAttribute('name'),
-            'value' => (string) $category->getAttribute('slug'),
-            'places_count' => (int) ($category->getAttribute('places_count') ?? 0),
-        ]);
+        $categories = Category::query()
+            ->where('type', 'listing')
+            ->where('is_active', true)
+            ->withCount(['listings as places_count' => publishedListingsScope(...)])
+            ->orderByDesc('places_count')
+            ->limit(6)
+            ->get(['id', 'name', 'slug'])
+            ->map(fn(Category $category) => [
+                'type' => 'category',
+                'label' => (string) $category->getAttribute('name'),
+                'value' => (string) $category->getAttribute('slug'),
+                'places_count' => (int) ($category->getAttribute('places_count') ?? 0),
+            ]);
 
-    return [
-        'countries' => $countries,
-        'cities' => $cities,
-        'categories' => $categories,
-    ];
+        return [
+            'countries' => $countries,
+            'cities' => $cities,
+            'categories' => $categories,
+        ];
+    }
 }
 
 // Auth routes (public)
-Route::prefix('v1/auth')->group(function (): void {
+Route::prefix('api/v1/auth')->group(function (): void {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
     Route::middleware('auth:sanctum')->group(function (): void {
@@ -325,7 +341,7 @@ Route::prefix('v1/auth')->group(function (): void {
 });
 
 // Public blog/pages
-Route::prefix('v1/public')->group(function (): void {
+Route::prefix('api/v1/public')->group(function (): void {
     Route::get('search', [GlobalSearchController::class, 'index']);
     Route::post('newsletter/subscribe', [NewsletterSubscriptionController::class, 'store']);
     Route::get('newsletter/subscribers', [NewsletterSubscriberController::class, 'index']);
@@ -351,9 +367,16 @@ Route::prefix('v1/public')->group(function (): void {
 });
 
 // Admin routes (protected)
-Route::prefix('v1/admin')->middleware('auth:sanctum')->group(function (): void {
+Route::prefix('api/v1/admin')->middleware('auth:sanctum')->group(function (): void {
     Route::get('search', [GlobalSearchController::class, 'index']);
     Route::get('dashboard', [DashboardController::class, 'index']);
+
+    // File upload
+    Route::post('upload', [UploadController::class, 'store']);
+
+    // Settings endpoints (branding, theme, seo, payments)
+    Route::get('settings/{section}', [AdminSettingsController::class, 'show']);
+    Route::post('settings/{section}', [AdminSettingsController::class, 'update']);
 
     Route::apiResource('listings', ListingController::class);
     Route::patch('listings/{listing}/approve', [ListingController::class, 'approve']);

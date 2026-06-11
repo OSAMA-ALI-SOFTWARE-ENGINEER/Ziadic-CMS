@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import AdminLayout from '@/layouts/AdminLayout.vue'
 import AboutPage from '@/pages/AboutPage.vue'
 import HomePage from '@/pages/HomePage.vue'
 import ListingsPage from '@/pages/ListingsPage.vue'
@@ -9,6 +10,12 @@ import LoginPage from '@/pages/auth/LoginPage.vue'
 import RegisterPage from '@/pages/auth/RegisterPage.vue'
 import BlogPage from '@/pages/BlogPage.vue'
 import BlogDetailPage from '@/pages/BlogDetailPage.vue'
+import AdminDashboardPage from '@/pages/admin/DashboardPage.vue'
+import AdminListingsPage from '@/pages/admin/ListingsPage.vue'
+import AdminUsersPage from '@/pages/admin/UsersPage.vue'
+import AdminActivityPage from '@/pages/admin/ActivityPage.vue'
+import AdminSettingsPage from '@/pages/admin/SettingsPage.vue'
+import UserDashboardPage from '@/pages/DashboardPage.vue'
 
 const legacyRoutes = [
   {
@@ -142,6 +149,69 @@ const router = createRouter({
       },
     },
     {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: UserDashboardPage,
+      meta: {
+        title: 'Dashboard | Zaidic',
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/admin',
+      component: AdminLayout,
+      meta: {
+        requiresAdmin: true,
+      },
+      children: [
+        {
+          path: 'dashboard',
+          name: 'admin-dashboard',
+          component: AdminDashboardPage,
+          meta: {
+            title: 'Dashboard | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'listings',
+          name: 'admin-listings',
+          component: AdminListingsPage,
+          meta: {
+            title: 'Listings | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: AdminUsersPage,
+          meta: {
+            title: 'Users | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'activity',
+          name: 'admin-activity',
+          component: AdminActivityPage,
+          meta: {
+            title: 'Activity | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'settings',
+          name: 'admin-settings',
+          component: AdminSettingsPage,
+          meta: {
+            title: 'Settings | Admin',
+            requiresAdmin: true,
+          },
+        },
+      ],
+    },
+    {
       path: '/',
       component: PublicLayout,
       children: [
@@ -209,6 +279,21 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore()
   if (authStore.token && !authStore.user) {
     await authStore.fetchUser()
+  }
+
+  // Check authentication
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Check admin access
+  if (to.meta.requiresAdmin) {
+    if (!authStore.isAuthenticated) {
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
+    if (!authStore.isAdmin) {
+      return { name: 'home' }
+    }
   }
 })
 

@@ -60,14 +60,14 @@ function getUserInitials() {
 
         <div class="site-header__actions">
           <div v-if="!authStore.isAuthenticated" class="site-header__guest-actions">
-            <a href="/admin/login" class="style-button site-header__animated-button site-header__animated-button--login">
+            <RouterLink to="/login" class="style-button site-header__animated-button site-header__animated-button--login">
               <span class="style-button-text">Login</span>
               <span class="button-color"></span>
-            </a>
-            <a href="/admin/signup" class="primary-button site-header__animated-button site-header__animated-button--signup">
+            </RouterLink>
+            <RouterLink to="/register" class="primary-button site-header__animated-button site-header__animated-button--signup">
               <span class="style-button-text">Get Started</span>
               <span class="button-color"></span>
-            </a>
+            </RouterLink>
           </div>
 
           <div v-else class="site-header__user-menu-wrap">
@@ -84,14 +84,17 @@ function getUserInitials() {
                 <p class="site-header__user-email">{{ authStore.user?.email }}</p>
               </div>
 
-              <a
+              <RouterLink to="/dashboard" class="site-header__user-link">
+                👤 My Dashboard
+              </RouterLink>
+
+              <RouterLink
                 v-if="authStore.isAdmin"
-                href="http://localhost:5174/admin/dashboard"
-                target="_blank"
+                to="/admin/dashboard"
                 class="site-header__user-link"
               >
                 📊 Admin Dashboard
-              </a>
+              </RouterLink>
 
               <button @click="handleLogout" class="site-header__user-logout">
                 Sign Out
@@ -124,15 +127,19 @@ function getUserInitials() {
         </nav>
 
         <div class="site-header__mobile-actions">
-          <a v-if="!authStore.isAuthenticated" href="/admin/login" class="style-button site-header__animated-button site-header__animated-button--login site-header__mobile-login">
+          <RouterLink v-if="!authStore.isAuthenticated" to="/login" class="style-button site-header__animated-button site-header__animated-button--login site-header__mobile-login">
             <span class="style-button-text">Login</span>
             <span class="button-color"></span>
-          </a>
-          <a v-if="!authStore.isAuthenticated" href="/admin/signup" class="primary-button site-header__animated-button site-header__animated-button--signup site-header__mobile-cta">
+          </RouterLink>
+          <RouterLink v-if="!authStore.isAuthenticated" to="/register" class="primary-button site-header__animated-button site-header__animated-button--signup site-header__mobile-cta">
             <span class="style-button-text">Get Started</span>
             <span class="button-color"></span>
-          </a>
-          <button v-else @click="handleLogout" class="site-header__mobile-logout">Sign Out</button>
+          </RouterLink>
+          <div v-else class="site-header__mobile-user-section">
+            <RouterLink to="/dashboard" class="site-header__mobile-link">👤 My Dashboard</RouterLink>
+            <RouterLink v-if="authStore.isAdmin" to="/admin/dashboard" class="site-header__mobile-link">📊 Admin</RouterLink>
+            <button @click="handleLogout" class="site-header__mobile-logout">Sign Out</button>
+          </div>
         </div>
       </div>
     </div>
@@ -395,6 +402,18 @@ function getUserInitials() {
   color: var(--primary-color);
   font-size: 16px;
   font-weight: 500;
+}
+
+.site-header__mobile-user-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.site-header__user-link {
+  text-decoration: none;
+  color: #374151;
+  font-size: 14px;
 }
 
 @media (min-width: 992px) {

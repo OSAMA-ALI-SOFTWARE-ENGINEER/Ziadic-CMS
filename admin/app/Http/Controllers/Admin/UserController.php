@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -51,7 +52,13 @@ class UserController
             'role' => 'required|string|exists:roles,name',
         ]);
 
+        $oldRoles = $user->getRoleNames()->toArray();
         $user->syncRoles([$validated['role']]);
+
+        ActivityLogger::log('user.updated', $user, [
+            'old' => ['roles' => $oldRoles],
+            'new' => ['roles' => $user->getRoleNames()->toArray()],
+        ], $request);
 
         return response()->json([
             'message' => 'Role assigned successfully',

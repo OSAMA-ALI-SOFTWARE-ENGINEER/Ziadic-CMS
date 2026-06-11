@@ -23,12 +23,12 @@ use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\NewsletterSubscriberController;
 use App\Http\Controllers\Admin\GlobalSearchController;
-use App\Http\Controllers\Admin\PageContentController;
-use App\Http\Controllers\Admin\BlogWorkflowController;
-use App\Http\Controllers\Admin\ContentLibraryController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\NewsletterSubscriptionController;
+use App\Http\Controllers\PublicListingSubmissionController;
 
-Route::prefix('api/v1')->group(function (): void {
+Route::prefix('v1')->group(function (): void {
     Route::get('health', fn() => ['status' => 'ok']);
 
     Route::get('public/countries', function () {
@@ -334,7 +334,7 @@ if (!function_exists('popularPayload')) {
 }
 
 // Auth routes (public)
-Route::prefix('api/v1/auth')->group(function (): void {
+Route::prefix('v1/auth')->group(function (): void {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
     Route::middleware('auth:sanctum')->group(function (): void {
@@ -344,9 +344,10 @@ Route::prefix('api/v1/auth')->group(function (): void {
 });
 
 // Public blog/pages
-Route::prefix('api/v1/public')->group(function (): void {
+Route::prefix('v1/public')->group(function (): void {
     Route::get('search', [GlobalSearchController::class, 'index']);
     Route::post('newsletter/subscribe', [NewsletterSubscriptionController::class, 'store']);
+    Route::post('listings/submit', [PublicListingSubmissionController::class, 'store']);
     Route::get('newsletter/subscribers', [NewsletterSubscriberController::class, 'index']);
     Route::delete('newsletter/subscribers/{newsletterSubscriber}', [NewsletterSubscriberController::class, 'destroyPublic']);
 
@@ -370,12 +371,18 @@ Route::prefix('api/v1/public')->group(function (): void {
 });
 
 // Admin routes (protected)
-Route::prefix('api/v1/admin')->middleware('auth:sanctum')->group(function (): void {
+Route::prefix('v1/admin')->middleware('auth:sanctum')->group(function (): void {
     Route::get('search', [GlobalSearchController::class, 'index']);
+    Route::get('activity-logs', [ActivityLogController::class, 'index']);
     Route::get('dashboard', [DashboardController::class, 'index']);
 
     // File upload
     Route::post('upload', [UploadController::class, 'store']);
+    Route::get('media', [MediaController::class, 'index']);
+    Route::post('media', [MediaController::class, 'store']);
+    Route::patch('media/{media}', [MediaController::class, 'update']);
+    Route::delete('media/bulk', [MediaController::class, 'bulkDestroy']);
+    Route::delete('media/{media}', [MediaController::class, 'destroy']);
 
     // Settings endpoints (branding, theme, seo, payments)
     Route::get('settings/{section}', [AdminSettingsController::class, 'show']);
@@ -402,24 +409,4 @@ Route::prefix('api/v1/admin')->middleware('auth:sanctum')->group(function (): vo
 
     Route::get('newsletter-subscribers', [NewsletterSubscriberController::class, 'index']);
     Route::delete('newsletter-subscribers/{newsletterSubscriber}', [NewsletterSubscriberController::class, 'destroy']);
-
-    // CMS Content Management
-    Route::get('content-library', [ContentLibraryController::class, 'index']);
-    Route::get('content-library/stats', [ContentLibraryController::class, 'stats']);
-
-    Route::get('page-content', [PageContentController::class, 'index']);
-    Route::get('page-content/{slug}', [PageContentController::class, 'show']);
-    Route::patch('page-content/{slug}', [PageContentController::class, 'update']);
-    Route::patch('page-content/{slug}/publish', [PageContentController::class, 'publish']);
-    Route::patch('page-content/{slug}/unpublish', [PageContentController::class, 'unpublish']);
-    Route::get('page-content/{slug}/audit', [PageContentController::class, 'audit']);
-
-    Route::get('blog-workflow', [BlogWorkflowController::class, 'index']);
-    Route::get('blog-workflow/posts/{post}', [BlogWorkflowController::class, 'show']);
-    Route::patch('blog-workflow/posts/{post}/submit', [BlogWorkflowController::class, 'submit']);
-    Route::patch('blog-workflow/posts/{post}/approve', [BlogWorkflowController::class, 'approve']);
-    Route::patch('blog-workflow/posts/{post}/reject', [BlogWorkflowController::class, 'reject']);
-    Route::patch('blog-workflow/posts/{post}/publish', [BlogWorkflowController::class, 'publish']);
-    Route::patch('blog-workflow/posts/{post}/unpublish', [BlogWorkflowController::class, 'unpublish']);
-    Route::patch('blog-workflow/posts/{post}/archive', [BlogWorkflowController::class, 'archive']);
 });

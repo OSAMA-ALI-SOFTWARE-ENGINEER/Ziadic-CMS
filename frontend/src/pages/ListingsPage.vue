@@ -355,7 +355,7 @@ onMounted(async () => {
 
 /* Filter Section */
 .listing-filters-section {
-  padding: 40px 20px;
+  padding: 40px 0;
   background-color: #fff;
   border-bottom: 1px solid #e5ddd0;
 }
@@ -460,7 +460,7 @@ onMounted(async () => {
 }
 
 .listing-content-section {
-  padding: 60px 20px;
+  padding: 60px 0;
   background-color: #fdf5ed;
 }
 
@@ -523,7 +523,7 @@ onMounted(async () => {
 
 .listings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px;
 }
 
@@ -687,19 +687,21 @@ onMounted(async () => {
 }
 
 .listing-container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1350px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 .w-container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1350px;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 .section {
@@ -713,7 +715,7 @@ onMounted(async () => {
   }
 
   .listings-grid {
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px;
   }
 
@@ -782,11 +784,11 @@ onMounted(async () => {
   }
 
   .listing-filters-section {
-    padding: 24px 16px;
+    padding: 24px 0;
   }
 
   .listing-content-section {
-    padding: 32px 16px;
+    padding: 32px 0;
   }
 
   .listings-loading {
@@ -874,13 +876,14 @@ onMounted(async () => {
   }
 
   .listing-filters-section {
-    padding: 20px 12px;
+    padding: 20px 0;
   }
 
   .listing-content-section {
-    padding: 24px 12px;
+    padding: 24px 0;
   }
 
+  .listing-container,
   .w-container {
     padding-left: 16px;
     padding-right: 16px;

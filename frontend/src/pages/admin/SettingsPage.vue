@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Card } from 'primevue/card'
-import { InputText } from 'primevue/inputtext'
-import { InputTextarea } from 'primevue/inputtextarea'
-import { Button } from 'primevue/button'
-import { Toast } from 'primevue/toast'
+import Card from 'primevue/card'
+import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
+import Button from 'primevue/button'
+import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import * as adminService from '@/services/admin'
 
@@ -72,7 +72,7 @@ async function saveSettings() {
 
           <div class="form-group">
             <label for="site_description">Site Description</label>
-            <InputTextarea
+            <Textarea
               id="site_description"
               v-model="settings.site_description"
               placeholder="Brief description of your site"
@@ -276,8 +276,13 @@ async function saveSettings() {
 }
 
 :deep(.p-inputtext),
-:deep(.p-inputtextarea) {
+:deep(.p-textarea) {
   width: 100%;
+}
+
+:deep(.p-textarea textarea) {
+  font-family: inherit;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 768px) {

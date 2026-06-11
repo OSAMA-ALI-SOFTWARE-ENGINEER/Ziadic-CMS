@@ -2,13 +2,14 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Sidebar } from 'primevue/sidebar'
-import { Button } from 'primevue/button'
-import { Menu } from 'primevue/menu'
+import Sidebar from 'primevue/sidebar'
+import Button from 'primevue/button'
+import Menu from 'primevue/menu'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const sidebarVisible = ref(false)
+const userMenuRef = ref()
 
 const menuItems = computed(() => [
   {
@@ -40,12 +41,9 @@ const menuItems = computed(() => [
 
 const userMenu = computed(() => [
   {
-    label: 'Profile',
+    label: 'Dashboard',
     icon: 'pi pi-user',
     command: () => router.push('/dashboard'),
-  },
-  {
-    separator: true,
   },
   {
     label: 'Logout',
@@ -57,9 +55,8 @@ const userMenu = computed(() => [
   },
 ])
 
-function navigate(to: string) {
-  router.push(to)
-  sidebarVisible.value = false
+function toggleUserMenu(event: Event) {
+  userMenuRef.value?.toggle(event)
 }
 </script>
 
@@ -79,17 +76,15 @@ function navigate(to: string) {
       </div>
 
       <div class="admin-header-right">
-        <Menu :model="userMenu" :popup="true">
-          <template #start>
-            <Button
-              :label="authStore.user?.name || 'User'"
-              icon="pi pi-user"
-              class="admin-user-btn"
-              text
-              rounded
-            />
-          </template>
-        </Menu>
+        <Button
+          :label="authStore.user?.name || 'User'"
+          icon="pi pi-user"
+          class="admin-user-btn"
+          text
+          rounded
+          @click="toggleUserMenu"
+        />
+        <Menu ref="userMenuRef" :model="userMenu" popup />
       </div>
     </header>
 

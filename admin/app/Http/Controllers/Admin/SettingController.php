@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Setting;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 
 class SettingController
@@ -38,6 +39,10 @@ class SettingController
                 ['value' => $item['value']]
             );
         }
+
+        ActivityLogger::log('settings.changed', null, [
+            'new' => $validated['settings'],
+        ], $request);
 
         return response()->json(['message' => 'Settings updated successfully']);
     }

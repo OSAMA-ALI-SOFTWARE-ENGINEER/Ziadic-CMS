@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CategoryController
 {
     public function index(Request $request)
     {
-        $query = Category::withCount('listings')->orderBy('sort_order')->orderBy('name');
+        $query = Category::with('parent:id,name')
+            ->withCount('listings')
+            ->orderBy('sort_order')
+            ->orderBy('name');
 
         if ($request->has('type')) {
             $query->where('type', $request->type);
@@ -30,34 +34,46 @@ class CategoryController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|unique:categories',
-            'type' => 'in:listing,post|default:listing',
+            'slug' => [
+                'required',
+                'string',
+                Rule::unique('categories', 'slug')->where(fn ($query) => $query->where('type', $request->input('type', 'listing'))),
+            ],
+            'type' => ['nullable', Rule::in(['listing', 'post'])],
             'parent_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
             'icon' => 'nullable|string',
             'sort_order' => 'nullable|integer',
-            'is_active' => 'boolean|default:true',
+            'is_active' => 'boolean',
             'seo_title' => 'nullable|string',
             'seo_description' => 'nullable|string',
             'seo_keywords' => 'nullable|string',
         ]);
 
+        $validated['type'] = $validated['type'] ?? 'listing';
+        $validated['is_active'] = $validated['is_active'] ?? true;
+
         $category = Category::create($validated);
 
-        return response()->json($category, 201);
+        return response()->json($category->load('parent:id,name')->loadCount('listings'), 201);
     }
 
     public function show(Category $category)
     {
-        return response()->json($category->loadCount('listings'));
+        return response()->json($category->load('parent:id,name')->loadCount('listings'));
     }
 
     public function update(Request $request, Category $category)
     {
         $validated = $request->validate([
             'name' => 'string|max:255',
-            'slug' => 'string|unique:categories,slug,' . $category->id,
-            'type' => 'in:listing,post',
+            'slug' => [
+                'string',
+                Rule::unique('categories', 'slug')
+                    ->ignore($category->id)
+                    ->where(fn ($query) => $query->where('type', $request->input('type', $category->type))),
+            ],
+            'type' => ['nullable', Rule::in(['listing', 'post'])],
             'parent_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
             'icon' => 'nullable|string',
@@ -70,7 +86,7 @@ class CategoryController
 
         $category->update($validated);
 
-        return response()->json($category);
+        return response()->json($category->load('parent:id,name')->loadCount('listings'));
     }
 
     public function destroy(Category $category)

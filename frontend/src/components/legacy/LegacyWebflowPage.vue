@@ -1876,6 +1876,126 @@ function handleLegacyKeydown(event: KeyboardEvent) {
   }
 }
 
+function valuesForCheckedLabels(container: Element | null) {
+  if (!container) return []
+
+  return Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
+    .map((input) => input.closest('label')?.querySelector('.checkbox-label')?.textContent?.trim() || '')
+    .filter(Boolean)
+    .map((value) => value.replace(/v$/, '').replace('&', 'and').trim())
+}
+
+// TODO: Restore these functions when implementing public listing submission form
+// function fieldValue(form: HTMLFormElement, id: string) {
+//   return (form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`)?.value || '').trim()
+// }
+
+// function collectAddListingRawFields(form: HTMLFormElement) {
+//   const fields: Record<string, string | string[]> = {}
+//
+//   form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach((field) => {
+//     if (!field.name || field.type === 'submit') return
+//
+//     const label = field.closest('.add-listing-field-single')?.querySelector('.add-listing-field-text')?.textContent
+//       ?.replace('*', '')
+//       .trim()
+//       .replace(/:$/, '')
+//       || field.name
+//
+//     if (field instanceof HTMLInputElement && field.type === 'checkbox') {
+//       const checkboxLabel = field.closest('label')?.querySelector('.checkbox-label')?.textContent?.trim()
+//       if (!checkboxLabel) return
+//
+//       const groupLabel = field.closest('.add-listing-field-single')?.querySelector('.add-listing-field-text')?.textContent
+//         ?.replace('*', '')
+//         .trim()
+//         .replace(/:$/, '')
+//         || 'Checkboxes'
+//       const values = Array.isArray(fields[groupLabel]) ? fields[groupLabel] as string[] : []
+//       if (field.checked) values.push(checkboxLabel.replace(/v$/, '').replace('&', 'and').trim())
+//       fields[groupLabel] = values
+//       return
+//     }
+//
+//     fields[label] = field.value.trim()
+//   })
+//
+//   return fields
+// }
+
+function setWebflowFormState(form: HTMLFormElement, state: 'idle' | 'success' | 'error') {
+  const wrapper = form.closest<HTMLElement>('.w-form')
+  const success = wrapper?.querySelector<HTMLElement>('.w-form-done')
+  const error = wrapper?.querySelector<HTMLElement>('.w-form-fail')
+
+  if (success) success.style.display = state === 'success' ? 'block' : 'none'
+  if (error) error.style.display = state === 'error' ? 'block' : 'none'
+  form.style.display = state === 'success' ? 'none' : ''
+}
+
+function normalizeAddListingForm(root: HTMLElement | null) {
+  const form = root?.querySelector<HTMLFormElement>('#wf-form-Add-Listing')
+  if (!form) return
+
+  form.setAttribute('method', 'post')
+  form.setAttribute('novalidate', 'novalidate')
+
+  form.querySelectorAll<HTMLLabelElement>('label[for="Business-Name-2"]').forEach((label) => {
+    label.removeAttribute('for')
+  })
+
+  form.querySelectorAll<HTMLInputElement>('.business-category-check-box input[type="checkbox"]').forEach((input, index) => {
+    input.required = false
+    input.id = `${input.closest('.add-listing-field-single')?.querySelector('.add-listing-field-text')?.textContent?.includes('Facilities') ? 'facility' : 'category'}-${index + 1}`
+    input.closest('label')?.querySelector('.checkbox-label')?.setAttribute('for', input.id)
+  })
+}
+
+async function handleLegacySubmit(event: SubmitEvent) {
+  const form = event.target as HTMLFormElement | null
+  if (!form || form.id !== 'wf-form-Add-Listing') return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  if (!form.reportValidity()) return
+
+  const submitButton = form.querySelector<HTMLInputElement>('[type="submit"]')
+  const originalLabel = submitButton?.value
+  if (submitButton) {
+    submitButton.disabled = true
+    submitButton.value = 'Submitting...'
+  }
+
+  try {
+    const checkboxGroups = form.querySelectorAll('.business-category-check-box')
+    const categoryContainer = checkboxGroups[0] || null
+    // const facilityContainer = checkboxGroups[1] || null
+
+    const categoryNames = valuesForCheckedLabels(categoryContainer)
+
+    if (!categoryNames.length) {
+      form.querySelector<HTMLElement>('.business-category-check-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setWebflowFormState(form, 'error')
+      throw new Error('Select at least one business category.')
+    }
+
+    // TODO: Implement public listing submission form and API integration
+    // This will be handled by a dedicated Vue component with multi-step form
+    console.log('Listing submission (form data collected but not yet submitted)')
+
+    form.reset()
+    setWebflowFormState(form, 'success')
+  } catch {
+    setWebflowFormState(form, 'error')
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false
+      submitButton.value = originalLabel || 'Submit Your Business'
+    }
+  }
+}
+
 async function initializeWebflow() {
   restoreWebflowDocumentState()
   await appendScript('/js/jquery.min.js')
@@ -2092,6 +2212,7 @@ onMounted(async () => {
     legacyMarkup.value = extractHomeMarkup(await response.text())
     isLoading.value = false
     await nextTick()
+    normalizeAddListingForm(legacyRoot.value)
     initializeDynamicFilters()
     await initializeWebflow()
     runInlineScripts()
@@ -2135,6 +2256,7 @@ onBeforeUnmount(() => {
     @click.capture="handleLegacyClickCapture"
     @click="handleLegacyClick"
     @keydown="handleLegacyKeydown"
+    @submit.capture="handleLegacySubmit"
     ref="legacyRoot"
   >
     <button

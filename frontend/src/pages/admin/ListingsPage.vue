@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useAdminStore } from '@/stores/admin'
-import { Card } from 'primevue/card'
-import { DataTable } from 'primevue/datatable'
-import { Column } from 'primevue/column'
-import { Button } from 'primevue/button'
-import { InputGroup } from 'primevue/inputgroup'
-import { InputGroupAddon } from 'primevue/inputgroupaddon'
-import { InputText } from 'primevue/inputtext'
-import { Dropdown } from 'primevue/dropdown'
-import { ConfirmDialog } from 'primevue/confirmdialog'
-import { Toast } from 'primevue/toast'
+import Card from 'primevue/card'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import InputGroup from 'primevue/inputgroup'
+import InputGroupAddon from 'primevue/inputgroupaddon'
+import InputText from 'primevue/inputtext'
+import Dropdown from 'primevue/dropdown'
+import ConfirmDialog from 'primevue/confirmdialog'
+import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 
@@ -111,35 +111,6 @@ function formatDate(date: string): string {
   })
 }
 
-function getActionButtons(listing: any): any[] {
-  const buttons = []
-
-  if (listing.status === 'pending') {
-    buttons.push({
-      label: 'Approve',
-      icon: 'pi pi-check',
-      onClick: () => confirmApprove(listing),
-      severity: 'success',
-    })
-    buttons.push({
-      label: 'Reject',
-      icon: 'pi pi-times',
-      onClick: () => confirmReject(listing),
-      severity: 'danger',
-    })
-  }
-
-  if (listing.status === 'approved') {
-    buttons.push({
-      label: 'Publish',
-      icon: 'pi pi-send',
-      onClick: () => confirmPublish(listing),
-      severity: 'info',
-    })
-  }
-
-  return buttons
-}
 </script>
 
 <template>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
-import { Card } from 'primevue/card'
-import { DataTable } from 'primevue/datatable'
-import { Column } from 'primevue/column'
-import { Button } from 'primevue/button'
-import { Dropdown } from 'primevue/dropdown'
-import { Toast } from 'primevue/toast'
+import Card from 'primevue/card'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import Dropdown from 'primevue/dropdown'
+import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 
 const adminStore = useAdminStore()
@@ -40,9 +40,6 @@ function formatDate(date: string): string {
   })
 }
 
-function getRoleLabel(role: string): string {
-  return roleOptions.find(r => r.value === role)?.label || role
-}
 </script>
 
 <template>
@@ -95,14 +92,14 @@ function getRoleLabel(role: string): string {
           </Column>
 
           <Column header="Actions" style="width: 10%">
-            <template #body="{ data }">
+            <template #body>
               <Button
                 icon="pi pi-eye"
                 rounded
                 text
                 class="action-btn"
-                @click="() => {}"
                 v-tooltip="'View Details'"
+                disabled
               />
             </template>
           </Column>

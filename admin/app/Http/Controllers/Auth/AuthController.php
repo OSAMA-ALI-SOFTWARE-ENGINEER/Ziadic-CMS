@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +32,8 @@ class AuthController
 
         $token = $user->createToken('api-token')->plainTextToken;
 
+        ActivityLogger::log('admin.login', $user, [], $request);
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -39,6 +42,7 @@ class AuthController
                 'phone' => $user->phone,
                 'status' => $user->status,
                 'roles' => $user->getRoleNames()->toArray(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
             ],
             'token' => $token,
         ]);
@@ -74,6 +78,7 @@ class AuthController
                 'phone' => $user->phone,
                 'status' => $user->status,
                 'roles' => $user->getRoleNames()->toArray(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
             ],
             'token' => $token,
         ], Response::HTTP_CREATED);
@@ -81,6 +86,8 @@ class AuthController
 
     public function logout(Request $request)
     {
+        ActivityLogger::log('admin.logout', $request->user(), [], $request);
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out successfully']);
@@ -97,6 +104,7 @@ class AuthController
             'phone' => $user->phone,
             'status' => $user->status,
             'roles' => $user->getRoleNames()->toArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
         ]);
     }
 }

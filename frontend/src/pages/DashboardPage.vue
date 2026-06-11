@@ -2,8 +2,8 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Card } from 'primevue/card'
-import { Button } from 'primevue/button'
+import Card from 'primevue/card'
+import Button from 'primevue/button'
 
 const router = useRouter()
 const authStore = useAuthStore()

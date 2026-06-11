@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
-import { Card } from 'primevue/card'
-import { Timeline } from 'primevue/timeline'
-import { Button } from 'primevue/button'
+import Card from 'primevue/card'
+import Timeline from 'primevue/timeline'
+import Button from 'primevue/button'
 
 const adminStore = useAdminStore()
 

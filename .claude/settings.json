@@ -17,7 +17,9 @@
       "PowerShell(Move-Item -Path \"c:\\\\laragon\\\\www\\\\Ziadic\\\\database\" -Destination \"c:\\\\laragon\\\\www\\\\Ziadic\\\\admin\\\\database\" -Force)",
       "PowerShell(\"Folders moved\")",
       "PowerShell(head -20)",
-      "Bash(curl -s http://localhost:8000/up)"
+      "Bash(curl -s http://localhost:8000/up)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

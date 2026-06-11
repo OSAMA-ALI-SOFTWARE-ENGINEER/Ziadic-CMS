@@ -32,6 +32,7 @@ import AdminUsersPage from '@/pages/admin/UsersPage.vue'
 import AdminActivityPage from '@/pages/admin/ActivityPage.vue'
 import AdminSettingsPage from '@/pages/admin/SettingsPage.vue'
 import AdminSubmissionsPage from '@/pages/admin/SubmissionsPage.vue'
+import AdminMediaPage from '@/pages/admin/MediaPage.vue'
 import UserDashboardPage from '@/pages/DashboardPage.vue'
 
 const legacyRoutes = [
@@ -232,6 +233,15 @@ const router = createRouter({
           component: AdminSubmissionsPage,
           meta: {
             title: 'Submissions | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'media',
+          name: 'admin-media',
+          component: AdminMediaPage,
+          meta: {
+            title: 'Media | Admin',
             requiresAdmin: true,
           },
         },

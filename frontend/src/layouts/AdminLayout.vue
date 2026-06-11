@@ -28,6 +28,11 @@ const menuItems = computed(() => [
     to: '/admin/submissions',
   },
   {
+    label: 'Media',
+    icon: 'pi pi-fw pi-images',
+    to: '/admin/media',
+  },
+  {
     label: 'Users',
     icon: 'pi pi-fw pi-users',
     to: '/admin/users',

@@ -20,6 +20,7 @@ const ListingsIndexPage = () => import('@/pages/ListingsIndexPage.vue')
 const BlogsIndexPage = () => import('@/pages/BlogsIndexPage.vue')
 const AddListingPage = () => import('@/pages/AddListingPage.vue')
 const SearchPage = () => import('@/pages/SearchPage.vue')
+const SubmitListingPage = () => import('@/pages/SubmitListingPage.vue')
 // Detail pages still handled by legacyRoutes - will be migrated in Phase 1B+
 // const ListingDetailPage = () => import('@/pages/details/ListingDetailPage.vue')
 // const CityDetailPage = () => import('@/pages/details/CityDetailPage.vue')
@@ -334,6 +335,14 @@ const router = createRouter({
           component: SearchPage,
           meta: {
             title: 'Search Results | Zaidic',
+          },
+        },
+        {
+          path: 'submit',
+          name: 'submit-listing',
+          component: SubmitListingPage,
+          meta: {
+            title: 'Submit Listing | Zaidic',
           },
         },
         ...legacyRoutes.map((route) => ({

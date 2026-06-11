@@ -33,6 +33,7 @@ import AdminActivityPage from '@/pages/admin/ActivityPage.vue'
 import AdminSettingsPage from '@/pages/admin/SettingsPage.vue'
 import AdminSubmissionsPage from '@/pages/admin/SubmissionsPage.vue'
 import AdminMediaPage from '@/pages/admin/MediaPage.vue'
+import AdminDebugPage from '@/pages/admin/DebugPage.vue'
 import UserDashboardPage from '@/pages/DashboardPage.vue'
 
 const legacyRoutes = [
@@ -242,6 +243,15 @@ const router = createRouter({
           component: AdminMediaPage,
           meta: {
             title: 'Media | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'debug',
+          name: 'admin-debug',
+          component: AdminDebugPage,
+          meta: {
+            title: 'Debug | Admin',
             requiresAdmin: true,
           },
         },

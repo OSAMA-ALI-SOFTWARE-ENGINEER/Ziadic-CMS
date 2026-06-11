@@ -31,6 +31,22 @@ use App\Http\Controllers\PublicListingSubmissionController;
 Route::prefix('v1')->group(function (): void {
     Route::get('health', fn() => ['status' => 'ok']);
 
+    // DEBUG: Test endpoints
+    Route::get('test/submissions', function () {
+        $count = \App\Models\ListingSubmission::count();
+        $submissions = \App\Models\ListingSubmission::with('category', 'city')->latest()->limit(5)->get();
+        return [
+            'total' => $count,
+            'recent' => $submissions->map(fn($s) => [
+                'id' => $s->id,
+                'title' => $s->title,
+                'status' => $s->status,
+                'email' => $s->contact_email,
+                'created_at' => $s->created_at,
+            ]),
+        ];
+    });
+
     Route::get('public/countries', function () {
         return countriesWithPlaceCounts()
             ->orderBy('name')

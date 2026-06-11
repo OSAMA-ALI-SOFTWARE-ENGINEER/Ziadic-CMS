@@ -23,6 +23,9 @@ use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\NewsletterSubscriberController;
 use App\Http\Controllers\Admin\GlobalSearchController;
+use App\Http\Controllers\Admin\PageContentController;
+use App\Http\Controllers\Admin\BlogWorkflowController;
+use App\Http\Controllers\Admin\ContentLibraryController;
 use App\Http\Controllers\NewsletterSubscriptionController;
 
 Route::prefix('api/v1')->group(function (): void {
@@ -399,4 +402,24 @@ Route::prefix('api/v1/admin')->middleware('auth:sanctum')->group(function (): vo
 
     Route::get('newsletter-subscribers', [NewsletterSubscriberController::class, 'index']);
     Route::delete('newsletter-subscribers/{newsletterSubscriber}', [NewsletterSubscriberController::class, 'destroy']);
+
+    // CMS Content Management
+    Route::get('content-library', [ContentLibraryController::class, 'index']);
+    Route::get('content-library/stats', [ContentLibraryController::class, 'stats']);
+
+    Route::get('page-content', [PageContentController::class, 'index']);
+    Route::get('page-content/{slug}', [PageContentController::class, 'show']);
+    Route::patch('page-content/{slug}', [PageContentController::class, 'update']);
+    Route::patch('page-content/{slug}/publish', [PageContentController::class, 'publish']);
+    Route::patch('page-content/{slug}/unpublish', [PageContentController::class, 'unpublish']);
+    Route::get('page-content/{slug}/audit', [PageContentController::class, 'audit']);
+
+    Route::get('blog-workflow', [BlogWorkflowController::class, 'index']);
+    Route::get('blog-workflow/posts/{post}', [BlogWorkflowController::class, 'show']);
+    Route::patch('blog-workflow/posts/{post}/submit', [BlogWorkflowController::class, 'submit']);
+    Route::patch('blog-workflow/posts/{post}/approve', [BlogWorkflowController::class, 'approve']);
+    Route::patch('blog-workflow/posts/{post}/reject', [BlogWorkflowController::class, 'reject']);
+    Route::patch('blog-workflow/posts/{post}/publish', [BlogWorkflowController::class, 'publish']);
+    Route::patch('blog-workflow/posts/{post}/unpublish', [BlogWorkflowController::class, 'unpublish']);
+    Route::patch('blog-workflow/posts/{post}/archive', [BlogWorkflowController::class, 'archive']);
 });

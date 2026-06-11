@@ -11,31 +11,32 @@ The complete CMS admin UI has been built as a separate Vue 3 + TypeScript applic
 ### 1. Admin-UI Application Structure ✅
 
 ```
-admin-ui/
-├── index.html                    ← App entry point
-├── package.json                  ← Dependencies: vue, pinia, vue-router, tailwindcss
-├── vite.config.ts               ← Configured for port 5174
-├── tsconfig.json                ← TypeScript config
-├── tailwind.config.ts           ← Tailwind theming
-├── postcss.config.js            ← CSS processing
-├── src/
-│   ├── main.ts                  ← Vue app bootstrap
-│   ├── App.vue                  ← Root component
-│   ├── style.css                ← Global styles
-│   ├── router/
-│   │   └── index.ts             ← Routes + guards
-│   ├── stores/
-│   │   └── auth.ts              ← Pinia auth store
-│   ├── layouts/
-│   │   └── AdminLayout.vue      ← Main layout (sidebar + topbar)
-│   └── pages/
-│       ├── DashboardPage.vue    ← Dashboard with stats
-│       ├── auth/
-│       │   └── AdminLoginPage.vue
-│       └── content/
-│           ├── ContentLibraryPage.vue
-│           ├── PageContentEditorPage.vue
-│           └── BlogWorkflowPage.vue
+admin/
+└── admin-ui/
+    ├── index.html               ← App entry point
+    ├── package.json             ← Dependencies: vue, pinia, vue-router, tailwindcss
+    ├── vite.config.ts          ← Configured for port 5174
+    ├── tsconfig.json           ← TypeScript config
+    ├── tailwind.config.ts      ← Tailwind theming
+    ├── postcss.config.js       ← CSS processing
+    └── src/
+        ├── main.ts             ← Vue app bootstrap
+        ├── App.vue             ← Root component
+        ├── style.css           ← Global styles
+        ├── router/
+        │   └── index.ts        ← Routes + guards
+        ├── stores/
+        │   └── auth.ts         ← Pinia auth store
+        ├── layouts/
+        │   └── AdminLayout.vue ← Main layout (sidebar + topbar)
+        └── pages/
+            ├── DashboardPage.vue    ← Dashboard with stats
+            ├── auth/
+            │   └── AdminLoginPage.vue
+            └── content/
+                ├── ContentLibraryPage.vue
+                ├── PageContentEditorPage.vue
+                └── BlogWorkflowPage.vue
 ```
 
 ### 2. Routes ✅
@@ -112,7 +113,7 @@ PATCH  /api/v1/admin/blog-workflow/posts/{post}/archive
 ### Step 1: Install Dependencies
 
 ```bash
-cd C:\laragon\www\Ziadic\admin-ui
+cd C:\laragon\www\Ziadic\admin\admin-ui
 npm install
 ```
 

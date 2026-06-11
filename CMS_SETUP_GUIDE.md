@@ -98,7 +98,7 @@ curl http://localhost:8000/api/v1/admin/content-library \
 ### 1. Install Dependencies
 
 ```bash
-cd C:\laragon\www\Ziadic\admin-ui
+cd C:\laragon\www\Ziadic\admin\admin-ui
 npm install
 ```
 
@@ -136,7 +136,7 @@ admin-ui/
 ### 3. Start Development Server
 
 ```bash
-cd C:\laragon\www\Ziadic\admin-ui
+cd C:\laragon\www\Ziadic\admin\admin-ui
 npm run dev
 ```
 

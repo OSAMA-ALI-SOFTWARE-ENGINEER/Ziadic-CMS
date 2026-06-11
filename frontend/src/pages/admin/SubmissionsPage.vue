@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
-import { useApiClient } from '@/composables/useApiClient'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -10,13 +9,11 @@ import InputGroupAddon from 'primevue/inputgroupaddon'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Dialog from 'primevue/dialog'
-import Textarea from 'primevue/textarea'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 
-const api = useApiClient()
 const toast = useToast()
 const confirm = useConfirm()
 
@@ -26,6 +23,7 @@ const statusFilter = ref('')
 const searchQuery = ref('')
 const selectedSubmission = ref<any>(null)
 const showDetails = ref(false)
+const showRejectModal = ref(false)
 const rejectionReason = ref('')
 
 const statusOptions = [
@@ -48,13 +46,14 @@ const filteredSubmissions = computed(() => {
 async function loadSubmissions() {
   try {
     loading.value = true
-    const response = await api.get('/api/v1/admin/submissions', {
-      params: {
-        status: statusFilter.value,
-        search: searchQuery.value,
-      },
-    })
-    submissions.value = response.data.data || []
+    const params = new URLSearchParams()
+    if (statusFilter.value) params.append('status', statusFilter.value)
+    if (searchQuery.value) params.append('search', searchQuery.value)
+
+    const url = `/api/v1/admin/submissions${params.toString() ? '?' + params.toString() : ''}`
+    const response = await fetch(url)
+    const data = await response.json()
+    submissions.value = data.data || []
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -68,8 +67,9 @@ async function loadSubmissions() {
 
 async function viewDetails(submission: any) {
   try {
-    const response = await api.get(`/api/v1/admin/submissions/${submission.id}`)
-    selectedSubmission.value = response.data
+    const response = await fetch(`/api/v1/admin/submissions/${submission.id}`)
+    const data = await response.json()
+    selectedSubmission.value = data
     showDetails.value = true
   } catch (error) {
     toast.add({
@@ -87,7 +87,10 @@ function confirmApprove(submission: any) {
     icon: 'pi pi-check',
     accept: async () => {
       try {
-        await api.patch(`/api/v1/admin/submissions/${submission.id}/approve`)
+        const response = await fetch(`/api/v1/admin/submissions/${submission.id}/approve`, {
+          method: 'PATCH',
+        })
+        if (!response.ok) throw new Error('Failed to approve')
         toast.add({ severity: 'success', summary: 'Success', detail: 'Submission approved' })
         showDetails.value = false
         loadSubmissions()
@@ -99,40 +102,34 @@ function confirmApprove(submission: any) {
 }
 
 function confirmReject(submission: any) {
-  confirm.require({
-    message: `Reject "${submission.title}"?`,
-    header: 'Confirm Rejection',
-    icon: 'pi pi-times',
-    accept: () => {
-      rejectionReason.value = ''
-      // Show rejection reason dialog
-      confirm.require({
-        message: 'Provide a reason for rejection:',
-        header: 'Rejection Reason',
-        icon: 'pi pi-exclamation-triangle',
-        accept: async () => {
-          if (!rejectionReason.value.trim()) {
-            toast.add({
-              severity: 'warn',
-              summary: 'Warning',
-              detail: 'Please provide a rejection reason',
-            })
-            return
-          }
-          try {
-            await api.patch(`/api/v1/admin/submissions/${submission.id}/reject`, {
-              rejection_reason: rejectionReason.value,
-            })
-            toast.add({ severity: 'success', summary: 'Success', detail: 'Submission rejected' })
-            showDetails.value = false
-            loadSubmissions()
-          } catch (error) {
-            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to reject submission' })
-          }
-        },
-      })
-    },
-  })
+  rejectionReason.value = ''
+  selectedSubmission.value = submission
+  showRejectModal.value = true
+}
+
+async function submitRejection() {
+  if (!rejectionReason.value.trim()) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: 'Please provide a rejection reason',
+    })
+    return
+  }
+  try {
+    const response = await fetch(`/api/v1/admin/submissions/${selectedSubmission.value.id}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rejection_reason: rejectionReason.value }),
+    })
+    if (!response.ok) throw new Error('Failed to reject')
+    toast.add({ severity: 'success', summary: 'Success', detail: 'Submission rejected' })
+    showRejectModal.value = false
+    showDetails.value = false
+    loadSubmissions()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to reject submission' })
+  }
 }
 
 function confirmDelete(submission: any) {
@@ -142,7 +139,10 @@ function confirmDelete(submission: any) {
     icon: 'pi pi-trash',
     accept: async () => {
       try {
-        await api.delete(`/api/v1/admin/submissions/${submission.id}`)
+        const response = await fetch(`/api/v1/admin/submissions/${submission.id}`, {
+          method: 'DELETE',
+        })
+        if (!response.ok) throw new Error('Failed to delete')
         toast.add({ severity: 'success', summary: 'Success', detail: 'Submission deleted' })
         loadSubmissions()
       } catch (error) {
@@ -256,6 +256,40 @@ onMounted(() => {
         </DataTable>
       </template>
     </Card>
+
+    <!-- Rejection Reason Modal -->
+    <Dialog
+      v-model:visible="showRejectModal"
+      header="Rejection Reason"
+      :modal="true"
+      :style="{ width: '500px' }"
+    >
+      <div v-if="selectedSubmission" class="rejection-modal">
+        <div class="form-group">
+          <label>Why are you rejecting this submission?</label>
+          <textarea
+            v-model="rejectionReason"
+            rows="4"
+            placeholder="Provide constructive feedback..."
+            class="rejection-textarea"
+          />
+        </div>
+        <div class="actions">
+          <Button
+            label="Reject"
+            icon="pi pi-check"
+            class="p-button-danger"
+            @click="submitRejection"
+          />
+          <Button
+            label="Cancel"
+            icon="pi pi-times"
+            class="p-button-secondary"
+            @click="showRejectModal = false"
+          />
+        </div>
+      </div>
+    </Dialog>
 
     <!-- Details Dialog -->
     <Dialog
@@ -506,6 +540,37 @@ onMounted(() => {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.rejection-modal {
+  padding: 1rem 0;
+}
+
+.rejection-modal .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.rejection-modal label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.rejection-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.rejection-textarea:focus {
+  outline: none;
+  border-color: #c41e3a;
+  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
 }
 
 @media (max-width: 768px) {

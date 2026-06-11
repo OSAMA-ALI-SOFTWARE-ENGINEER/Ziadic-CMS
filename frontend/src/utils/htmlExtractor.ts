@@ -98,8 +98,7 @@ export function cleanupHtml(html: string, options: {
  */
 export function createVueComponent(
   bodyHtml: string,
-  styles: string,
-  pageName: string
+  styles: string
 ): string {
   return `<template>
   <div class="page-wrapper">

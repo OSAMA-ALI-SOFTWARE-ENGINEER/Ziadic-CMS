@@ -11,10 +11,20 @@ import RegisterPage from '@/pages/auth/RegisterPage.vue'
 import BlogPage from '@/pages/BlogPage.vue'
 import BlogDetailPage from '@/pages/BlogDetailPage.vue'
 
-// Legacy template pages (Phase 1: Vue Migration)
+// Phase 1: Vue Migration - All remaining pages (lazy loaded)
 const ContactPage = () => import('@/pages/ContactPage.vue')
 const ServicesPage = () => import('@/pages/ServicesPage.vue')
 const PricingPage = () => import('@/pages/PricingPage.vue')
+const CitiesIndexPage = () => import('@/pages/CitiesIndexPage.vue')
+const ListingsIndexPage = () => import('@/pages/ListingsIndexPage.vue')
+const BlogsIndexPage = () => import('@/pages/BlogsIndexPage.vue')
+const AddListingPage = () => import('@/pages/AddListingPage.vue')
+const SearchPage = () => import('@/pages/SearchPage.vue')
+// Detail pages still handled by legacyRoutes - will be migrated in Phase 1B+
+// const ListingDetailPage = () => import('@/pages/details/ListingDetailPage.vue')
+// const CityDetailPage = () => import('@/pages/details/CityDetailPage.vue')
+// const TeamDetailPage = () => import('@/pages/details/TeamDetailPage.vue')
+// const CategoryDetailPage = () => import('@/pages/details/CategoryDetailPage.vue')
 import AdminDashboardPage from '@/pages/admin/DashboardPage.vue'
 import AdminListingsPage from '@/pages/admin/ListingsPage.vue'
 import AdminUsersPage from '@/pages/admin/UsersPage.vue'
@@ -284,6 +294,46 @@ const router = createRouter({
           component: PricingPage,
           meta: {
             title: 'Pricing | Zaidic',
+          },
+        },
+        {
+          path: 'cities',
+          name: 'cities',
+          component: CitiesIndexPage,
+          meta: {
+            title: 'Cities | Zaidic',
+          },
+        },
+        {
+          path: 'listings-index',
+          name: 'listings-index',
+          component: ListingsIndexPage,
+          meta: {
+            title: 'Listings | Zaidic',
+          },
+        },
+        {
+          path: 'blogs-index',
+          name: 'blogs-index',
+          component: BlogsIndexPage,
+          meta: {
+            title: 'Blogs | Zaidic',
+          },
+        },
+        {
+          path: 'add-listing',
+          name: 'add-listing',
+          component: AddListingPage,
+          meta: {
+            title: 'Add Listing | Zaidic',
+          },
+        },
+        {
+          path: 'search',
+          name: 'search',
+          component: SearchPage,
+          meta: {
+            title: 'Search Results | Zaidic',
           },
         },
         ...legacyRoutes.map((route) => ({

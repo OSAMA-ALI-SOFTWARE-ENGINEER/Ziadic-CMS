@@ -10,6 +10,11 @@ import LoginPage from '@/pages/auth/LoginPage.vue'
 import RegisterPage from '@/pages/auth/RegisterPage.vue'
 import BlogPage from '@/pages/BlogPage.vue'
 import BlogDetailPage from '@/pages/BlogDetailPage.vue'
+
+// Legacy template pages (Phase 1: Vue Migration)
+const ContactPage = () => import('@/pages/ContactPage.vue')
+const ServicesPage = () => import('@/pages/ServicesPage.vue')
+const PricingPage = () => import('@/pages/PricingPage.vue')
 import AdminDashboardPage from '@/pages/admin/DashboardPage.vue'
 import AdminListingsPage from '@/pages/admin/ListingsPage.vue'
 import AdminUsersPage from '@/pages/admin/UsersPage.vue'
@@ -255,6 +260,30 @@ const router = createRouter({
           component: BlogDetailPage,
           meta: {
             title: 'Blog Post | Zaidic',
+          },
+        },
+        {
+          path: 'contact',
+          name: 'contact',
+          component: ContactPage,
+          meta: {
+            title: 'Contact Us | Zaidic',
+          },
+        },
+        {
+          path: 'services',
+          name: 'services',
+          component: ServicesPage,
+          meta: {
+            title: 'Services | Zaidic',
+          },
+        },
+        {
+          path: 'pricing',
+          name: 'pricing',
+          component: PricingPage,
+          meta: {
+            title: 'Pricing | Zaidic',
           },
         },
         ...legacyRoutes.map((route) => ({

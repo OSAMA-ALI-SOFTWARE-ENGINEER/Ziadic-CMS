@@ -1,5 +1,5 @@
 <template>
-  <LegacyWebflowPage legacy-path="/legacy/index.html" loading-label="Loading Home..." />
+  <LegacyWebflowPage legacy-path="/legacy/template-pages/contact-us.html" loading-label="Loading Contact..." />
 </template>
 
 <script setup lang="ts">

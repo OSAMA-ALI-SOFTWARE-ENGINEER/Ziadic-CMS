@@ -31,6 +31,7 @@ import AdminListingsPage from '@/pages/admin/ListingsPage.vue'
 import AdminUsersPage from '@/pages/admin/UsersPage.vue'
 import AdminActivityPage from '@/pages/admin/ActivityPage.vue'
 import AdminSettingsPage from '@/pages/admin/SettingsPage.vue'
+import AdminSubmissionsPage from '@/pages/admin/SubmissionsPage.vue'
 import UserDashboardPage from '@/pages/DashboardPage.vue'
 
 const legacyRoutes = [
@@ -222,6 +223,15 @@ const router = createRouter({
           component: AdminSettingsPage,
           meta: {
             title: 'Settings | Admin',
+            requiresAdmin: true,
+          },
+        },
+        {
+          path: 'submissions',
+          name: 'admin-submissions',
+          component: AdminSubmissionsPage,
+          meta: {
+            title: 'Submissions | Admin',
             requiresAdmin: true,
           },
         },

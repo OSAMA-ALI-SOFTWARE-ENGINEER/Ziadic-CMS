@@ -409,4 +409,11 @@ Route::prefix('v1/admin')->middleware('auth:sanctum')->group(function (): void {
 
     Route::get('newsletter-subscribers', [NewsletterSubscriberController::class, 'index']);
     Route::delete('newsletter-subscribers/{newsletterSubscriber}', [NewsletterSubscriberController::class, 'destroy']);
+
+    // Listing Submissions
+    Route::get('submissions', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'index']);
+    Route::get('submissions/{submission}', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'show']);
+    Route::patch('submissions/{submission}/approve', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'approve']);
+    Route::patch('submissions/{submission}/reject', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'reject']);
+    Route::delete('submissions/{submission}', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'destroy']);
 });

@@ -23,6 +23,11 @@ const menuItems = computed(() => [
     to: '/admin/listings',
   },
   {
+    label: 'Submissions',
+    icon: 'pi pi-fw pi-inbox',
+    to: '/admin/submissions',
+  },
+  {
     label: 'Users',
     icon: 'pi pi-fw pi-users',
     to: '/admin/users',

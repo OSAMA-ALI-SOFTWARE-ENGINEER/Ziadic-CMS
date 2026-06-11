@@ -306,8 +306,15 @@ async function submitForm() {
       formData.append('image', form.value.image)
     }
 
-    // TODO: Call API to submit listing
-    // await submitListing(formData)
+    const response = await fetch('/api/v1/public/listings/submit', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to submit listing')
+    }
 
     successMessage.value = 'Listing submitted successfully! Our team will review it shortly.'
 
@@ -316,7 +323,7 @@ async function submitForm() {
       router.push('/listings')
     }, 2000)
   } catch (error) {
-    errorMessage.value = 'Failed to submit listing. Please try again.'
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to submit listing. Please try again.'
   } finally {
     isSubmitting.value = false
   }

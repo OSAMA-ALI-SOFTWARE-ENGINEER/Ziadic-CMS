@@ -701,6 +701,10 @@ input {
   flex: 1;
 }
 
+.global-search input {
+  padding: 0px 40px;
+}
+
 .global-search__dropdown {
   position: absolute;
   left: 0;

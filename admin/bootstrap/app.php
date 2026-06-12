@@ -15,6 +15,21 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+
+        // Apply CORS to all routes
+        $middleware->use([
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+
+        // Register custom middleware aliases
+        $middleware->alias([
+            'admin-auth' => \App\Http\Middleware\AdminAuth::class,
+        ]);
+
+        // Exclude API routes from CSRF protection (Bearer token auth doesn't need CSRF)
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

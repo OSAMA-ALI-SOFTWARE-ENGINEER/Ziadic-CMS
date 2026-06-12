@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { api } from '@/services/api'
 import { useRoute, useRouter } from 'vue-router'
 import BgSwitcher from '@/components/BgSwitcher.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -16,6 +17,7 @@ const isCollapsed = ref(false)
 const isDark = ref(false)
 const isUserMenuOpen = ref(false)
 const isNotificationsOpen = ref(false)
+const pendingCount = ref(0)
 const isMobileSearchOpen = ref(false)
 const searchQuery = ref('')
 const isSearchOpen = ref(false)
@@ -27,6 +29,7 @@ const navigationGroups = [
       { label: 'Dashboard', to: '/dashboard', icon: 'pi pi-home' },
       { label: 'Listings', to: '/listings', icon: 'pi pi-building' },
       { label: 'Approvals', to: '/approvals', icon: 'pi pi-check-circle' },
+      { label: 'Submitted Listings', to: '/submissions', icon: 'pi pi-inbox' },
       { label: 'Categories', to: '/categories', icon: 'pi pi-tags' },
     ],
   },
@@ -34,6 +37,7 @@ const navigationGroups = [
     label: 'Content',
     items: [
       { label: 'Content', to: '/content', icon: 'pi pi-file-edit' },
+      { label: 'Blog Articles', to: '/blog-articles', icon: 'pi pi-book' },
       { label: 'Media', to: '/media', icon: 'pi pi-images' },
     ],
   },
@@ -50,6 +54,7 @@ const navigationGroups = [
       { label: 'Users', to: '/users', icon: 'pi pi-users' },
       { label: 'Roles', to: '/roles', icon: 'pi pi-shield' },
       { label: 'Settings', to: '/settings', icon: 'pi pi-cog' },
+      { label: 'Activity Logs', to: '/activity-logs', icon: 'pi pi-list' },
     ],
   },
 ]
@@ -85,10 +90,34 @@ async function logout() {
 onMounted(() => {
   isDark.value = localStorage.getItem('cms-theme') === 'dark'
   applyTheme()
+  startPendingPoll()
 })
 
 onBeforeUnmount(() => {
   closeSearch()
+  stopPendingPoll()
+})
+
+let pollTimer: any = null
+function startPendingPoll() {
+  fetchPendingCount()
+  pollTimer = setInterval(fetchPendingCount, 10000)
+}
+function stopPendingPoll() {
+  if (pollTimer) clearInterval(pollTimer)
+}
+async function fetchPendingCount() {
+  try {
+    const res = await api.get('/submissions/count')
+    pendingCount.value = res.data.count || 0
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Listen for optimistic update events from pages to refresh immediately
+window.addEventListener('pending-count-updated', () => {
+  fetchPendingCount()
 })
 </script>
 
@@ -147,6 +176,7 @@ onBeforeUnmount(() => {
           >
             <i :class="item.icon" aria-hidden="true"></i>
             <span v-show="!isCollapsed">{{ item.label }}</span>
+            <span v-if="item.to === '/submissions' && pendingCount > 0" class="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">{{ pendingCount }}</span>
           </RouterLink>
         </div>
       </nav>

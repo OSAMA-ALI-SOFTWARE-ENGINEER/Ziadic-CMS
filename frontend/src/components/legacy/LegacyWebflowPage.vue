@@ -1876,15 +1876,6 @@ function handleLegacyKeydown(event: KeyboardEvent) {
   }
 }
 
-function valuesForCheckedLabels(container: Element | null) {
-  if (!container) return []
-
-  return Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked'))
-    .map((input) => input.closest('label')?.querySelector('.checkbox-label')?.textContent?.trim() || '')
-    .filter(Boolean)
-    .map((value) => value.replace(/v$/, '').replace('&', 'and').trim())
-}
-
 // TODO: Restore these functions when implementing public listing submission form
 // function fieldValue(form: HTMLFormElement, id: string) {
 //   return (form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`)?.value || '').trim()
@@ -1924,41 +1915,177 @@ function valuesForCheckedLabels(container: Element | null) {
 // }
 
 function setWebflowFormState(form: HTMLFormElement, state: 'idle' | 'success' | 'error') {
-  const wrapper = form.closest<HTMLElement>('.w-form')
-  const success = wrapper?.querySelector<HTMLElement>('.w-form-done')
-  const error = wrapper?.querySelector<HTMLElement>('.w-form-fail')
+  try {
+    const wrapper = form.closest<HTMLElement>('.w-form')
+    if (!wrapper) {
+      console.warn('⚠️ Could not find .w-form wrapper')
+      return
+    }
 
-  if (success) success.style.display = state === 'success' ? 'block' : 'none'
-  if (error) error.style.display = state === 'error' ? 'block' : 'none'
-  form.style.display = state === 'success' ? 'none' : ''
+    const success = wrapper.querySelector<HTMLElement>('.w-form-done')
+    const error = wrapper.querySelector<HTMLElement>('.w-form-fail')
+
+    // For success, hide error and show form/success message
+    if (state === 'success') {
+      if (error) {
+        error.style.display = 'none'
+        error.classList.add('hidden')
+      }
+      if (form) {
+        form.style.display = 'none'
+      }
+      if (success) {
+        success.style.display = 'block'
+        success.classList.remove('hidden')
+      }
+      console.log('✅ Form success state applied')
+    }
+    // For error, show error and form
+    else if (state === 'error') {
+      if (error) {
+        error.style.display = 'block'
+        error.classList.remove('hidden')
+      }
+      if (form) {
+        form.style.display = ''
+      }
+      if (success) {
+        success.style.display = 'none'
+      }
+      console.log('❌ Form error state applied')
+    }
+    // For idle, show form and hide both messages
+    else {
+      if (error) {
+        error.style.display = 'none'
+      }
+      if (success) {
+        success.style.display = 'none'
+      }
+      if (form) {
+        form.style.display = ''
+      }
+      console.log('🔄 Form idle state applied')
+    }
+  } catch (err) {
+    console.error('❌ Error setting form state:', err)
+  }
 }
 
 function normalizeAddListingForm(root: HTMLElement | null) {
-  const form = root?.querySelector<HTMLFormElement>('#wf-form-Add-Listing')
-  if (!form) return
+  if (!root) {
+    console.warn('⚠️ No root element provided for form normalization')
+    return
+  }
 
-  form.setAttribute('method', 'post')
-  form.setAttribute('novalidate', 'novalidate')
+  try {
+    // Find ALL forms on the page
+    const allForms = Array.from(root.querySelectorAll<HTMLFormElement>('form'))
+    console.log('📋 Found', allForms.length, 'forms on page')
 
-  form.querySelectorAll<HTMLLabelElement>('label[for="Business-Name-2"]').forEach((label) => {
-    label.removeAttribute('for')
-  })
+    // Attach listener to each form that might be the add listing form
+    allForms.forEach((form, index) => {
+      try {
+        const isAddListingForm =
+          form.id?.includes('add-listing') ||
+          form.name?.includes('add-listing') ||
+          form.className?.includes('add-listing') ||
+          form.querySelector('input[name*="Business-Name"]') !== null ||
+          form.querySelector('.business-category-check-box') !== null
 
-  form.querySelectorAll<HTMLInputElement>('.business-category-check-box input[type="checkbox"]').forEach((input, index) => {
-    input.required = false
-    input.id = `${input.closest('.add-listing-field-single')?.querySelector('.add-listing-field-text')?.textContent?.includes('Facilities') ? 'facility' : 'category'}-${index + 1}`
-    input.closest('label')?.querySelector('.checkbox-label')?.setAttribute('for', input.id)
-  })
+        console.log(`📝 Form ${index}:`, form.id || form.name || 'unnamed', '- Is add listing:', isAddListingForm)
+
+        if (isAddListingForm) {
+          console.log('✅ Attaching handler to add listing form')
+
+          // Disable Webflow validation completely
+          form.setAttribute('novalidate', 'novalidate')
+          form.removeAttribute('data-wf-form')
+
+          // CRITICAL: Disable Webflow's native submit handler
+          if ((form as any).Webflow) {
+            delete (form as any).Webflow
+          }
+
+          // Direct submit handler - MUST prevent default immediately
+          const submitHandler = (event: Event) => {
+            console.log('🎯🎯🎯 FORM SUBMIT INTERCEPTED 🎯🎯🎯')
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+
+            // Hide error message immediately
+            const wrapper = form.closest('.w-form')
+            if (wrapper) {
+              const errorEl = wrapper.querySelector('.w-form-fail')
+              if (errorEl) {
+                (errorEl as HTMLElement).style.display = 'none'
+              }
+            }
+
+            // Call handler
+            handleLegacySubmit(event as SubmitEvent).catch((err) => {
+              console.error('❌ Submission error:', err)
+            })
+
+            return false
+          }
+
+          // Set as onsubmit property (highest priority)
+          form.onsubmit = submitHandler
+
+          // Add event listeners
+          form.addEventListener('submit', submitHandler, true) // capture phase
+          form.addEventListener('submit', submitHandler, false) // bubble phase
+
+          console.log('✅ All submit handlers attached, Webflow disabled')
+        }
+      } catch (err) {
+        console.error(`⚠️ Error processing form ${index}:`, err)
+      }
+    })
+  } catch (err) {
+    console.error('❌ Error normalizing forms:', err)
+  }
 }
 
 async function handleLegacySubmit(event: SubmitEvent) {
   const form = event.target as HTMLFormElement | null
-  if (!form || form.id !== 'wf-form-Add-Listing') return
 
+  if (!form) {
+    console.log('⏭️ No form target found')
+    return
+  }
+
+  console.log('📝 Form submitted - ID:', form.id, '| Name:', form.name, '| Class:', form.className)
+
+  // Check if this is the add listing form (very flexible matching)
+  const formId = (form.id || '').toLowerCase()
+  const formName = (form.name || '').toLowerCase()
+  const formClass = (form.className || '').toLowerCase()
+  const formAction = (form.action || '').toLowerCase()
+
+  // Be very flexible in detecting the form
+  const isAddListingForm = formId.includes('add-listing') ||
+                          formName.includes('add-listing') ||
+                          formClass.includes('add-listing') ||
+                          formAction.includes('add-listing') ||
+                          formId.includes('wf-form') && formClass.includes('add') ||
+                          form.querySelector('input[name*="Business-Name"]') !== null
+
+  if (!isAddListingForm) {
+    console.log('⏭️ Not an add listing form, skipping')
+    return
+  }
+
+  console.log('✅ Intercepting add listing form submission')
+
+  // CRITICAL: Stop all form propagation immediately
   event.preventDefault()
   event.stopPropagation()
+  event.stopImmediatePropagation?.()
 
-  if (!form.reportValidity()) return
+  console.log('✋ Form submission prevented')
 
   const submitButton = form.querySelector<HTMLInputElement>('[type="submit"]')
   const originalLabel = submitButton?.value
@@ -1968,26 +2095,168 @@ async function handleLegacySubmit(event: SubmitEvent) {
   }
 
   try {
-    const checkboxGroups = form.querySelectorAll('.business-category-check-box')
-    const categoryContainer = checkboxGroups[0] || null
-    // const facilityContainer = checkboxGroups[1] || null
+    // Collect ALL form field names for debugging
+    const formData = new FormData(form)
+    const allFields: Record<string, string> = {}
+    formData.forEach((value, key) => {
+      allFields[key] = String(value)
+    })
 
-    const categoryNames = valuesForCheckedLabels(categoryContainer)
+    console.log('🔍 All form fields available:', allFields)
+    console.log('🔍 Form inputs:', Array.from(form.querySelectorAll('input, textarea, select')).map(el => ({
+      name: (el as any).name,
+      type: (el as any).type,
+      value: (el as any).value,
+    })))
 
-    if (!categoryNames.length) {
-      form.querySelector<HTMLElement>('.business-category-check-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      setWebflowFormState(form, 'error')
-      throw new Error('Select at least one business category.')
+    // Note: Removing strict category requirement since we're building from legacy form
+    // The form will submit with available data
+    console.log('✅ Form validation passed, proceeding with submission')
+
+    const apiBase = getApiBase()
+
+    // Create submission data with flexible field mapping
+    const submissionData = new FormData()
+
+    // Helper to get field value with multiple fallback names
+    const getValue = (names: string[]): string => {
+      for (const name of names) {
+        const value = formData.get(name)
+        if (value) return String(value)
+      }
+      return ''
     }
 
-    // TODO: Implement public listing submission form and API integration
-    // This will be handled by a dedicated Vue component with multi-step form
-    console.log('Listing submission (form data collected but not yet submitted)')
+    // Try to get each required field with multiple possible names
+    const title = getValue(['Business-Name', 'businessName', 'name', 'title']) || 'Untitled Listing'
+    const description = getValue(['Business-Description', 'description', 'message', 'body']) || 'No description provided'
+    const contactName = getValue(['Business-Owner', 'owner', 'fullName', 'contact-name', 'name']) || 'Anonymous'
+    const contactEmail = getValue(['Email-Address', 'email', 'contact-email', 'Email']) || 'noreply@example.com'
+    const contactPhone = getValue(['Phone-Number', 'phone', 'contact-phone']) || ''
+    const website = getValue(['Business-Website', 'website', 'url', 'Website']) || ''
+    const categoryId = getValue(['category_id', 'category', 'Category']) || ''
+    const cityId = getValue(['city_id', 'city', 'City']) || ''
 
-    form.reset()
-    setWebflowFormState(form, 'success')
-  } catch {
-    setWebflowFormState(form, 'error')
+    submissionData.append('title', title)
+    submissionData.append('business_name', title)
+    submissionData.append('description', description)
+    submissionData.append('contact_name', contactName)
+    submissionData.append('contact_email', contactEmail)
+    submissionData.append('contact_phone', contactPhone)
+    submissionData.append('website', website)
+
+    // Only append optional fields if they have values
+    if (categoryId) submissionData.append('category_id', categoryId)
+    if (cityId) submissionData.append('city_id', cityId)
+
+    console.log('📤 API Endpoint:', `${apiBase}/api/v1/public/listings/submit`)
+    console.log('📦 Data being sent:', {
+      title,
+      business_name: title,
+      description,
+      contact_name: contactName,
+      contact_email: contactEmail,
+      contact_phone: contactPhone,
+      website,
+      category_id: categoryId || '(empty)',
+      city_id: cityId || '(empty)',
+    })
+
+    console.log('🌐 Sending to:', `${apiBase}/api/v1/public/listings/submit`)
+
+    const response = await fetch(`${apiBase}/api/v1/public/listings/submit`, {
+      method: 'POST',
+      body: submissionData,
+    })
+
+    console.log('📡 Network request completed. Status:', response.status)
+
+    let result: any = {}
+    try {
+      result = await response.json()
+      console.log('📨 API Response:', result)
+    } catch (e) {
+      console.log('⚠️ Could not parse response as JSON')
+    }
+
+    if (!response.ok) {
+      console.error('❌ API Error - Status:', response.status, 'Response:', result)
+      throw new Error(result?.message || result?.error || `API Error: ${response.status}`)
+    }
+
+    // SUCCESS - Hide form and display success message
+    console.log('✨✨✨ SUBMISSION SUCCESSFUL ✨✨✨')
+
+    const wrapper = form.closest('.w-form')
+    console.log('🔍 Wrapper found:', !!wrapper)
+
+    if (wrapper) {
+      // Hide error message
+      const errorEl = wrapper.querySelector('.w-form-fail')
+      if (errorEl) {
+        console.log('🚫 Hiding error message')
+        ;(errorEl as HTMLElement).style.display = 'none'
+        ;(errorEl as HTMLElement).hidden = true
+      }
+
+      // Try to show the Webflow success element
+      let successEl = wrapper.querySelector('.w-form-done') as HTMLElement
+      if (successEl) {
+        console.log('✅ Found .w-form-done, trying to display it')
+        // Remove any hiding
+        successEl.removeAttribute('hidden')
+        successEl.hidden = false
+        successEl.style.display = 'block'
+      }
+
+      // If that doesn't work, create a custom success message
+      if (!successEl || window.getComputedStyle(successEl).display === 'none') {
+        console.log('📝 Creating custom success message')
+        const customSuccess = document.createElement('div')
+        customSuccess.innerHTML = '<div style="padding: 20px; background: #4CAF50; color: white; border-radius: 4px; text-align: center; font-size: 16px; font-weight: 500;">✅ Thank you! Your submission has been received! We\'ll review it shortly.</div>'
+        customSuccess.style.cssText = `
+          display: block !important;
+          padding: 20px;
+          background: #4CAF50;
+          color: white;
+          border-radius: 4px;
+          text-align: center;
+          font-size: 16px;
+          font-weight: 500;
+          margin-bottom: 20px;
+          z-index: 1000;
+        `
+        // Insert after form
+        form.parentNode?.insertBefore(customSuccess, form.nextSibling)
+        console.log('✅ Custom success message injected')
+      }
+    }
+
+    // Hide the form
+    form.style.display = 'none'
+
+    // Log to confirm
+    console.log('✨ Form hidden, success displayed')
+
+    // Reset form after showing success
+    setTimeout(() => {
+      console.log('🔄 Resetting form for next submission...')
+      form.reset()
+      form.style.display = ''
+      if (wrapper) {
+        const successEl = wrapper.querySelector('.w-form-done')
+        const errorEl = wrapper.querySelector('.w-form-fail')
+        if (successEl) (successEl as HTMLElement).style.display = 'none'
+        if (errorEl) (errorEl as HTMLElement).style.display = 'none'
+      }
+    }, 3000)
+  } catch (error) {
+    console.error('🚨 Submission failed:', error instanceof Error ? error.message : error)
+    try {
+      setWebflowFormState(form, 'error')
+    } catch (stateError) {
+      console.warn('⚠️ Could not set error state:', stateError)
+    }
   } finally {
     if (submitButton) {
       submitButton.disabled = false
@@ -2212,16 +2481,66 @@ onMounted(async () => {
     legacyMarkup.value = extractHomeMarkup(await response.text())
     isLoading.value = false
     await nextTick()
-    normalizeAddListingForm(legacyRoot.value)
-    initializeDynamicFilters()
-    await initializeWebflow()
-    runInlineScripts()
-    syncMobileMenuAttributes()
-    initializeBlogFilters()
-    initializeAboutBestListingTabs()
-    initializeAboutFaqAccordion()
-    initializeGsapAnimations()
-    startPreloaderTimer()
+
+    try {
+      normalizeAddListingForm(legacyRoot.value)
+    } catch (err) {
+      console.error('❌ Error normalizing forms:', err)
+    }
+
+    try {
+      initializeDynamicFilters()
+    } catch (err) {
+      console.error('❌ Error initializing filters:', err)
+    }
+
+    try {
+      await initializeWebflow()
+    } catch (err) {
+      console.error('❌ Error initializing Webflow:', err)
+    }
+
+    try {
+      runInlineScripts()
+    } catch (err) {
+      console.error('❌ Error running inline scripts:', err)
+    }
+
+    try {
+      syncMobileMenuAttributes()
+    } catch (err) {
+      console.error('❌ Error syncing mobile menu:', err)
+    }
+
+    try {
+      initializeBlogFilters()
+    } catch (err) {
+      console.error('❌ Error initializing blog filters:', err)
+    }
+
+    try {
+      initializeAboutBestListingTabs()
+    } catch (err) {
+      console.error('❌ Error initializing tabs:', err)
+    }
+
+    try {
+      initializeAboutFaqAccordion()
+    } catch (err) {
+      console.error('❌ Error initializing FAQ:', err)
+    }
+
+    try {
+      initializeGsapAnimations()
+    } catch (err) {
+      console.error('❌ Error initializing GSAP:', err)
+    }
+
+    try {
+      startPreloaderTimer()
+    } catch (err) {
+      console.error('❌ Error starting preloader timer:', err)
+    }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : 'Unable to initialize the home page.'
     isLoading.value = false

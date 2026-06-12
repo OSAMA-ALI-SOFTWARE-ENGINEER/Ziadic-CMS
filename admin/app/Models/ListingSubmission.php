@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Models\Category;
+use App\Models\City;
+use App\Models\User;
+
 /**
  * @property int $id
  * @property string $title
@@ -28,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ListingSubmission extends Model
 {
     use SoftDeletes;
+
+    protected $table = 'listing_submissions';
 
     protected $fillable = [
         'title',

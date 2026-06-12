@@ -25,27 +25,50 @@ use App\Http\Controllers\Admin\NewsletterSubscriberController;
 use App\Http\Controllers\Admin\GlobalSearchController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\MediaController;
+use App\Http\Controllers\Admin\SubmittedListingController;
+use App\Http\Controllers\Admin\ApprovedListingController;
 use App\Http\Controllers\NewsletterSubscriptionController;
 use App\Http\Controllers\PublicListingSubmissionController;
+use App\Http\Controllers\PublicArticleController;
 
-Route::prefix('v1')->group(function (): void {
+// DEBUG ENDPOINTS - Check database status (no auth required for debugging)
+Route::get('api/v1/admin/debug/submissions-status', function () {
+    $submissions = \App\Models\ListingSubmission::select('id', 'title', 'status', 'reviewed_at')->orderBy('id', 'desc')->limit(20)->get();
+
+    return response()->json([
+        'total_count' => \App\Models\ListingSubmission::count(),
+        'status_breakdown' => \App\Models\ListingSubmission::groupBy('status')->selectRaw('status, count(*) as count')->get(),
+        'recent_submissions' => $submissions,
+    ]);
+});
+
+// DEBUG - Test what approvals query returns
+Route::get('api/v1/admin/debug/approved-listings', function (Request $request) {
+    $status = $request->get('status', 'approved');
+
+    \Log::info('DEBUG approved-listings query', ['status' => $status]);
+
+    $query = \App\Models\ListingSubmission::query()
+        ->where('status', '=', $status)
+        ->with(['category', 'city', 'reviewer']);
+
+    $listings = $query->orderBy('reviewed_at', 'desc')->get();
+
+    \Log::info('DEBUG approved-listings result', [
+        'status' => $status,
+        'count' => $listings->count(),
+        'titles' => $listings->pluck('title')->toArray(),
+    ]);
+
+    return response()->json([
+        'status' => $status,
+        'count' => $listings->count(),
+        'data' => $listings,
+    ]);
+});
+
+Route::prefix('api/v1')->group(function (): void {
     Route::get('health', fn() => ['status' => 'ok']);
-
-    // DEBUG: Test endpoints
-    Route::get('test/submissions', function () {
-        $count = \App\Models\ListingSubmission::count();
-        $submissions = \App\Models\ListingSubmission::with('category', 'city')->latest()->limit(5)->get();
-        return [
-            'total' => $count,
-            'recent' => $submissions->map(fn($s) => [
-                'id' => $s->id,
-                'title' => $s->title,
-                'status' => $s->status,
-                'email' => $s->contact_email,
-                'created_at' => $s->created_at,
-            ]),
-        ];
-    });
 
     Route::get('public/countries', function () {
         return countriesWithPlaceCounts()
@@ -135,7 +158,90 @@ Route::prefix('v1')->group(function (): void {
 
         return publicListingPayload($listing);
     });
+
+    Route::post('public/listings/submit', [PublicListingSubmissionController::class, 'store']);
 });
+
+// Removed - now using the endpoint in v1/public group below
+
+// Helpful debug route to check submissions table (local/dev only)
+Route::get('debug/submissions', function () {
+    return response()->json(['has_table' => \Schema::hasTable('listing_submissions')]);
+});
+
+// Create a demo submission (dev only)
+Route::post('debug/submissions/create', function () {
+    if (!\Schema::hasTable('listing_submissions')) {
+        return response()->json(['error' => 'listing_submissions table missing'], 400);
+    }
+
+    $data = [
+        'title' => 'Demo Coffee & Bistro',
+        'business_name' => 'Demo Coffee',
+        'description' => 'A demo listing created for UI verification.',
+        'category_id' => null,
+        'city_id' => null,
+        'contact_name' => 'Demo User',
+        'contact_email' => 'demo@example.com',
+        'contact_phone' => null,
+        'website' => 'https://example.com',
+        'image_path' => null,
+        'status' => 'pending',
+    ];
+
+    $submission = \App\Models\ListingSubmission::create($data);
+
+    return response()->json(['data' => $submission]);
+});
+
+// Create N demo submissions (dev only)
+Route::post('debug/submissions/seed', function (
+    Illuminate\Http\Request $request
+) {
+    $count = (int) $request->input('count', 10);
+    if (!\Schema::hasTable('listing_submissions')) {
+        return response()->json(['error' => 'listing_submissions table missing'], 400);
+    }
+
+    $items = [];
+    for ($i = 0; $i < $count; $i++) {
+        $data = [
+            'title' => "Demo Listing #" . (time() + $i),
+            'business_name' => 'Demo Business ' . ($i + 1),
+            'description' => 'Auto-seeded demo listing',
+            'contact_name' => 'Demo User',
+            'contact_email' => "demo+{$i}@example.com",
+            'status' => 'pending',
+        ];
+        $items[] = \App\Models\ListingSubmission::create($data);
+    }
+
+    return response()->json(['data' => $items]);
+});
+
+// Count pending submissions for UI badge
+Route::get('v1/admin/submissions/count', function () {
+    if (!\Schema::hasTable('listing_submissions')) {
+        return response()->json(['count' => 0]);
+    }
+    $c = \App\Models\ListingSubmission::where('status', 'pending')->count();
+    return response()->json(['count' => $c]);
+});
+
+// Ensure a 'login' route exists to avoid Redirect exceptions when auth middleware
+// attempts to redirect unauthenticated requests to the named route. For API
+// callers we return a 401 JSON response.
+Route::any('login', function () {
+    return response()->json(['message' => 'Unauthenticated.'], 401);
+})->name('login');
+
+// Development-only helper: return activity logs without auth for quick local testing.
+// Only enabled in local environment to avoid exposing logs in production.
+if (app()->environment('local')) {
+    Route::get('admin/debug/activity-logs', function () {
+        return response()->json(\App\Models\ActivityLog::query()->latest()->limit(200)->get());
+    });
+}
 
 if (!function_exists('publishedListingsScope')) {
     function publishedListingsScope(Builder $query): void
@@ -143,6 +249,7 @@ if (!function_exists('publishedListingsScope')) {
         $query->where('status', 'published');
     }
 }
+
 
 if (!function_exists('cityPayload')) {
     function cityPayload(City $city): array
@@ -384,10 +491,14 @@ Route::prefix('v1/public')->group(function (): void {
         abort_unless((string) $page->getAttribute('status') === 'published', 404);
         return $page;
     });
+
+    // Public articles (published only, no auth required)
+    Route::get('articles', [PublicArticleController::class, 'index']);
+    Route::get('articles/{slug}', [PublicArticleController::class, 'show']);
 });
 
 // Admin routes (protected)
-Route::prefix('v1/admin')->middleware('auth:sanctum')->group(function (): void {
+Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
     Route::get('search', [GlobalSearchController::class, 'index']);
     Route::get('activity-logs', [ActivityLogController::class, 'index']);
     Route::get('dashboard', [DashboardController::class, 'index']);
@@ -412,6 +523,8 @@ Route::prefix('v1/admin')->middleware('auth:sanctum')->group(function (): void {
     Route::apiResource('posts', PostController::class);
     Route::apiResource('pages', PageController::class);
     Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('cities', \App\Http\Controllers\Admin\CityController::class);
+    Route::apiResource('countries', \App\Http\Controllers\Admin\CountryController::class);
 
     Route::get('users', [UserController::class, 'index']);
     Route::get('users/{user}', [UserController::class, 'show']);
@@ -426,10 +539,40 @@ Route::prefix('v1/admin')->middleware('auth:sanctum')->group(function (): void {
     Route::get('newsletter-subscribers', [NewsletterSubscriberController::class, 'index']);
     Route::delete('newsletter-subscribers/{newsletterSubscriber}', [NewsletterSubscriberController::class, 'destroy']);
 
-    // Listing Submissions
-    Route::get('submissions', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'index']);
-    Route::get('submissions/{submission}', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'show']);
-    Route::patch('submissions/{submission}/approve', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'approve']);
-    Route::patch('submissions/{submission}/reject', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'reject']);
-    Route::delete('submissions/{submission}', [\App\Http\Controllers\Admin\ListingSubmissionController::class, 'destroy']);
+    // Submitted Listings (frontend submissions)
+    Route::get('submissions', [SubmittedListingController::class, 'index']);
+    Route::get('submissions/{id}', [SubmittedListingController::class, 'show']);
+    Route::put('submissions/{id}', [SubmittedListingController::class, 'update']);
+    Route::patch('submissions/{id}/approve', [SubmittedListingController::class, 'approve']);
+    Route::patch('submissions/{id}/reject', [SubmittedListingController::class, 'reject']);
+    Route::patch('submissions/{id}/publish', [SubmittedListingController::class, 'publish']);
+    Route::delete('submissions/{id}', [SubmittedListingController::class, 'destroy']);
+
+    // Approvals (Approved Listings Management)
+    Route::get('approvals', [ApprovedListingController::class, 'index']);
+    Route::get('approvals/{listing}', [ApprovedListingController::class, 'show']);
+    Route::put('approvals/{listing}', [ApprovedListingController::class, 'update']);
+    Route::delete('approvals/{listing}', [ApprovedListingController::class, 'delete']);
+    Route::patch('approvals/{listing}/publish', [ApprovedListingController::class, 'publish']);
+
+    // Submission Actions
+    Route::patch('submissions/{listing}/approve', [ApprovedListingController::class, 'approve']);
+    Route::patch('submissions/{listing}/reject', [ApprovedListingController::class, 'reject']);
+
+    // Status Counts for Sidebar Badges
+    Route::get('submissions/count/pending', [SubmittedListingController::class, 'getCountByStatus']);
+    Route::get('approvals/count/approved', [ApprovedListingController::class, 'getCountByStatus']);
+
+    // Blog Management
+    Route::apiResource('articles', \App\Http\Controllers\Admin\ArticleController::class);
+    Route::patch('articles/{article}/submit', [\App\Http\Controllers\Admin\ArticleController::class, 'submit']);
+    Route::patch('articles/{article}/approve', [\App\Http\Controllers\Admin\ArticleController::class, 'approve']);
+    Route::patch('articles/{article}/reject', [\App\Http\Controllers\Admin\ArticleController::class, 'reject']);
+    Route::patch('articles/{article}/publish', [\App\Http\Controllers\Admin\ArticleController::class, 'publish']);
+
+    Route::apiResource('authors', \App\Http\Controllers\Admin\AuthorController::class);
+    Route::apiResource('article-categories', \App\Http\Controllers\Admin\ArticleCategoryController::class);
+
+    // Pages Management
+    Route::apiResource('pages', \App\Http\Controllers\Admin\PageController::class);
 });

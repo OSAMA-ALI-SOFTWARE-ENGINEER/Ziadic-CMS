@@ -2,26 +2,46 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class ActivityLog extends Model
 {
-    protected $fillable = ['user_id', 'subject_type', 'subject_id', 'event', 'properties', 'ip_address', 'user_agent'];
+    use HasFactory;
 
-    protected function casts(): array
+    protected $fillable = [
+        // new schema
+        'action',
+        'old_value',
+        'new_value',
+        // legacy schema
+        'event',
+        'properties',
+        'subject_type',
+        'subject_id',
+        'user_agent',
+        // common
+        'user_id',
+        'user_name',
+        'user_role',
+        'related_id',
+        'related_type',
+        'ip_address',
+    ];
+
+    protected $casts = [
+        'old_value' => 'array',
+        'new_value' => 'array',
+    ];
+
+    // Optional relations
+    public function user()
     {
-        return ['properties' => 'array'];
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function user(): BelongsTo
+    public function related()
     {
-        return $this->belongsTo(User::class);
-    }
-
-    public function subject(): MorphTo
-    {
-        return $this->morphTo();
+        return $this->morphTo(null, 'related_type', 'related_id');
     }
 }

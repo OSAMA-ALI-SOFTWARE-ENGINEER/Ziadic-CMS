@@ -16,15 +16,15 @@ function getApiUrl(): string {
 
     // If running on localhost/127.0.0.1 on port 5173 (Vite dev), API is on port 8000
     if ((hostname === 'localhost' || hostname === '127.0.0.1') && window.location.port === '5173') {
-      return `${protocol}//localhost:8000/api/v1`
+      return `${protocol}//localhost:8000/api/v1/admin`
     }
 
     // Otherwise assume API is on same domain/host
-    return `${protocol}//${hostname}${port}/api/v1`
+    return `${protocol}//${hostname}${port}/api/v1/admin`
   }
 
   // Fallback
-  return 'http://localhost:8000/api/v1'
+  return 'http://localhost:8000/api/v1/admin'
 }
 
 export const api = axios.create({
@@ -41,24 +41,29 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-
   return config
 })
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response
+  },
   (error) => {
+    const status = error?.response?.status || 'unknown'
+    const url = error?.config?.url || 'unknown'
+    const method = error?.config?.method?.toUpperCase() || 'unknown'
+    const errorMsg = error?.response?.data?.message || error?.message || 'Unknown error'
+
     const isSilentError = error.config?.headers?.['X-Silent-Error'] === '1' || error.config?.headers?.get?.('X-Silent-Error') === '1'
 
     if (isSilentError) {
       return Promise.reject(error)
     }
 
-    const url = error.config?.url || ''
-    const isSettingsEndpoint = url.includes('/admin/settings/') || url.includes('/admin/upload')
+    const url2 = error.config?.url || ''
+    const isSettingsEndpoint = url2.includes('/admin/settings/') || url2.includes('/admin/upload')
     const is404 = error.response?.status === 404
 
-    // Suppress 404 errors for settings endpoints (mock API will handle them)
     if (is404 && isSettingsEndpoint) {
       return Promise.reject(error)
     }

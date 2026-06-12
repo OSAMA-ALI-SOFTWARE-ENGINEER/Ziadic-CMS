@@ -1,12 +1,29 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import CmsTable from '@/components/CmsTable.vue'
 import ChartPanel from '@/components/ChartPanel.vue'
 import StatCard from '@/components/StatCard.vue'
 import { useDashboardStore } from '@/stores/dashboard'
-import { activityItems, contentRows, listingRows } from '@/data/cms'
 
 const dashboard = useDashboardStore()
+const activeActivityFilter = ref('all')
+
+// Filter activity by type
+const filteredActivity = computed(() => {
+  if (activeActivityFilter.value === 'all') return dashboard.recentActivity
+  return dashboard.recentActivity.filter(a => a.type === activeActivityFilter.value)
+})
+
+// Get activity icon color
+function getActivityColor(type: string): string {
+  const colors: Record<string, string> = {
+    'listing': 'text-blue-500',
+    'approval': 'text-green-500',
+    'content': 'text-purple-500',
+    'payment': 'text-yellow-500',
+  }
+  return colors[type] || 'text-gray-500'
+}
 
 // Initialize dashboard on mount
 onMounted(() => {
@@ -22,15 +39,18 @@ onBeforeUnmount(() => {
 <template>
   <div class="space-y-6">
     <!-- Dashboard Header with Last Updated & Refresh -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div>
-        <h1 class="m-0 text-2xl font-bold text-(--admin-ink)">Dashboard</h1>
-        <p class="m-0 mt-1 text-sm text-(--admin-muted)">
-          Last updated: <span class="font-medium">{{ dashboard.formattedLastUpdated }}</span>
+        <h1 class="m-0 text-3xl font-bold text-(--admin-ink)">Dashboard</h1>
+        <p class="m-0 mt-2 text-sm text-(--admin-muted)">
+          <span class="inline-flex items-center gap-1">
+            <i class="pi pi-circle-fill text-green-500 text-xs"></i>
+            Last updated: <span class="font-medium text-(--admin-ink)">{{ dashboard.formattedLastUpdated }}</span>
+          </span>
         </p>
       </div>
       <button
-        class="primary-action gap-2"
+        class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all duration-200 font-medium"
         type="button"
         :disabled="dashboard.isLoading"
         @click="dashboard.refreshDashboard"
@@ -41,13 +61,65 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Metrics Grid -->
-    <section class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
         v-for="metric in dashboard.metrics"
         :key="metric.id"
-        :metric="metric"
-        :loading="dashboard.isLoading"
-      />
+        :class="[
+          'rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow border',
+          metric.tone === 'neutral' && metric.value === 'Coming Soon'
+            ? 'bg-gray-50 border-gray-200'
+            : 'bg-white border-gray-100'
+        ]"
+      >
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <p class="text-sm font-medium text-gray-600 mb-1">{{ metric.label }}</p>
+            <p
+              :class="[
+                'text-3xl font-bold',
+                metric.value === 'Coming Soon'
+                  ? 'text-gray-400'
+                  : 'text-gray-900'
+              ]"
+            >
+              {{ metric.value }}
+            </p>
+          </div>
+          <div :class="['p-3 rounded-lg', {
+            'bg-green-100 text-green-600': metric.tone === 'success',
+            'bg-yellow-100 text-yellow-600': metric.tone === 'warning',
+            'bg-red-100 text-red-600': metric.tone === 'danger',
+            'bg-blue-100 text-blue-600': metric.tone === 'info',
+            'bg-gray-100 text-gray-600': metric.tone === 'neutral',
+          }]">
+            <i :class="metric.icon"></i>
+          </div>
+        </div>
+        <div
+          v-if="metric.value === 'Coming Soon'"
+          class="flex items-center justify-center py-2 px-3 rounded-lg bg-white border border-dashed border-gray-300"
+        >
+          <i class="pi pi-hourglass text-gray-400 mr-2"></i>
+          <span class="text-xs font-medium text-gray-500">{{ metric.delta }}</span>
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <span
+            :class="[
+              'text-xs font-semibold px-2 py-1 rounded',
+              {
+                'bg-green-100 text-green-700': metric.changePercent && metric.changePercent > 0,
+                'bg-red-100 text-red-700': metric.changePercent && metric.changePercent < 0,
+                'bg-gray-100 text-gray-700': !metric.changePercent || metric.changePercent === 0,
+              }
+            ]"
+          >
+            <i :class="metric.changePercent && metric.changePercent > 0 ? 'pi pi-arrow-up text-xs' : metric.changePercent && metric.changePercent < 0 ? 'pi pi-arrow-down text-xs' : 'pi pi-minus text-xs'"></i>
+            {{ Math.abs(metric.changePercent || 0).toFixed(1) }}%
+          </span>
+          <span class="text-xs text-gray-500">{{ metric.delta }}</span>
+        </div>
+      </div>
     </section>
 
     <!-- Chart Panel -->
@@ -55,38 +127,187 @@ onBeforeUnmount(() => {
 
     <!-- Recent Listings & Activity -->
     <section class="grid gap-6 xl:grid-cols-[1.5fr_0.8fr]">
-      <CmsTable
-        title="Recent listings"
-        description="Approval workflow, city data, and featured listing status."
-        :rows="listingRows"
-        mode="listings"
-      />
-
-      <aside class="cms-card p-5">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <h2 class="m-0 text-base font-semibold text-(--admin-ink)">CMS activity</h2>
-            <p class="m-0 mt-1 text-sm text-(--admin-muted)">Latest admin actions</p>
-          </div>
-          <span class="grid h-10 w-10 place-items-center rounded-lg bg-(--admin-soft) text-(--admin-primary)">
-            <i class="pi pi-history" aria-hidden="true"></i>
-          </span>
+      <!-- Recent Listings Table -->
+      <div class="cms-card p-6">
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Recent listings</h2>
+          <p class="text-sm text-gray-600">Approval workflow, city data, and featured listing status.</p>
         </div>
-        <ol class="mt-5 grid gap-4 p-0">
-          <li v-for="item in activityItems" :key="item" class="flex gap-3 text-sm text-(--admin-muted)">
-            <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-(--admin-primary)"></span>
-            <span>{{ item }}</span>
-          </li>
-        </ol>
-      </aside>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-gray-200">
+              <tr>
+                <th class="text-left py-3 px-3 font-semibold text-gray-700">Title</th>
+                <th class="text-left py-3 px-3 font-semibold text-gray-700">Category</th>
+                <th class="text-left py-3 px-3 font-semibold text-gray-700">City</th>
+                <th class="text-left py-3 px-3 font-semibold text-gray-700">Status</th>
+                <th class="text-left py-3 px-3 font-semibold text-gray-700">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(listing, idx) in dashboard.recentListings.slice(0, 5)"
+                :key="idx"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              >
+                <td class="py-3 px-3 font-medium text-gray-900">{{ listing.title }}</td>
+                <td class="py-3 px-3 text-gray-600">{{ listing.category }}</td>
+                <td class="py-3 px-3 text-gray-600">{{ listing.city }}</td>
+                <td class="py-3 px-3">
+                  <span :class="[
+                    'inline-block px-3 py-1 rounded-full text-xs font-semibold',
+                    {
+                      'bg-green-100 text-green-700': listing.status === 'published',
+                      'bg-yellow-100 text-yellow-700': listing.status === 'pending',
+                      'bg-red-100 text-red-700': listing.status === 'rejected',
+                      'bg-gray-100 text-gray-700': listing.status === 'draft',
+                    }
+                  ]">
+                    {{ listing.status }}
+                  </span>
+                </td>
+                <td class="py-3 px-3 text-gray-500">{{ listing.updatedAt }}</td>
+              </tr>
+              <tr v-if="dashboard.recentListings.length === 0">
+                <td colspan="5" class="py-8 px-3 text-center text-gray-500">No listings found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CMS Activity -->
+      <div class="cms-card p-6">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">CMS activity</h2>
+            <p class="text-sm text-gray-600">Latest admin actions</p>
+          </div>
+          <div class="p-3 rounded-lg bg-blue-100 text-blue-600">
+            <i class="pi pi-history"></i>
+          </div>
+        </div>
+
+        <!-- Activity Filter -->
+        <div class="flex gap-2 mb-4 flex-wrap">
+          <button
+            @click="activeActivityFilter = 'all'"
+            :class="[
+              'px-3 py-1 rounded-full text-xs font-medium transition-all',
+              activeActivityFilter === 'all'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            ]"
+          >
+            All
+          </button>
+          <button
+            v-for="type in ['listing', 'approval', 'content', 'payment']"
+            :key="type"
+            @click="activeActivityFilter = type"
+            :class="[
+              'px-3 py-1 rounded-full text-xs font-medium transition-all capitalize',
+              activeActivityFilter === type
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            ]"
+          >
+            {{ type }}
+          </button>
+        </div>
+
+        <!-- Activity List -->
+        <div class="space-y-3">
+          <div
+            v-for="activity in filteredActivity.slice(0, 6)"
+            :key="activity.id"
+            class="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+          >
+            <div :class="['pt-1 shrink-0', getActivityColor(activity.type)]">
+              <i :class="activity.icon"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-gray-700 line-clamp-2">{{ activity.message }}</p>
+              <p class="text-xs text-gray-500 mt-1">{{ activity.timestamp.toLocaleTimeString() }}</p>
+            </div>
+          </div>
+          <div v-if="filteredActivity.length === 0" class="py-6 text-center text-gray-500 text-sm">
+            No activity found
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Content Pipeline -->
-    <CmsTable
-      title="Content pipeline"
-      description="Pages, services, and blog posts ready for publishing."
-      :rows="contentRows"
-      mode="content"
-    />
+    <div class="cms-card p-6">
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Content pipeline</h2>
+        <p class="text-sm text-gray-600">Pages, services, and blog posts ready for publishing.</p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-200">
+            <tr>
+              <th class="text-left py-3 px-3 font-semibold text-gray-700">Title</th>
+              <th class="text-left py-3 px-3 font-semibold text-gray-700">Type</th>
+              <th class="text-left py-3 px-3 font-semibold text-gray-700">Author</th>
+              <th class="text-left py-3 px-3 font-semibold text-gray-700">Status</th>
+              <th class="text-left py-3 px-3 font-semibold text-gray-700">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(content, idx) in dashboard.contentPipeline.slice(0, 5)"
+              :key="idx"
+              class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+            >
+              <td class="py-3 px-3 font-medium text-gray-900">{{ content.title }}</td>
+              <td class="py-3 px-3 text-gray-600">{{ content.type }}</td>
+              <td class="py-3 px-3 text-gray-600">{{ content.author }}</td>
+              <td class="py-3 px-3">
+                <span :class="[
+                  'inline-block px-3 py-1 rounded-full text-xs font-semibold',
+                  {
+                    'bg-green-100 text-green-700': content.status === 'published',
+                    'bg-yellow-100 text-yellow-700': content.status === 'pending',
+                    'bg-red-100 text-red-700': content.status === 'rejected',
+                    'bg-gray-100 text-gray-700': content.status === 'draft',
+                  }
+                ]">
+                  {{ content.status }}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-gray-500">{{ content.updatedAt }}</td>
+            </tr>
+            <tr v-if="dashboard.contentPipeline.length === 0">
+              <td colspan="5" class="py-8 px-3 text-center text-gray-500">No content found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.cms-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.cms-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>

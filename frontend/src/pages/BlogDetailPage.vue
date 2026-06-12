@@ -24,13 +24,15 @@
       <section class="section blog-detail-content-section">
         <div class="container">
           <article class="blog-detail-article">
+            <div v-if="post.featured_image" class="blog-detail-featured-image">
+              <img :src="getImageUrl(post.featured_image)" :alt="post.title" />
+            </div>
+
             <div v-if="post.excerpt" class="blog-detail-excerpt">
               <p>{{ post.excerpt }}</p>
             </div>
 
-            <div class="blog-detail-content">
-              {{ post.content }}
-            </div>
+            <div class="blog-detail-content" v-html="post.content"></div>
 
             <div v-if="post.tags && post.tags.length > 0" class="blog-detail-tags-wrap">
               <div class="blog-detail-tags">
@@ -54,7 +56,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchPublicPost } from '@/services/auth'
 
 interface BlogPost {
   id: number
@@ -62,6 +63,7 @@ interface BlogPost {
   slug: string
   excerpt: string
   content: string
+  featured_image?: string
   author?: { id: number; name: string }
   category?: { id: number; name: string }
   tags?: Array<{ id: number; name: string }>
@@ -75,7 +77,12 @@ const loading = ref(true)
 async function loadPost() {
   try {
     const slug = route.params.slug as string
-    post.value = await fetchPublicPost(slug)
+    const response = await fetch(`http://localhost:8000/api/v1/public/articles/${slug}`)
+    if (!response.ok) throw new Error('Article not found')
+
+    const data = await response.json()
+    post.value = data.data || null
+
     if (post.value) {
       document.title = post.value.title
     }
@@ -92,6 +99,12 @@ function formatDate(dateStr: string) {
     month: 'long',
     day: 'numeric',
   })
+}
+
+function getImageUrl(imagePath: string | undefined): string {
+  if (!imagePath) return ''
+  if (imagePath.startsWith('http')) return imagePath
+  return `http://localhost:8000${imagePath}`
 }
 
 onMounted(loadPost)
@@ -172,6 +185,19 @@ onMounted(loadPost)
 
 .blog-detail-article {
   max-width: 820px;
+}
+
+.blog-detail-featured-image {
+  margin-bottom: 32px;
+  border-radius: 10px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.blog-detail-featured-image img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 .blog-detail-excerpt {

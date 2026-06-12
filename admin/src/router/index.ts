@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import ApprovalsPage from '@/pages/ApprovalsPage.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
+import BlogArticlesPage from '@/pages/BlogArticlesPage.vue'
 import CategoriesPage from '@/pages/CategoriesPage.vue'
 import ContentPage from '@/pages/ContentPage.vue'
 import DashboardPage from '@/pages/DashboardPage.vue'
@@ -95,11 +96,31 @@ const router = createRouter({
           },
         },
         {
+          path: 'add-listing',
+          redirect: { name: 'listings' },
+        },
+        {
           path: 'approvals',
           name: 'approvals',
           component: ApprovalsPage,
           meta: {
             title: 'Approvals | Kukaqka CMS',
+          },
+        },
+        {
+          path: 'submissions',
+          name: 'submissions',
+          component: () => import('@/pages/SubmissionsPage.vue'),
+          meta: {
+            title: 'Submissions | Kukaqka CMS',
+          },
+        },
+        {
+          path: 'activity-logs',
+          name: 'activity-logs',
+          component: () => import('@/pages/ActivityLogsPage.vue'),
+          meta: {
+            title: 'Activity Logs | Kukaqka CMS',
           },
         },
         {
@@ -116,6 +137,14 @@ const router = createRouter({
           component: ContentPage,
           meta: {
             title: 'Content | Kukaqka CMS',
+          },
+        },
+        {
+          path: 'blog-articles',
+          name: 'blog-articles',
+          component: BlogArticlesPage,
+          meta: {
+            title: 'Blog Articles | Kukaqka CMS',
           },
         },
         {

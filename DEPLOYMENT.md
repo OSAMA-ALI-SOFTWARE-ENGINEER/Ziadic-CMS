@@ -1,3 +1,13 @@
+# Deployment Notes
+
+Basic deployment checklist for Ziadic CMS
+
+- Ensure `APP_ENV=production` and secure `.env` on server
+- Run `composer install --no-dev --optimize-autoloader`
+- Run `npm ci && npm run build` for frontend assets
+- Run `php artisan migrate --force`
+- Set correct permissions for `storage` and `bootstrap/cache`
+- Configure web server to point to `public/`
 # Hostinger Deployment
 
 This repo has two Vite/Vue apps:

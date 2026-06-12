@@ -19,7 +19,14 @@
       "PowerShell(head -20)",
       "Bash(curl -s http://localhost:8000/up)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(dir *.md)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Recurse -Depth 2 -Attributes Directory)",
+      "Bash(Select-Object -First 50)",
+      "Bash(php -l app/Http/Controllers/Admin/SubmittedListingController.php)",
+      "Bash(php -l routes/api.php)",
+      "Bash(php -l src/pages/SubmissionsPage.vue)"
     ]
   }
 }

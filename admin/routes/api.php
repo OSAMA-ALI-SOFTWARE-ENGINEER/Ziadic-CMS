@@ -403,6 +403,8 @@ if (!function_exists('publicListingPayload')) {
             'keywords' => $listing->getAttribute('seo_keywords'),
         ],
         'is_featured' => (bool) $listing->getAttribute('is_featured'),
+        'is_popular' => (bool) $listing->getAttribute('is_popular'),
+        'popular_order' => (int) $listing->getAttribute('popular_order'),
         'published_at' => $listing->getAttribute('published_at'),
     ];
     }

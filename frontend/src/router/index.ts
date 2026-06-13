@@ -8,7 +8,6 @@ import ListingsPage from '@/pages/ListingsPage.vue'
 import LegacyRoutePage from '@/pages/LegacyRoutePage.vue'
 import LoginPage from '@/pages/auth/LoginPage.vue'
 import RegisterPage from '@/pages/auth/RegisterPage.vue'
-import BlogPage from '@/pages/BlogPage.vue'
 import BlogDetailPage from '@/pages/BlogDetailPage.vue'
 
 // Phase 1: Vue Migration - All remaining pages (lazy loaded)

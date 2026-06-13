@@ -11,6 +11,7 @@ const showGalleryPreview = ref(false)
 const galleryPreviewIndex = ref(0)
 const galleryImages = ref<string[]>([])
 const currentListing = ref<PublicListing | null>(null)
+const webflowNotFound = ref(false)
 
 onMounted(async () => {
   const slug = route.params.slug as string
@@ -68,14 +69,19 @@ function populateListingDetail(listing: PublicListing) {
 
   let elementsUpdated = 0
 
-  // Page title
+  // Check if key elements exist - if not, use Vue fallback
   const pageTitle = root.querySelector('.page-banner-title')
+  if (!pageTitle) {
+    console.warn('[ListingDetail] Webflow elements not found. Using Vue fallback rendering.')
+    webflowNotFound.value = true
+    return
+  }
+
+  // Page title
   if (pageTitle) {
     pageTitle.textContent = listing.title
     pageTitle.classList.remove('w-dyn-bind-empty')
     elementsUpdated++
-  } else {
-    console.warn('[ListingDetail] .page-banner-title not found')
   }
 
   // Breadcrumb
@@ -259,7 +265,200 @@ function escapeHtml(value: string): string {
     @close="closeGalleryPreview"
   />
 
+  <!-- Fallback: Display listing if Webflow elements not found -->
+  <div v-if="webflowNotFound && currentListing" class="listing-detail-simple">
+    <div class="listing-container">
+      <h1 class="listing-title">{{ currentListing.title }}</h1>
+      <p class="listing-meta">{{ currentListing.category }} • {{ currentListing.location }}</p>
+
+      <div class="listing-info-grid">
+        <div class="info-box">
+          <span class="info-label">📅 Days</span>
+          <span class="info-value">{{ currentListing.open_days || currentListing.days }}</span>
+        </div>
+        <div class="info-box">
+          <span class="info-label">⏰ Hours</span>
+          <span class="info-value">{{ currentListing.open_time && currentListing.close_time ? `${currentListing.open_time.substring(0, 5)} - ${currentListing.close_time.substring(0, 5)}` : currentListing.hours }}</span>
+        </div>
+      </div>
+
+      <div class="listing-section">
+        <h2>Description</h2>
+        <p>{{ currentListing.description || currentListing.summary }}</p>
+      </div>
+
+      <div class="listing-section" v-if="currentListing.contact_phone || currentListing.contact_email || currentListing.contact_website || currentListing.contact_address">
+        <h2>Contact Information</h2>
+        <ul class="contact-list">
+          <li v-if="currentListing.contact_phone"><strong>Phone:</strong> <a :href="`tel:${currentListing.contact_phone}`">{{ currentListing.contact_phone }}</a></li>
+          <li v-if="currentListing.contact_email"><strong>Email:</strong> <a :href="`mailto:${currentListing.contact_email}`">{{ currentListing.contact_email }}</a></li>
+          <li v-if="currentListing.contact_website"><strong>Website:</strong> <a :href="currentListing.contact_website" target="_blank">{{ currentListing.contact_website.replace(/^https?:\/\//, '') }}</a></li>
+          <li v-if="currentListing.contact_address"><strong>Address:</strong> {{ currentListing.contact_address }}</li>
+        </ul>
+      </div>
+
+      <div class="listing-section" v-if="galleryImages.length > 0">
+        <h2>{{ currentListing.gallery_heading || 'Gallery' }}</h2>
+        <div class="gallery-simple">
+          <div
+            v-for="(image, index) in galleryImages"
+            :key="index"
+            class="gallery-img-simple"
+            @click="openGalleryPreview(index)"
+          >
+            <img :src="getImageUrl(image)" :alt="`Gallery image ${index + 1}`" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- This component populates the existing Webflow HTML with dynamic CMS data -->
-  <!-- No visible output - modifies Webflow content in place -->
+  <!-- If Webflow elements are not found, falls back to Vue rendering above -->
 </template>
+
+<style scoped>
+.listing-detail-simple {
+  min-height: 100vh;
+  background: #fafafa;
+  padding: 40px 20px;
+}
+
+.listing-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.listing-title {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: #222;
+}
+
+.listing-meta {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 30px 0;
+}
+
+.listing-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #333;
+}
+
+.listing-section {
+  margin-bottom: 30px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #eee;
+}
+
+.listing-section h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 15px 0;
+  color: #222;
+}
+
+.listing-section p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #555;
+  margin: 0;
+}
+
+.contact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.contact-list li {
+  padding: 10px 0;
+  font-size: 15px;
+  color: #555;
+}
+
+.contact-list a {
+  color: #e74c3c;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.contact-list a:hover {
+  text-decoration: underline;
+}
+
+.gallery-simple {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.gallery-img-simple {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #f0f0f0;
+}
+
+.gallery-img-simple img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.gallery-img-simple:hover img {
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .listing-container {
+    padding: 20px;
+  }
+
+  .listing-title {
+    font-size: 24px;
+  }
+
+  .listing-section h2 {
+    font-size: 18px;
+  }
+
+  .gallery-simple {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+}
+</style>
 

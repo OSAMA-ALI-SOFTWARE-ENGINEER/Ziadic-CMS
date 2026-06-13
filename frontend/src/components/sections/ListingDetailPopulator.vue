@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchPublicListings, type PublicListing } from '@/services/listings'
-import { getImageUrl, deduplicateImages } from '@/utils/imageUrl'
+import { getImageUrl } from '@/utils/imageUrl'
 import GalleryPreview from '@/components/GalleryPreview.vue'
 
 const route = useRoute()
@@ -15,20 +15,29 @@ onMounted(async () => {
   if (!slug) return
 
   try {
+    // Wait for Webflow to fully initialize
+    await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // Fetch listing data
     const listings = await fetchPublicListings()
     const listing = listings.find(l => l.slug === slug)
 
     if (listing) {
-      // Populate Webflow HTML
-      populateListingDetail(listing)
+      console.log('[CMS] Found listing:', listing.title)
 
-      // Load gallery images for preview modal
+      // Wait a bit more for Webflow to fully render
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Populate Webflow with CMS data
+      populatePage(listing)
+
+      // Store gallery images for preview
       if (listing.gallery && listing.gallery.length > 0) {
-        galleryImages.value = deduplicateImages(listing.gallery)
+        galleryImages.value = listing.gallery
       }
     }
   } catch (error) {
-    console.error('Error loading listing:', error)
+    console.error('[CMS] Error loading listing:', error)
   }
 })
 
@@ -41,191 +50,158 @@ function closeGalleryPreview() {
   showGalleryPreview.value = false
 }
 
-function populateListingDetail(listing: PublicListing) {
-  const root = document.querySelector('.page-wrapper, .legacy-home') || document.body
+function populatePage(listing: PublicListing) {
+  try {
+    const doc = document
 
-  // Page title
-  const pageTitle = root.querySelector('.page-banner-title')
-  if (pageTitle) {
-    pageTitle.textContent = listing.title
-    pageTitle.classList.remove('w-dyn-bind-empty')
+    // Update all text nodes that might contain placeholder text
+    updatePageTitle(listing)
+    updateLocation(listing)
+    updateHours(listing)
+    updateDescription(listing)
+    updateContactInfo(listing)
+    updateGallery(listing)
+  } catch (error) {
+    console.error('[CMS] Error populating page:', error)
   }
+}
 
-  // Breadcrumb
-  const breadcrumb = root.querySelector('.page-link-text')
-  if (breadcrumb) {
-    breadcrumb.textContent = listing.title
-    breadcrumb.classList.remove('w-dyn-bind-empty')
-  }
-
-  // Section title
-  const sectionTitle = root.querySelector('.section-title.listing')
-  if (sectionTitle) {
-    sectionTitle.textContent = listing.title
-    sectionTitle.classList.remove('w-dyn-bind-empty')
-  }
-
-  // Description
-  const bodyCopy = root.querySelector('.listings-content-wrap p')
-  if (bodyCopy) {
-    bodyCopy.textContent = listing.summary || listing.description
-    bodyCopy.classList.remove('w-dyn-bind-empty')
-  }
-
-  // Location, Days, Hours
-  const dateTimeTexts = Array.from(root.querySelectorAll('.date-and-time-icon-text'))
-  if (dateTimeTexts.length >= 3) {
-    dateTimeTexts[0].textContent = listing.location || 'Location'
-    dateTimeTexts[1].textContent = listing.open_days || listing.days || 'Monday - Saturday'
-    dateTimeTexts[2].textContent = listing.open_time && listing.close_time
-      ? `${listing.open_time} - ${listing.close_time}`
-      : (listing.hours || '09:00 - 18:00')
-    dateTimeTexts.forEach(el => el.classList.remove('w-dyn-bind-empty'))
-  }
-
-  // Main image
-  const mainImg = root.querySelector<HTMLImageElement>('.listing-single-img')
-  if (mainImg) {
-    mainImg.src = getImageUrl(listing.image)
-    mainImg.alt = listing.title
-    mainImg.classList.remove('w-dyn-bind-empty')
-  }
-
-  // Gallery images
-  const galleryImages = root.querySelectorAll<HTMLImageElement>('.vibrant-gallery-img')
-  const images = galleryImages.value && galleryImages.value.length > 0
-    ? galleryImages.value
-    : (listing.image ? [listing.image] : [])
-
-  galleryImages.forEach((img, index) => {
-    const imageUrl = images[index % images.length]
-    img.src = getImageUrl(imageUrl)
-    img.alt = listing.title
-    img.classList.remove('w-dyn-bind-empty')
+function updatePageTitle(listing: PublicListing) {
+  // Update page banner title
+  const titles = document.querySelectorAll('.page-banner-title, .section-title, h1')
+  titles.forEach(el => {
+    if (el.textContent && (el.textContent.includes('Loading') || el.textContent.length < 100)) {
+      el.textContent = listing.title
+      el.classList.remove('w-dyn-bind-empty')
+    }
   })
+}
 
-  // Details section
-  const richText = root.querySelector<HTMLElement>('.rich-text')
-  if (richText) {
-    const detailsHeading = listing.details_heading || 'Details'
-    const detailsItems = listing.details_items && listing.details_items.length > 0
-      ? listing.details_items
-      : [listing.summary, listing.description].filter(Boolean)
+function updateLocation(listing: PublicListing) {
+  // Update location info
+  const locationElements = document.querySelectorAll(
+    '.date-and-time-icon-text, [class*="location"], [class*="address"]'
+  )
+  let locationUpdated = false
 
-    const facilitiesHeading = listing.facilities_heading || 'Facilities Available'
-    const facilitiesItems = (listing.facilities_items && listing.facilities_items.length > 0)
-      ? listing.facilities_items
-      : (listing.facilities && listing.facilities.length > 0
-        ? listing.facilities
-        : ['Helpful Staff', 'Easy Access', 'Visitor Friendly'])
+  locationElements.forEach(el => {
+    const text = el.textContent || ''
+    if (!locationUpdated && (text.includes('Location') || text.length > 10 && text.length < 150)) {
+      el.textContent = listing.location
+      el.classList.remove('w-dyn-bind-empty')
+      locationUpdated = true
+    }
+  })
+}
 
-    const facilitiesHtml = facilitiesItems.length > 0
-      ? `<ul style="margin-left: 1.25rem; list-style-type: disc; line-height: 1.8; margin-bottom: 1.5rem;">${facilitiesItems.map((f: string) => `<li style="margin-bottom: 0.5rem;">${escapeHtml(f)}</li>`).join('')}</ul>`
-      : ''
+function updateHours(listing: PublicListing) {
+  // Update hours/days info
+  const timeElements = document.querySelectorAll(
+    '.date-and-time-icon-text, [class*="hours"], [class*="time"]'
+  )
+  let timeUpdated = false
+  let daysUpdated = false
 
-    richText.innerHTML = [
-      `<h3>${escapeHtml(detailsHeading)}</h3>`,
-      ...detailsItems.map((item: string) => `<p>${escapeHtml(item)}</p>`),
-      facilitiesItems.length > 0 ? `<h3 style="margin-top: 1.5rem;">${escapeHtml(facilitiesHeading)}</h3>` : '',
-      facilitiesHtml,
-    ].filter(Boolean).join('')
-    richText.classList.remove('w-dyn-bind-empty')
-  }
+  timeElements.forEach(el => {
+    const text = el.textContent || ''
 
-  // Contact information
-  const contactPhone = listing.contact_phone || listing.phone || 'Not Available'
-  const contactEmail = listing.contact_email || listing.email || 'Not Available'
-  const contactWebsite = listing.contact_website || listing.website_url || 'Not Available'
-  const contactLocation = listing.contact_address || listing.location || 'Not Available'
+    // Update time
+    if (!timeUpdated && (text.includes('AM') || text.includes('PM') || text.match(/\d{2}:\d{2}/))) {
+      const timeStr = listing.open_time && listing.close_time
+        ? `${listing.open_time.substring(0, 5)} - ${listing.close_time.substring(0, 5)}`
+        : listing.hours
+      el.textContent = timeStr
+      el.classList.remove('w-dyn-bind-empty')
+      timeUpdated = true
+    }
 
-  // Update contact info in page
-  const allElements = Array.from(root.querySelectorAll('*'))
+    // Update days
+    if (!daysUpdated && (text.includes('Monday') || text.includes('Saturday') || text.includes('Day'))) {
+      el.textContent = listing.open_days || listing.days
+      el.classList.remove('w-dyn-bind-empty')
+      daysUpdated = true
+    }
+  })
+}
+
+function updateDescription(listing: PublicListing) {
+  // Update description
+  const descElements = document.querySelectorAll(
+    '.listings-content-wrap p, [class*="description"], [class*="summary"]'
+  )
+  descElements.forEach(el => {
+    const text = el.textContent || ''
+    if (text.length < 200 && text.length > 10) {
+      el.textContent = listing.description || listing.summary
+      el.classList.remove('w-dyn-bind-empty')
+    }
+  })
+}
+
+function updateContactInfo(listing: PublicListing) {
+  // Find all elements and update contact information
+  const allElements = document.querySelectorAll('*')
   let phoneUpdated = false
   let emailUpdated = false
   let websiteUpdated = false
-  let addressUpdated = false
 
-  for (let i = 0; i < allElements.length; i++) {
-    const el = allElements[i]
+  allElements.forEach(el => {
     const text = el.textContent || ''
-    const isLeaf = el.children.length === 0
+    if (text.length > 200 || el.children.length > 5) return // Skip containers
+
     const isLink = el.tagName === 'A'
 
-    // Phone
-    if (!phoneUpdated && text && text.match(/\(\d{3}\)|\d{3}[.\s-]\d{3}|000.*012|\+\d{8,}|\(\d{4}\)/)) {
-      el.textContent = contactPhone
+    // Update phone
+    if (!phoneUpdated && listing.contact_phone && text.match(/\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\+\d{1,3}\s?\d+|\(\d+\)/)) {
+      el.textContent = listing.contact_phone
       el.classList.remove('w-dyn-bind-empty')
       phoneUpdated = true
     }
 
-    // Email
-    if (!emailUpdated && text && text.includes('@') && !text.includes('www') && !text.includes('osama-ali')) {
-      if (isLink && contactEmail !== 'Not Available') {
-        (el as HTMLAnchorElement).href = `mailto:${contactEmail}`
+    // Update email
+    if (!emailUpdated && listing.contact_email && text.includes('@') && !text.includes('www')) {
+      if (isLink) {
+        (el as HTMLAnchorElement).href = `mailto:${listing.contact_email}`
       }
-      el.textContent = contactEmail
+      el.textContent = listing.contact_email
       el.classList.remove('w-dyn-bind-empty')
       emailUpdated = true
     }
 
-    // Website
-    if (!websiteUpdated && text && (text.includes('www') || text.includes('example')) && !text.includes('@')) {
-      const displayUrl = contactWebsite === 'Not Available' ? contactWebsite : contactWebsite.replace(/^https?:\/\//, '')
+    // Update website
+    if (!websiteUpdated && listing.contact_website && (text.includes('www') || text.includes('example'))) {
+      const displayUrl = listing.contact_website.replace(/^https?:\/\//, '')
       el.textContent = displayUrl
-      if (isLink && contactWebsite !== 'Not Available') {
-        const anchor = el as HTMLAnchorElement
-        anchor.href = contactWebsite.startsWith('http') ? contactWebsite : `https://${contactWebsite}`
-        anchor.target = '_blank'
-        anchor.rel = 'noopener noreferrer'
+      if (isLink) {
+        const link = el as HTMLAnchorElement
+        link.href = listing.contact_website.startsWith('http')
+          ? listing.contact_website
+          : `https://${listing.contact_website}`
+        link.target = '_blank'
       }
       el.classList.remove('w-dyn-bind-empty')
       websiteUpdated = true
     }
-
-    // Address
-    if (!addressUpdated && isLeaf && text && text.length < 150) {
-      if (text.includes('Address') || text.includes('Location') || text.match(/\d{4,}/)) {
-        el.textContent = contactLocation
-        el.classList.remove('w-dyn-bind-empty')
-        addressUpdated = true
-      }
-    }
-  }
-
-  // Update schedule info
-  for (let i = 0; i < allElements.length; i++) {
-    const el = allElements[i]
-    const text = el.textContent || ''
-    const isLeaf = el.children.length === 0
-
-    if (isLeaf) {
-      if (text.match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}|AM|PM/)) {
-        const timeStr = listing.open_time && listing.close_time
-          ? `${listing.open_time} - ${listing.close_time}`
-          : (listing.hours || '06:00 AM - 10:00 PM')
-        if (text !== timeStr) {
-          el.textContent = timeStr
-        }
-      }
-
-      if (text.includes('Monday') || text.includes('Saturday') || text.includes('Day')) {
-        const daysStr = listing.open_days || listing.days || 'Monday - Saturday'
-        if (text !== daysStr && text.length < 50) {
-          el.textContent = daysStr
-        }
-      }
-
-      if (text.includes('Weekend') && text.length < 40) {
-        el.textContent = listing.weekend_text || 'Weekend: Sunday'
-      }
-    }
-  }
+  })
 }
 
-function escapeHtml(value: string): string {
-  const div = document.createElement('div')
-  div.textContent = value
-  return div.innerHTML
+function updateGallery(listing: PublicListing) {
+  // Update gallery images
+  const galleryImgs = document.querySelectorAll<HTMLImageElement>('.vibrant-gallery-img, [class*="gallery"] img')
+  const images = (listing.gallery && listing.gallery.length > 0) ? listing.gallery : [listing.image]
+
+  galleryImgs.forEach((img, index) => {
+    if (images[index % images.length]) {
+      img.src = getImageUrl(images[index % images.length])
+      img.alt = listing.title
+      img.classList.remove('w-dyn-bind-empty')
+    }
+  })
+
+  // Store for preview
+  if (listing.gallery && listing.gallery.length > 0) {
+    galleryImages.value = listing.gallery
+  }
 }
 </script>
 
@@ -238,5 +214,5 @@ function escapeHtml(value: string): string {
     @close="closeGalleryPreview"
   />
 
-  <!-- This component populates the existing Webflow HTML with CMS data -->
+  <!-- This component populates Webflow listing page with real-time CMS data -->
 </template>

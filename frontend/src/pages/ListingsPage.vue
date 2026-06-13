@@ -88,6 +88,13 @@ function resetFilters() {
   router.push({ path: '/listings' })
 }
 
+function getImageUrl(path?: string | null): string {
+  if (!path) return '/assets/images/1.png'
+  if (path.startsWith('http')) return path
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+  return `${backendUrl}/${path.replace(/^\/+/, '')}`
+}
+
 function normalizeFilterQuery() {
   if (!selectedCountry.value && selectedCity.value) {
     const city = catalog.value.cities.find((item) => item.slug === selectedCity.value)
@@ -232,8 +239,11 @@ onMounted(async () => {
 
               <div class="listing-card-image-wrap">
               <div class="listing-card-image">
-                <img v-if="listing.image" :src="listing.image" :alt="listing.title" />
-                <div v-if="!listing.image" class="listing-card-placeholder">No image</div>
+                <img
+                  :src="getImageUrl(listing.image)"
+                  :alt="listing.title"
+                  loading="lazy"
+                />
                 <div v-if="listing.category" class="listing-category-badge">{{ listing.category }}</div>
               </div>
               </div>
@@ -585,18 +595,6 @@ onMounted(async () => {
   justify-content: center;
 }
 
-.listing-card-placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 14px;
-}
 
 .listing-card-image img {
   position: absolute;

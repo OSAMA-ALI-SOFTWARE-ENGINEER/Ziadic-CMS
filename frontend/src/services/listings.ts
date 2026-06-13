@@ -54,12 +54,24 @@ export interface PublicListing {
   summary: string
   description: string
   contact_address: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  contact_website: string | null
   phone: string | null
   email: string | null
   website_url: string | null
+  open_days: string | null
+  open_time: string | null
+  close_time: string | null
+  weekend_text: string | null
+  details_heading: string | null
+  details_items: string[]
   details_title: string
   details_paragraphs: string[]
+  facilities_heading: string | null
   facilities: string[]
+  facilities_items: string[]
+  gallery_heading: string | null
   seo: {
     title: string | null
     description: string | null
@@ -122,5 +134,12 @@ export async function fetchPublicListings(options?: {
 
   const response = await fetch(url.toString())
   if (!response.ok) throw new Error(`Failed to fetch listings: ${response.statusText}`)
+  return response.json()
+}
+
+export async function fetchPopularListings(): Promise<PublicListing[]> {
+  const url = `${getApiBase()}${API_BASE}/public/listings/popular`
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`Failed to fetch popular listings: ${response.statusText}`)
   return response.json()
 }

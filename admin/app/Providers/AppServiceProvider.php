@@ -2,7 +2,14 @@
 
 namespace App\Providers;
 
+use App\Events\MediaDeleted;
+use App\Events\MediaUploaded;
+use App\Events\MediaUpdated;
+use App\Listeners\LogMediaDeleted;
+use App\Listeners\LogMediaUpdated;
+use App\Listeners\LogMediaUploaded;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,12 +33,20 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->registerRoutes();
+        $this->registerEventListeners();
 
         // Register model observers
         \App\Models\Listing::observe(\App\Observers\ListingObserver::class);
         if (class_exists(\App\Models\ListingSubmission::class)) {
             \App\Models\ListingSubmission::observe(\App\Observers\ListingSubmissionObserver::class);
         }
+    }
+
+    protected function registerEventListeners(): void
+    {
+        Event::listen(MediaUploaded::class, LogMediaUploaded::class);
+        Event::listen(MediaUpdated::class, LogMediaUpdated::class);
+        Event::listen(MediaDeleted::class, LogMediaDeleted::class);
     }
 
     protected function registerRoutes(): void

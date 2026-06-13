@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import AppModal from '@/components/AppModal.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import DataTable from '@/components/DataTable.vue'
-import ListingForm from '@/components/ListingForm.vue'
+import ListingForm from '@/components/ListingFormExpanded.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import type { ListingRow } from '@/data/cms'
 import { useCmsStore } from '@/stores/cms'
@@ -65,6 +65,7 @@ async function loadListings() {
       // Store full listing object by ID
       if (listing.id) {
         fullListings.value.set(listing.id, listing)
+        console.log(`Cached listing ${listing.id}: ${listing.title} - mediaFiles:`, listing.mediaFiles?.length || 0)
       }
 
       return {

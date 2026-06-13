@@ -38,6 +38,8 @@ interface Listing {
   phone?: string
   website_url?: string
   address?: string
+  is_popular?: boolean
+  popular_order?: number
 }
 
 const props = defineProps<{
@@ -75,6 +77,8 @@ const form = reactive<Listing>({
   phone: '',
   website_url: '',
   address: '',
+  is_popular: false,
+  popular_order: 0,
 })
 
 const stepLabels = ['Basics', 'Content', 'Media', 'SEO & Status']
@@ -133,6 +137,8 @@ function loadListingData() {
   form.phone = listing.phone || ''
   form.website_url = listing.website_url || ''
   form.address = listing.address || ''
+  form.is_popular = listing.is_popular ?? false
+  form.popular_order = listing.popular_order ?? 0
 
   // Handle city_id - could be direct or nested in city object
   if (listing.city_id) {
@@ -237,6 +243,8 @@ async function submit() {
       seo_description: form.seo_description,
       seo_keywords: form.seo_keywords,
       categories: form.category_ids, // Backend expects 'categories', not 'category_ids'
+      is_popular: form.is_popular,
+      popular_order: form.is_popular ? form.popular_order : 0,
     }
 
     console.log('Submitting:', {
@@ -542,6 +550,33 @@ async function submit() {
           <option value="published">Published</option>
           <option value="rejected">Rejected</option>
         </select>
+      </div>
+
+      <!-- Popular Listing Section -->
+      <div class="border-t border-gray-200 pt-4 mt-4">
+        <div class="grid gap-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              v-model="form.is_popular"
+              type="checkbox"
+              class="w-4 h-4 rounded border-gray-300"
+            />
+            <span class="text-sm font-medium text-gray-900">Show in Popular Listing Collection</span>
+          </label>
+
+          <div v-if="form.is_popular" class="grid gap-2 ml-7">
+            <label class="text-sm font-medium text-gray-900">Popular Order (0-2)</label>
+            <select
+              v-model.number="form.popular_order"
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="0">Position 1 (First)</option>
+              <option value="1">Position 2 (Second)</option>
+              <option value="2">Position 3 (Third)</option>
+            </select>
+            <p class="text-xs text-gray-600">Set the order this listing appears in the Popular section</p>
+          </div>
+        </div>
       </div>
     </section>
 

@@ -56,7 +56,7 @@ async function loadSubmissions() {
     const params = new URLSearchParams()
     if (statusFilter.value) params.append('status', statusFilter.value)
     if (searchQuery.value) params.append('search', searchQuery.value)
-    const url = `/admin/submissions${params.toString() ? '?' + params.toString() : ''}`
+    const url = `/submissions${params.toString() ? '?' + params.toString() : ''}`
     const response = await api.get(url)
     submissions.value = response.data.data || response.data || []
   } catch (error: any) {
@@ -70,8 +70,8 @@ async function loadSubmissions() {
 async function loadCitiesAndCategories() {
   try {
     const [citiesRes, categoriesRes] = await Promise.all([
-      api.get('/public/cities'),
-      api.get('/public/categories')
+      api.get('/cities'),
+      api.get('/categories')
     ])
     cities.value = citiesRes.data?.data || []
     categories.value = categoriesRes.data?.data || []
@@ -86,7 +86,7 @@ function notifyPendingUpdated() {
 
 async function viewDetails(submission: any) {
   try {
-    const response = await api.get(`/admin/submissions/${submission.id}`)
+    const response = await api.get(`/submissions/${submission.id}`)
     selectedSubmission.value = response.data
     showDetails.value = true
   } catch (error: any) {
@@ -101,7 +101,7 @@ function confirmApprove(submission: any) {
     icon: 'pi pi-check',
     accept: async () => {
       try {
-        await api.patch(`/admin/submissions/${submission.id}/approve`)
+        await api.patch(`/submissions/${submission.id}/approve`)
         toast.add({ severity: 'success', summary: 'Success', detail: 'Submission approved' })
         showDetails.value = false
         await loadSubmissions()
@@ -125,7 +125,7 @@ async function submitRejection() {
     return
   }
   try {
-    await api.patch(`/admin/submissions/${selectedSubmission.value.id}/reject`, { reason: rejectionReason.value })
+    await api.patch(`/submissions/${selectedSubmission.value.id}/reject`, { reason: rejectionReason.value })
     toast.add({ severity: 'success', summary: 'Success', detail: 'Submission rejected' })
     showRejectModal.value = false
     showDetails.value = false
@@ -143,7 +143,7 @@ function confirmDelete(submission: any) {
     icon: 'pi pi-trash',
     accept: async () => {
       try {
-        await api.delete(`/admin/submissions/${submission.id}`)
+        await api.delete(`/submissions/${submission.id}`)
         toast.add({ severity: 'success', summary: 'Success', detail: 'Submission deleted' })
         await loadSubmissions()
         notifyPendingUpdated()
@@ -178,7 +178,7 @@ async function saveSubmission() {
   if (!editingSubmission.value || !selectedSubmission.value) return
   try {
     isSaving.value = true
-    await api.put(`/admin/submissions/${selectedSubmission.value.id}`, {
+    await api.put(`/submissions/${selectedSubmission.value.id}`, {
       title: editingSubmission.value.title,
       business_name: editingSubmission.value.business_name,
       description: editingSubmission.value.description,
@@ -208,7 +208,7 @@ async function confirmPublish(submission: any) {
     icon: 'pi pi-globe',
     accept: async () => {
       try {
-        const response = await api.patch(`/admin/submissions/${submission.id}/publish`)
+        const response = await api.patch(`/submissions/${submission.id}/publish`)
         toast.add({
           severity: 'success',
           summary: 'Success',
@@ -247,7 +247,7 @@ async function bulkApprove() {
       try {
         await Promise.all(
           selectedSubmissions.value.map(s =>
-            api.patch(`/admin/submissions/${s.id}/approve`)
+            api.patch(`/submissions/${s.id}/approve`)
           )
         )
         toast.add({
@@ -280,7 +280,7 @@ async function bulkReject() {
       try {
         await Promise.all(
           selectedSubmissions.value.map(s =>
-            api.patch(`/admin/submissions/${s.id}/reject`, { reason })
+            api.patch(`/submissions/${s.id}/reject`, { reason })
           )
         )
         toast.add({
@@ -369,7 +369,7 @@ async function bulkDelete() {
       try {
         await Promise.all(
           selectedSubmissions.value.map(s =>
-            api.delete(`/admin/submissions/${s.id}`)
+            api.delete(`/submissions/${s.id}`)
           )
         )
         toast.add({

@@ -651,7 +651,8 @@ function listingBySlug(slug: string) {
 function normalizeAssetUrl(value?: string | null) {
   if (!value) return ''
   if (/^https?:\/\//.test(value) || value.startsWith('/')) return value
-  return `${import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'}/${value.replace(/^\/+/, '')}`
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+  return `${backendUrl}/${value.replace(/^\/+/, '')}`
 }
 
 function mapCmsListing(listing: PublicListing): ListingStaticData {

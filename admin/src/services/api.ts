@@ -14,8 +14,8 @@ function getApiUrl(): string {
     const { hostname, protocol } = window.location
     const port = window.location.port ? `:${window.location.port}` : ''
 
-    // If running on localhost/127.0.0.1 on port 5173 (Vite dev), API is on port 8000
-    if ((hostname === 'localhost' || hostname === '127.0.0.1') && window.location.port === '5173') {
+    // If running on localhost/127.0.0.1 on Vite dev (5173, 5174, etc), API is on port 8000
+    if ((hostname === 'localhost' || hostname === '127.0.0.1') && (window.location.port === '5173' || window.location.port === '5174')) {
       return `${protocol}//localhost:8000/api/v1/admin`
     }
 
@@ -41,6 +41,12 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // Don't override Content-Type for FormData (file uploads)
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+
   return config
 })
 

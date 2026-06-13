@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\UploadController;
+use App\Http\Controllers\Admin\CustomMediaController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\NewsletterSubscriberController;
 use App\Http\Controllers\Admin\GlobalSearchController;
@@ -44,7 +45,7 @@ Route::get('api/v1/admin/debug/submissions-status', function () {
 
 // DEBUG - Test what approvals query returns
 Route::get('api/v1/admin/debug/approved-listings', function (Request $request) {
-    $status = $request->get('status', 'approved');
+    $status = $request->input('status', 'approved');
 
     \Log::info('DEBUG approved-listings query', ['status' => $status]);
 
@@ -146,6 +147,18 @@ Route::prefix('api/v1')->group(function (): void {
                     ->orWhere('name', $category));
             })
             ->latest('published_at')
+            ->get()
+            ->map(fn(Listing $listing) => publicListingPayload($listing))
+            ->values();
+    });
+
+    Route::get('public/listings/popular', function () {
+        return Listing::query()
+            ->with(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'hours', 'facilities', 'contacts'])
+            ->where('status', 'published')
+            ->where('is_popular', true)
+            ->orderBy('popular_order', 'asc')
+            ->limit(3)
             ->get()
             ->map(fn(Listing $listing) => publicListingPayload($listing))
             ->values();
@@ -319,6 +332,10 @@ if (!function_exists('publicListingPayload')) {
     $category = $listing->categories->first();
     $cityName = $listing->city?->name ?: $listing->city?->state_region;
 
+    // Image priority: thumbnail > featured gallery > fallback placeholder (NO CDN URLs)
+    // Only use images actually uploaded to CMS, not CDN URLs
+    $image = $listing->getAttribute('thumbnail_image') ?: $featuredImage?->path;
+
     return [
         'id' => (int) $listing->getAttribute('id'),
         'slug' => (string) $listing->getAttribute('slug'),
@@ -334,7 +351,7 @@ if (!function_exists('publicListingPayload')) {
             'name' => (string) $category->getAttribute('name'),
             'slug' => (string) $category->getAttribute('slug'),
         ])->values(),
-        'image' => $featuredImage?->path ?: $listing->getAttribute('og_image'),
+        'image' => $image,
         'gallery' => $gallery,
         'location' => $listing->getAttribute('address') ?: $cityName ?: 'Location available soon',
         'city' => $cityName,
@@ -347,12 +364,24 @@ if (!function_exists('publicListingPayload')) {
         'phone' => $listing->getAttribute('phone') ?: $contacts->get('phone'),
         'email' => $listing->getAttribute('email') ?: $contacts->get('email'),
         'website_url' => $listing->getAttribute('website_url') ?: $contacts->get('website'),
+        'contact_phone' => $listing->getAttribute('contact_phone') ?: $listing->getAttribute('phone'),
+        'contact_email' => $listing->getAttribute('contact_email') ?: $listing->getAttribute('email'),
+        'contact_website' => $listing->getAttribute('contact_website') ?: $listing->getAttribute('website_url'),
+        'open_days' => $listing->getAttribute('open_days') ?? 'Monday - Saturday',
+        'open_time' => $listing->getAttribute('open_time') ?? '09:00',
+        'close_time' => $listing->getAttribute('close_time') ?? '18:00',
+        'weekend_text' => $listing->getAttribute('weekend_text') ?? 'Weekend: Sunday',
+        'details_heading' => $listing->getAttribute('details_heading') ?? 'Details',
+        'details_items' => $listing->getAttribute('details_items') ?? [],
         'details_title' => $listing->getAttribute('business_name') ? $listing->getAttribute('business_name') . ' Details' : $listing->getAttribute('title') . ' Details',
         'details_paragraphs' => array_values(array_filter([
             $listing->getAttribute('description'),
             $listing->getAttribute('excerpt'),
         ])),
+        'facilities_heading' => $listing->getAttribute('facilities_heading') ?? 'Facilities Available',
         'facilities' => $listing->facilities->sortBy('sort_order')->pluck('name')->values(),
+        'facilities_items' => $listing->getAttribute('facilities_items') ?? [],
+        'gallery_heading' => $listing->getAttribute('gallery_heading') ?? 'Gallery',
         'seo' => [
             'title' => $listing->getAttribute('seo_title'),
             'description' => $listing->getAttribute('seo_description'),
@@ -503,12 +532,19 @@ Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
     Route::get('activity-logs', [ActivityLogController::class, 'index']);
     Route::get('dashboard', [DashboardController::class, 'index']);
 
-    // File upload
+    // File upload and Custom Media Library
     Route::post('upload', [UploadController::class, 'store']);
     Route::get('media', [MediaController::class, 'index']);
     Route::post('media', [MediaController::class, 'store']);
     Route::patch('media/{media}', [MediaController::class, 'update']);
     Route::delete('media/bulk', [MediaController::class, 'bulkDestroy']);
+
+    // Custom Media Library (Global)
+    Route::get('custom-media', [CustomMediaController::class, 'index']);
+    Route::get('custom-media/{media}', [CustomMediaController::class, 'show']);
+    Route::patch('custom-media/{media}', [CustomMediaController::class, 'update']);
+    Route::delete('custom-media/{media}', [CustomMediaController::class, 'destroy']);
+    Route::post('custom-media/bulk-delete', [CustomMediaController::class, 'bulkDelete']);
     Route::delete('media/{media}', [MediaController::class, 'destroy']);
 
     // Settings endpoints (branding, theme, seo, payments)
@@ -574,5 +610,5 @@ Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
     Route::apiResource('article-categories', \App\Http\Controllers\Admin\ArticleCategoryController::class);
 
     // Pages Management
-    Route::apiResource('pages', \App\Http\Controllers\Admin\PageController::class);
+    Route::apiResource('pages', PageController::class);
 });

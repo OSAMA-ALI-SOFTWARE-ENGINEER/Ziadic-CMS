@@ -21,8 +21,7 @@ const BlogsIndexPage = () => import('@/pages/BlogsIndexPage.vue')
 const AddListingPage = () => import('@/pages/AddListingPage.vue')
 const SearchPage = () => import('@/pages/SearchPage.vue')
 const SubmitListingPage = () => import('@/pages/SubmitListingPage.vue')
-// Detail pages still handled by legacyRoutes - will be migrated in Phase 1B+
-// const ListingDetailPage = () => import('@/pages/details/ListingDetailPage.vue')
+const ListingDetailPage = () => import('@/pages/details/ListingDetailPage.vue')
 // const CityDetailPage = () => import('@/pages/details/CityDetailPage.vue')
 // const TeamDetailPage = () => import('@/pages/details/TeamDetailPage.vue')
 // const CategoryDetailPage = () => import('@/pages/details/CategoryDetailPage.vue')
@@ -49,13 +48,6 @@ const legacyRoutes = [
     title: 'City | Zaidic',
     legacyPath: '/legacy/detail_cities.html',
     loadingLabel: 'Loading City...',
-  },
-  {
-    path: 'listings/:slug',
-    name: 'listing-detail',
-    title: 'Listing | Zaidic',
-    legacyPath: '/legacy/detail_listings.html',
-    loadingLabel: 'Loading Listing...',
   },
   {
     path: 'team/:slug',
@@ -363,6 +355,15 @@ const router = createRouter({
           component: SubmitListingPage,
           meta: {
             title: 'Submit Listing | Zaidic',
+          },
+        },
+        {
+          path: 'listings/:slug',
+          name: 'listing-detail',
+          component: ListingDetailPage,
+          meta: {
+            title: 'Listing | Zaidic',
+            legacyFullPage: true,
           },
         },
         ...legacyRoutes.map((route) => ({

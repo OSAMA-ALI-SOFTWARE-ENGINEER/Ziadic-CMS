@@ -1,19 +1,15 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchPublicListings, fetchPopularListings, type PublicListing } from '@/services/listings'
+import { fetchPublicListings, type PublicListing } from '@/services/listings'
 import { getImageUrl, deduplicateImages } from '@/utils/imageUrl'
 import GalleryPreview from '@/components/GalleryPreview.vue'
-import ListingCard from '@/components/ListingCard.vue'
 
 const route = useRoute()
 
 const showGalleryPreview = ref(false)
 const galleryPreviewIndex = ref(0)
 const galleryImages = ref<string[]>([])
-const visibleGalleryCount = ref(4)
-const currentListing = ref<PublicListing | null>(null)
-const popularListings = ref<PublicListing[]>([])
 
 onMounted(async () => {
   const slug = route.params.slug as string
@@ -34,23 +30,12 @@ onMounted(async () => {
         gallery_heading: listing.gallery_heading,
         gallery_count: listing.gallery?.length,
       })
-      currentListing.value = listing
       populateListingDetail(listing)
 
-      // Load and deduplicate gallery images
+      // Load and deduplicate gallery images for preview modal
       if (listing.gallery && listing.gallery.length > 0) {
         galleryImages.value = deduplicateImages(listing.gallery)
         console.log('Gallery deduped:', galleryImages.value.length, 'unique images')
-      }
-
-      // Load popular listings (excluding current listing if possible)
-      try {
-        const popular = await fetchPopularListings()
-        const filtered = popular.filter(p => p.id !== listing.id)
-        popularListings.value = filtered.length > 0 ? filtered : popular
-        console.log('Popular listings loaded:', popularListings.value.length)
-      } catch (error) {
-        console.warn('Could not load popular listings:', error)
       }
     } else {
       console.warn('Listing not found:', slug)
@@ -67,10 +52,6 @@ function openGalleryPreview(index: number) {
 
 function closeGalleryPreview() {
   showGalleryPreview.value = false
-}
-
-function loadMoreGallery() {
-  visibleGalleryCount.value += 4
 }
 
 function populateListingDetail(listing: PublicListing) {
@@ -255,7 +236,7 @@ function escapeHtml(value: string): string {
 </script>
 
 <template>
-  <!-- Gallery Preview Modal -->
+  <!-- Gallery Preview Modal (teleported, no layout impact) -->
   <GalleryPreview
     v-if="showGalleryPreview && galleryImages.length > 0"
     :images="galleryImages.map(img => getImageUrl(img))"
@@ -263,235 +244,7 @@ function escapeHtml(value: string): string {
     @close="closeGalleryPreview"
   />
 
-  <!-- Gallery Images Section (Vue-based) -->
-  <div v-if="currentListing && galleryImages.length > 0" class="listing-gallery-vue">
-    <div class="listing-gallery-header">
-      <h2>{{ currentListing.gallery_heading || 'Vibrant Gallery' }}</h2>
-    </div>
-
-    <!-- Gallery Grid -->
-    <div class="gallery-grid">
-      <div
-        v-for="(image, index) in galleryImages.slice(0, visibleGalleryCount)"
-        :key="index"
-        class="gallery-item"
-        @click="openGalleryPreview(index)"
-      >
-        <img
-          :src="getImageUrl(image)"
-          :alt="`${currentListing.title} - Image ${index + 1}`"
-          class="gallery-image"
-        />
-        <div class="gallery-overlay">
-          <span class="gallery-icon">🔍</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Load More Button -->
-    <div v-if="visibleGalleryCount < galleryImages.length" class="gallery-load-more">
-      <button @click="loadMoreGallery" class="load-more-btn">
-        Load More ({{ galleryImages.length - visibleGalleryCount }} more)
-      </button>
-    </div>
-  </div>
-
-  <!-- Popular Listings Carousel Section -->
-  <div v-if="popularListings.length > 0" class="popular-listings-carousel">
-    <div class="carousel-header">
-      <h2>Popular Places You Might Like</h2>
-    </div>
-
-    <!-- Carousel Grid -->
-    <div class="carousel-grid">
-      <ListingCard
-        v-for="listing in popularListings"
-        :key="listing.id"
-        :id="listing.id"
-        :slug="listing.slug"
-        :title="listing.title"
-        :location="listing.location"
-        :category="listing.category"
-        :image="listing.image"
-        :summary="listing.summary"
-        :days="listing.days"
-        :hours="listing.hours"
-      />
-    </div>
-  </div>
-
-  <!-- Fallback: Populate existing Webflow content -->
-  <!-- This ensures backward compatibility with existing HTML structure -->
+  <!-- This component populates the existing Webflow HTML with dynamic CMS data -->
+  <!-- Gallery and carousel sections are injected into the Webflow DOM, not rendered here -->
 </template>
 
-<style scoped>
-/* Gallery Vue Section Styles */
-.listing-gallery-vue {
-  margin: 60px 0;
-  padding: 0 20px;
-}
-
-.listing-gallery-header {
-  margin-bottom: 40px;
-}
-
-.listing-gallery-header h2 {
-  font-size: 32px;
-  font-weight: 700;
-  color: #222;
-  margin: 0;
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-@media (max-width: 1024px) {
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-  }
-}
-
-@media (max-width: 768px) {
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.gallery-item {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #f0f0f0;
-}
-
-.gallery-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.gallery-item:hover .gallery-image {
-  transform: scale(1.1);
-}
-
-.gallery-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.3s ease;
-}
-
-.gallery-item:hover .gallery-overlay {
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.gallery-icon {
-  font-size: 32px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.gallery-item:hover .gallery-icon {
-  opacity: 1;
-}
-
-.gallery-load-more {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0;
-}
-
-.load-more-btn {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 12px 32px;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.load-more-btn:hover {
-  background: #c0392b;
-}
-
-/* Popular Listings Carousel */
-.popular-listings-carousel {
-  margin: 80px 0;
-  padding: 60px 20px;
-  background: #f9f9f9;
-}
-
-.carousel-header {
-  margin-bottom: 40px;
-  text-align: center;
-}
-
-.carousel-header h2 {
-  font-size: 32px;
-  font-weight: 700;
-  color: #222;
-  margin: 0;
-}
-
-.carousel-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 30px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-@media (max-width: 1024px) {
-  .carousel-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
-  }
-}
-
-@media (max-width: 768px) {
-  .carousel-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .popular-listings-carousel {
-    padding: 40px 15px;
-    margin: 60px 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .listing-gallery-vue {
-    padding: 0 15px;
-  }
-
-  .carousel-header h2,
-  .listing-gallery-header h2 {
-    font-size: 24px;
-  }
-}
-</style>

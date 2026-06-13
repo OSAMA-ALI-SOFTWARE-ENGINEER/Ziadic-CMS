@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { fetchPopularListings, type PublicListing } from '@/services/listings'
+import { getImageUrl } from '@/utils/imageUrl'
 
 const isLoading = ref(true)
 
@@ -101,12 +102,6 @@ function populateWebflowContent(listings: PublicListing[]) {
   console.log('Popular listings populated successfully')
 }
 
-function getImageUrl(path?: string | null): string {
-  if (!path) return '/assets/images/1.png'
-  if (path.startsWith('http')) return path
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
-  return `${backendUrl}/${path.replace(/^\/+/, '')}`
-}
 </script>
 
 <template>

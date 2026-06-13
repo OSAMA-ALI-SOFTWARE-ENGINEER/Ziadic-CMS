@@ -1,59 +1,80 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchPublicListings, type PublicListing } from '@/services/listings'
+import { fetchPublicListings, fetchPopularListings, type PublicListing } from '@/services/listings'
+import { getImageUrl, deduplicateImages } from '@/utils/imageUrl'
+import GalleryPreview from '@/components/GalleryPreview.vue'
+import ListingCard from '@/components/ListingCard.vue'
 
 const route = useRoute()
+
+const showGalleryPreview = ref(false)
+const galleryPreviewIndex = ref(0)
+const galleryImages = ref<string[]>([])
+const visibleGalleryCount = ref(4)
+const currentListing = ref<PublicListing | null>(null)
+const popularListings = ref<PublicListing[]>([])
 
 onMounted(async () => {
   const slug = route.params.slug as string
   if (!slug) return
 
   try {
-    // Wait for DOM and Webflow to be ready (increased time)
     console.log('Waiting for DOM to be ready...')
     await new Promise(resolve => setTimeout(resolve, 500))
 
     const listings = await fetchPublicListings()
-    console.log('All listings fetched:', listings.length, listings.map(l => ({ id: l.id, slug: l.slug, title: l.title })))
+    console.log('All listings fetched:', listings.length)
 
     const listing = listings.find(l => l.slug === slug)
 
     if (listing) {
       console.log('Found listing:', listing.slug, {
         title: listing.title,
-        image: listing.image,
-        gallery: listing.gallery,
-        gallery_length: listing.gallery?.length,
-        contact_phone: listing.contact_phone,
-        contact_email: listing.contact_email,
-        contact_website: listing.contact_website,
-        contact_address: listing.contact_address,
-        open_days: listing.open_days,
-        open_time: listing.open_time,
-        close_time: listing.close_time,
+        gallery_heading: listing.gallery_heading,
+        gallery_count: listing.gallery?.length,
       })
+      currentListing.value = listing
       populateListingDetail(listing)
+
+      // Load and deduplicate gallery images
+      if (listing.gallery && listing.gallery.length > 0) {
+        galleryImages.value = deduplicateImages(listing.gallery)
+        console.log('Gallery deduped:', galleryImages.value.length, 'unique images')
+      }
+
+      // Load popular listings (excluding current listing if possible)
+      try {
+        const popular = await fetchPopularListings()
+        const filtered = popular.filter(p => p.id !== listing.id)
+        popularListings.value = filtered.length > 0 ? filtered : popular
+        console.log('Popular listings loaded:', popularListings.value.length)
+      } catch (error) {
+        console.warn('Could not load popular listings:', error)
+      }
     } else {
-      console.warn('Listing not found:', slug, 'Available slugs:', listings.map(l => l.slug))
+      console.warn('Listing not found:', slug)
     }
   } catch (error) {
     console.error('Failed to fetch listing:', error)
   }
 })
 
+function openGalleryPreview(index: number) {
+  galleryPreviewIndex.value = index
+  showGalleryPreview.value = true
+}
+
+function closeGalleryPreview() {
+  showGalleryPreview.value = false
+}
+
+function loadMoreGallery() {
+  visibleGalleryCount.value += 4
+}
+
 function populateListingDetail(listing: PublicListing) {
   const root = document.querySelector('.page-wrapper, .legacy-home') || document.body
-
-  console.log('Populating listing detail with:', {
-    title: listing.title,
-    location: listing.location,
-    days: listing.days,
-    hours: listing.hours,
-    open_days: listing.open_days,
-    open_time: listing.open_time,
-    close_time: listing.close_time,
-  })
 
   // Page title
   const pageTitle = root.querySelector('.page-banner-title')
@@ -83,7 +104,7 @@ function populateListingDetail(listing: PublicListing) {
     bodyCopy.classList.remove('w-dyn-bind-empty')
   }
 
-  // Location, Days, Hours - Update all date-and-time elements
+  // Location, Days, Hours
   const dateTimeTexts = Array.from(root.querySelectorAll('.date-and-time-icon-text'))
   if (dateTimeTexts.length >= 3) {
     dateTimeTexts[0].textContent = listing.location || 'Location'
@@ -95,36 +116,17 @@ function populateListingDetail(listing: PublicListing) {
   // Main image
   const mainImg = root.querySelector<HTMLImageElement>('.listing-single-img')
   if (mainImg) {
-    const mainImageUrl = getImageUrl(listing.image)
-    console.log('Main image:', { original: listing.image, fullUrl: mainImageUrl })
-    mainImg.src = mainImageUrl
+    mainImg.src = getImageUrl(listing.image)
     mainImg.alt = listing.title
     mainImg.classList.remove('w-dyn-bind-empty')
-  } else {
-    console.warn('Main image element not found')
   }
 
-  // Gallery images
-  const galleryImages = root.querySelectorAll<HTMLImageElement>('.vibrant-gallery-img')
-  const images = listing.gallery && listing.gallery.length > 0 ? listing.gallery : (listing.image ? [listing.image] : [])
-
-  console.log('Gallery images:', {
-    count: galleryImages.length,
-    availableImages: images.length,
-    images: images,
-  })
-
-  galleryImages.forEach((img, index) => {
-    const imageUrl = images[index % images.length]
-    const fullUrl = getImageUrl(imageUrl)
-    console.log(`Setting gallery image ${index}:`, {
-      original: imageUrl,
-      fullUrl: fullUrl,
-    })
-    img.src = fullUrl
-    img.alt = listing.title
-    img.classList.remove('w-dyn-bind-empty')
-  })
+  // Gallery heading - fetch from CMS
+  const galleryHeading = root.querySelector('.vibrant-gallery h2, .vibrant-gallery h3, [class*="gallery"] h2, [class*="gallery"] h3')
+  if (galleryHeading && listing.gallery_heading) {
+    galleryHeading.textContent = listing.gallery_heading
+    galleryHeading.classList.remove('w-dyn-bind-empty')
+  }
 
   // Details section
   const richText = root.querySelector<HTMLElement>('.rich-text')
@@ -135,7 +137,6 @@ function populateListingDetail(listing: PublicListing) {
       : [listing.summary, listing.description].filter(Boolean)
 
     const facilitiesHeading = listing.facilities_heading || 'Facilities Available'
-    // Use facilities_items if available, fallback to facilities for backward compatibility
     const facilitiesItems = (listing.facilities_items && listing.facilities_items.length > 0)
       ? listing.facilities_items
       : (listing.facilities && listing.facilities.length > 0
@@ -155,208 +156,75 @@ function populateListingDetail(listing: PublicListing) {
     richText.classList.remove('w-dyn-bind-empty')
   }
 
-  // Helper function to get field value with multiple fallback options
-  function getFieldValue(listing: PublicListing, ...fieldNames: string[]): string | null {
-    for (const field of fieldNames) {
-      const value = (listing as any)[field]
-      if (value) return value
-    }
-    return null
-  }
+  // Contact information
+  const contactPhone = listing.contact_phone || listing.phone || 'Not Available'
+  const contactEmail = listing.contact_email || listing.email || 'Not Available'
+  const contactWebsite = listing.contact_website || listing.website_url || 'Not Available'
+  const contactLocation = listing.contact_address || listing.location || listing.city || 'Not Available'
 
-  // Extract contact information with proper fallbacks
-  const contactPhone = getFieldValue(listing, 'contact_phone', 'phone') || 'Not Available'
-  const contactEmail = getFieldValue(listing, 'contact_email', 'email') || 'Not Available'
-  const contactWebsite = getFieldValue(listing, 'contact_website', 'website_url') || 'Not Available'
-  const contactLocation = getFieldValue(listing, 'contact_address', 'location', 'city') || 'Not Available'
+  updateContactInfo(root, contactPhone, contactEmail, contactWebsite, contactLocation)
+  updateScheduleInfo(root, listing)
+}
 
-  console.log('Contact information extracted:', {
-    phone: contactPhone,
-    email: contactEmail,
-    website: contactWebsite,
-    location: contactLocation,
-  })
-
-  // Find all text nodes and elements to match contact information
+function updateContactInfo(root: Element, phone: string, email: string, website: string, location: string) {
   const allElements = Array.from(root.querySelectorAll('*'))
   let phoneUpdated = false
   let emailUpdated = false
   let websiteUpdated = false
   let addressUpdated = false
 
-  console.log('Updating contact information:', {
-    phone: contactPhone,
-    email: contactEmail,
-    website: contactWebsite,
-    address: contactLocation,
-  })
-
-  for (let i = 0; i < allElements.length; i++) {
-    const el = allElements[i]
+  for (const el of allElements) {
     const text = el.textContent || ''
     const isLeaf = el.children.length === 0
     const isLink = el.tagName === 'A'
 
-    // Phone number matching and updating
-    if (!phoneUpdated && text && text.length < 50) {
-      if (text.match(/\(\d{3}\)|\d{3}[.\s-]\d{3}|000.*012|\+\d{8,}|\(\d{4}\)/)) {
-        el.textContent = contactPhone
-        el.classList.remove('w-dyn-bind-empty')
-        phoneUpdated = true
-        console.log('Updated phone (pass 1):', contactPhone, 'from element:', text)
-      }
+    if (!phoneUpdated && text.match(/\(\d{3}\)|\d{3}[.\s-]\d{3}|000.*012|\+\d{8,}|\(\d{4}\)/)) {
+      el.textContent = phone
+      el.classList.remove('w-dyn-bind-empty')
+      phoneUpdated = true
     }
 
-    // Email matching - look for @ symbol BUT NOT if it's a URL (www or osama-ali pattern)
-    // Email must have @ and should not be a website domain
-    if (!emailUpdated && text && text.length < 60) {
-      const hasAtSymbol = text.includes('@')
-      const isWebsiteDomain = text.includes('www') || text.includes('osama-ali') || (text.includes('.') && !text.includes('@'))
-
-      if (hasAtSymbol && !isWebsiteDomain) {
-        if (isLink && contactEmail !== 'Not Available') {
-          (el as HTMLAnchorElement).href = `mailto:${contactEmail}`
-        }
-        el.textContent = contactEmail
-        el.classList.remove('w-dyn-bind-empty')
-        emailUpdated = true
-        console.log('Updated email (pass 1):', contactEmail, 'from element:', text)
+    if (!emailUpdated && text.includes('@') && !text.includes('www') && !text.includes('osama-ali')) {
+      if (isLink) {
+        (el as HTMLAnchorElement).href = email !== 'Not Available' ? `mailto:${email}` : '#'
       }
+      el.textContent = email
+      el.classList.remove('w-dyn-bind-empty')
+      emailUpdated = true
     }
 
-    // Website matching - look for www or domain pattern BUT NOT if it's already an email (@)
-    if (!websiteUpdated && text && text.length < 60) {
-      const hasAtSymbol = text.includes('@')
-      const hasWebsite = text.includes('www') || text.includes('example.com') || text.includes('osama-ali')
-
-      if (!hasAtSymbol && hasWebsite) {
-        const displayUrl = contactWebsite === 'Not Available'
-          ? contactWebsite
-          : contactWebsite.replace(/^https?:\/\//, '')
-        el.textContent = displayUrl
-        if (isLink && contactWebsite !== 'Not Available') {
-          const anchor = el as HTMLAnchorElement
-          anchor.href = contactWebsite.startsWith('http') ? contactWebsite : `https://${contactWebsite}`
-          anchor.target = '_blank'
-          anchor.rel = 'noopener noreferrer'
-        }
-        el.classList.remove('w-dyn-bind-empty')
-        websiteUpdated = true
-        console.log('Updated website (pass 1):', contactWebsite, 'from element:', text)
+    if (!websiteUpdated && (text.includes('www') || text.includes('example.com') || text.includes('osama-ali')) && !text.includes('@')) {
+      const displayUrl = website === 'Not Available' ? website : website.replace(/^https?:\/\//, '')
+      el.textContent = displayUrl
+      if (isLink && website !== 'Not Available') {
+        const anchor = el as HTMLAnchorElement
+        anchor.href = website.startsWith('http') ? website : `https://${website}`
+        anchor.target = '_blank'
+        anchor.rel = 'noopener noreferrer'
       }
+      el.classList.remove('w-dyn-bind-empty')
+      websiteUpdated = true
     }
 
-    // Address/Location matching
     if (!addressUpdated && isLeaf && text && text.length < 150) {
-      if (text.includes('Germany') || text.includes('Berlin') || text.includes('Address') || text.includes('Location') || text.includes('Distt') || text.match(/\d{4,}/) || text.includes('DE,') || text.includes('Coastal') || text.includes('Gallery')) {
-        el.textContent = contactLocation
+      if (text.includes('Germany') || text.includes('Berlin') || text.includes('Address') || text.includes('Location') || text.match(/\d{4,}/)) {
+        el.textContent = location
         el.classList.remove('w-dyn-bind-empty')
         addressUpdated = true
-        console.log('Updated address (pass 1):', contactLocation, 'from element:', text)
       }
     }
   }
+}
 
-  // Fallback: If email not found, search more aggressively
-  if (!emailUpdated && contactEmail !== 'Not Available') {
-    console.log('Email not updated in pass 1, trying fallback search')
-    for (let i = 0; i < allElements.length; i++) {
-      const el = allElements[i]
-      const text = el.textContent || ''
-      const isEmailLink = el.tagName === 'A'
-      // Must have @ and not be a website URL
-      const hasAtSymbol = text.includes('@')
-      const isWebsiteDomain = text.includes('www') || text.includes('osama-ali')
+function updateScheduleInfo(root: Element, listing: PublicListing) {
+  const allElements = Array.from(root.querySelectorAll('*'))
 
-      if (hasAtSymbol && !isWebsiteDomain) {
-        console.log('Found email candidate:', text)
-        if (isEmailLink) {
-          (el as HTMLAnchorElement).href = `mailto:${contactEmail}`
-        }
-        el.textContent = contactEmail
-        el.classList.remove('w-dyn-bind-empty')
-        emailUpdated = true
-        console.log('Updated email (fallback):', contactEmail)
-        break
-      }
-    }
-  }
-
-  // If email is "Not Available", replace placeholders with it
-  if (!emailUpdated && contactEmail === 'Not Available') {
-    for (let i = 0; i < allElements.length; i++) {
-      const el = allElements[i]
-      const text = el.textContent || ''
-      if (text.includes('@') || text.includes('info.example')) {
-        el.textContent = contactEmail
-        el.classList.remove('w-dyn-bind-empty')
-        emailUpdated = true
-        console.log('Updated email to "Not Available"')
-        break
-      }
-    }
-  }
-
-  // Fallback: If website not found, search more aggressively
-  if (!websiteUpdated && contactWebsite !== 'Not Available') {
-    console.log('Website not updated in pass 1, trying fallback search')
-    for (let i = 0; i < allElements.length; i++) {
-      const el = allElements[i]
-      const text = el.textContent || ''
-      const href = (el as any).href || ''
-      const isWebsiteLink = el.tagName === 'A'
-      // Must have www or domain pattern but NOT be an email (@)
-      const hasAtSymbol = text.includes('@')
-      const hasWebsite = text.includes('www') || text.includes('example') || text.includes('osama')
-
-      if (!hasAtSymbol && hasWebsite) {
-        console.log('Found website candidate:', text, 'href:', href)
-        const displayUrl = contactWebsite.replace(/^https?:\/\//, '')
-        el.textContent = displayUrl
-        if (isWebsiteLink) {
-          const anchor = el as HTMLAnchorElement
-          anchor.href = contactWebsite.startsWith('http') ? contactWebsite : `https://${contactWebsite}`
-          anchor.target = '_blank'
-          anchor.rel = 'noopener noreferrer'
-        }
-        el.classList.remove('w-dyn-bind-empty')
-        websiteUpdated = true
-        console.log('Updated website (fallback):', contactWebsite)
-        break
-      }
-    }
-  }
-
-  // If website is "Not Available", replace placeholders with it
-  if (!websiteUpdated && contactWebsite === 'Not Available') {
-    for (let i = 0; i < allElements.length; i++) {
-      const el = allElements[i]
-      const text = el.textContent || ''
-      if (text.includes('www') || text.includes('example')) {
-        el.textContent = contactWebsite
-        el.classList.remove('w-dyn-bind-empty')
-        websiteUpdated = true
-        console.log('Updated website to "Not Available"')
-        break
-      }
-    }
-  }
-
-  console.log('Contact update summary:', {
-    phoneUpdated,
-    emailUpdated,
-    websiteUpdated,
-    addressUpdated,
-  })
-
-  // Schedule information - Find and update all schedule-related elements
-  allElements.forEach(el => {
+  for (const el of allElements) {
     const text = el.textContent || ''
     const isLeaf = el.children.length === 0
 
     if (isLeaf) {
-      // Update time format (HH:MM - HH:MM)
-      if (text.match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}|AM|PM/) && !el.closest('a')) {
+      if (text.match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}|AM|PM/)) {
         const timeStr = listing.open_time && listing.close_time
           ? `${listing.open_time} - ${listing.close_time}`
           : (listing.hours || '06:00 AM - 10:00 PM')
@@ -365,7 +233,6 @@ function populateListingDetail(listing: PublicListing) {
         }
       }
 
-      // Update days
       if (text.includes('Monday') || text.includes('Saturday') || text.includes('Day')) {
         const daysStr = listing.open_days || listing.days || 'Monday - Saturday'
         if (text !== daysStr && text.length < 50) {
@@ -373,28 +240,11 @@ function populateListingDetail(listing: PublicListing) {
         }
       }
 
-      // Update weekend
       if (text.includes('Weekend') && text.length < 40) {
         el.textContent = listing.weekend_text || 'Weekend: Sunday'
       }
     }
-  })
-
-  // Log all updated elements
-  const allUpdated = root.querySelectorAll('[class*="empty"]:not(.w-dyn-bind-empty)')
-  console.log('Listing detail populated successfully', {
-    elementsCleared: allUpdated.length,
-    title: root.querySelector('.page-banner-title')?.textContent,
-    location: root.querySelector('.date-and-time-icon-text')?.textContent,
-    galleryImages: root.querySelectorAll('.vibrant-gallery-img').length,
-  })
-}
-
-function getImageUrl(path?: string | null): string {
-  if (!path) return ''
-  if (path.startsWith('http')) return path
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
-  return `${backendUrl}/${path.replace(/^\/+/, '')}`
+  }
 }
 
 function escapeHtml(value: string): string {
@@ -405,5 +255,243 @@ function escapeHtml(value: string): string {
 </script>
 
 <template>
-  <!-- This component populates listing detail pages with dynamic CMS data -->
+  <!-- Gallery Preview Modal -->
+  <GalleryPreview
+    v-if="showGalleryPreview && galleryImages.length > 0"
+    :images="galleryImages.map(img => getImageUrl(img))"
+    :initialIndex="galleryPreviewIndex"
+    @close="closeGalleryPreview"
+  />
+
+  <!-- Gallery Images Section (Vue-based) -->
+  <div v-if="currentListing && galleryImages.length > 0" class="listing-gallery-vue">
+    <div class="listing-gallery-header">
+      <h2>{{ currentListing.gallery_heading || 'Vibrant Gallery' }}</h2>
+    </div>
+
+    <!-- Gallery Grid -->
+    <div class="gallery-grid">
+      <div
+        v-for="(image, index) in galleryImages.slice(0, visibleGalleryCount)"
+        :key="index"
+        class="gallery-item"
+        @click="openGalleryPreview(index)"
+      >
+        <img
+          :src="getImageUrl(image)"
+          :alt="`${currentListing.title} - Image ${index + 1}`"
+          class="gallery-image"
+        />
+        <div class="gallery-overlay">
+          <span class="gallery-icon">🔍</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load More Button -->
+    <div v-if="visibleGalleryCount < galleryImages.length" class="gallery-load-more">
+      <button @click="loadMoreGallery" class="load-more-btn">
+        Load More ({{ galleryImages.length - visibleGalleryCount }} more)
+      </button>
+    </div>
+  </div>
+
+  <!-- Popular Listings Carousel Section -->
+  <div v-if="popularListings.length > 0" class="popular-listings-carousel">
+    <div class="carousel-header">
+      <h2>Popular Places You Might Like</h2>
+    </div>
+
+    <!-- Carousel Grid -->
+    <div class="carousel-grid">
+      <ListingCard
+        v-for="listing in popularListings"
+        :key="listing.id"
+        :id="listing.id"
+        :slug="listing.slug"
+        :title="listing.title"
+        :location="listing.location"
+        :category="listing.category"
+        :image="listing.image"
+        :summary="listing.summary"
+        :days="listing.days"
+        :hours="listing.hours"
+      />
+    </div>
+  </div>
+
+  <!-- Fallback: Populate existing Webflow content -->
+  <!-- This ensures backward compatibility with existing HTML structure -->
 </template>
+
+<style scoped>
+/* Gallery Vue Section Styles */
+.listing-gallery-vue {
+  margin: 60px 0;
+  padding: 0 20px;
+}
+
+.listing-gallery-header {
+  margin-bottom: 40px;
+}
+
+.listing-gallery-header h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #222;
+  margin: 0;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+@media (max-width: 1024px) {
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.gallery-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f0f0f0;
+}
+
+.gallery-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.gallery-item:hover .gallery-image {
+  transform: scale(1.1);
+}
+
+.gallery-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+
+.gallery-item:hover .gallery-overlay {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.gallery-icon {
+  font-size: 32px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gallery-item:hover .gallery-icon {
+  opacity: 1;
+}
+
+.gallery-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.load-more-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.load-more-btn:hover {
+  background: #c0392b;
+}
+
+/* Popular Listings Carousel */
+.popular-listings-carousel {
+  margin: 80px 0;
+  padding: 60px 20px;
+  background: #f9f9f9;
+}
+
+.carousel-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.carousel-header h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #222;
+  margin: 0;
+}
+
+.carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .carousel-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .carousel-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .popular-listings-carousel {
+    padding: 40px 15px;
+    margin: 60px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .listing-gallery-vue {
+    padding: 0 15px;
+  }
+
+  .carousel-header h2,
+  .listing-gallery-header h2 {
+    font-size: 24px;
+  }
+}
+</style>

@@ -396,7 +396,7 @@ if (!function_exists('publicListingPayload')) {
         'facilities_heading' => $listing->getAttribute('facilities_heading') ?? 'Facilities Available',
         'facilities' => $listing->facilities->sortBy('sort_order')->pluck('name')->values(),
         'facilities_items' => $listing->getAttribute('facilities_items') ?? [],
-        'gallery_heading' => $listing->getAttribute('gallery_heading') ?? 'Gallery',
+        'gallery_heading' => $listing->getAttribute('gallery_heading') ?? 'Vibrant Gallery',
         'seo' => [
             'title' => $listing->getAttribute('seo_title'),
             'description' => $listing->getAttribute('seo_description'),

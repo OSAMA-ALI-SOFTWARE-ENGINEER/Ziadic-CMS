@@ -78,6 +78,8 @@ export interface PublicListing {
     keywords: string | null
   }
   is_featured: boolean
+  is_popular: boolean
+  popular_order: number
   published_at: string | null
 }
 

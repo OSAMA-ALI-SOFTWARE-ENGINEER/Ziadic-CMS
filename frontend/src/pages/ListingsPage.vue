@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicCatalog, fetchPublicListings, type PublicCatalog, type PublicListing } from '@/services/listings'
+import { getImageUrl } from '@/utils/imageUrl'
 
 const route = useRoute()
 const router = useRouter()
@@ -86,13 +87,6 @@ function setFilter(key: string, value: string) {
 
 function resetFilters() {
   router.push({ path: '/listings' })
-}
-
-function getImageUrl(path?: string | null): string {
-  if (!path) return '/assets/images/1.png'
-  if (path.startsWith('http')) return path
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
-  return `${backendUrl}/${path.replace(/^\/+/, '')}`
 }
 
 function normalizeFilterQuery() {
@@ -275,6 +269,7 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+    
   </div>
 </template>
 

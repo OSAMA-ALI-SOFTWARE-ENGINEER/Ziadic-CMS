@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchPublicListings, fetchPopularListings, type PublicListing } from '@/services/listings'
 import { getImageUrl } from '@/utils/imageUrl'
@@ -10,17 +10,8 @@ const showGalleryPreview = ref(false)
 const galleryPreviewIndex = ref(0)
 const galleryImages = ref<string[]>([])
 const galleryHeading = ref('Vibrant Gallery')
-const visibleGalleryCount = ref(4)
 const currentListing = ref<PublicListing | null>(null)
 const popularListings = ref<PublicListing[]>([])
-
-const visibleGalleryImages = computed(() => {
-  return galleryImages.value.slice(0, visibleGalleryCount.value)
-})
-
-const hasMoreGalleryImages = computed(() => {
-  return galleryImages.value.length > visibleGalleryCount.value
-})
 
 onMounted(async () => {
   const slug = route.params.slug as string
@@ -60,6 +51,10 @@ onMounted(async () => {
         const filtered = popular.filter(p => p.id !== listing.id)
         popularListings.value = filtered.length > 0 ? filtered : popular
         console.log('[CMS] Popular listings loaded:', popularListings.value.length)
+
+        // Wait for Vue to render the carousel, then inject it before CTA
+        await new Promise(resolve => setTimeout(resolve, 100))
+        injectPopularCarouselBeforeCTA()
       } catch (error) {
         console.warn('[CMS] Could not load popular listings:', error)
       }
@@ -69,17 +64,28 @@ onMounted(async () => {
   }
 })
 
-function openGalleryPreview(index: number) {
-  galleryPreviewIndex.value = index
-  showGalleryPreview.value = true
-}
-
 function closeGalleryPreview() {
   showGalleryPreview.value = false
 }
 
-function loadMoreGalleryImages() {
-  visibleGalleryCount.value += 4
+function injectPopularCarouselBeforeCTA() {
+  // Find the carousel element
+  const carousel = document.getElementById('popular-listings-carousel')
+  if (!carousel) return
+
+  // Find CTA section (button or link that looks like CTA)
+  const ctaSection = document.querySelector('[class*="cta"], [class*="button-section"], .listing-cta, .action-section')
+
+  if (ctaSection) {
+    // Insert carousel before CTA
+    ctaSection.parentElement?.insertBefore(carousel, ctaSection)
+  } else {
+    // If no CTA found, insert before the last major section
+    const mainContent = document.querySelector('main, .main-content, [class*="content"]')
+    if (mainContent) {
+      mainContent.appendChild(carousel)
+    }
+  }
 }
 
 function updateGalleryHeading() {
@@ -180,68 +186,152 @@ function updateDescription(listing: PublicListing) {
 }
 
 function updateContactInfo(listing: PublicListing) {
-  // Find all elements and update contact information
-  const allElements = document.querySelectorAll('*')
+  // Target contact section specifically
+  const contactSection = document.querySelector('[class*="contact"], .contact-wrapper, .contact-info')
+  if (!contactSection) return
+
+  // Find and update contact elements within the contact section
+  const elements = contactSection.querySelectorAll('*')
   let phoneUpdated = false
   let emailUpdated = false
   let websiteUpdated = false
 
-  allElements.forEach(el => {
+  elements.forEach(el => {
     const text = el.textContent || ''
-    if (text.length > 200 || el.children.length > 5) return // Skip containers
+    if (text.length > 200 || el.children.length > 3) return
 
     const isLink = el.tagName === 'A'
+    const isSmallText = text.length < 100
 
-    // Update phone
-    if (!phoneUpdated && listing.contact_phone && text.match(/\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\+\d{1,3}\s?\d+|\(\d+\)/)) {
-      el.textContent = listing.contact_phone
-      el.classList.remove('w-dyn-bind-empty')
-      phoneUpdated = true
+    // Update phone - look for phone patterns or "contact" context
+    if (!phoneUpdated && listing.contact_phone && isSmallText) {
+      const parentText = el.parentElement?.textContent?.toLowerCase() || ''
+      const isPhoneContext = parentText.includes('phone') || text.match(/\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\+\d{1,3}/)
+
+      if (isPhoneContext || text.match(/\d{3}[\s.-]?\d{3}[\s.-]?\d{4}|\+\d{1,3}/)) {
+        el.textContent = listing.contact_phone
+        el.classList.remove('w-dyn-bind-empty')
+        phoneUpdated = true
+      }
     }
 
     // Update email
-    if (!emailUpdated && listing.contact_email && text.includes('@') && !text.includes('www')) {
-      if (isLink) {
-        (el as HTMLAnchorElement).href = `mailto:${listing.contact_email}`
+    if (!emailUpdated && listing.contact_email && isSmallText) {
+      const parentText = el.parentElement?.textContent?.toLowerCase() || ''
+      const isEmailContext = parentText.includes('email') || text.includes('@')
+
+      if (isEmailContext || text.includes('@')) {
+        if (isLink) {
+          (el as HTMLAnchorElement).href = `mailto:${listing.contact_email}`
+        }
+        el.textContent = listing.contact_email
+        el.classList.remove('w-dyn-bind-empty')
+        emailUpdated = true
       }
-      el.textContent = listing.contact_email
-      el.classList.remove('w-dyn-bind-empty')
-      emailUpdated = true
     }
 
     // Update website
-    if (!websiteUpdated && listing.contact_website && (text.includes('www') || text.includes('example'))) {
-      const displayUrl = listing.contact_website.replace(/^https?:\/\//, '')
-      el.textContent = displayUrl
-      if (isLink) {
-        const link = el as HTMLAnchorElement
-        link.href = listing.contact_website.startsWith('http')
-          ? listing.contact_website
-          : `https://${listing.contact_website}`
-        link.target = '_blank'
+    if (!websiteUpdated && listing.contact_website && isSmallText) {
+      const parentText = el.parentElement?.textContent?.toLowerCase() || ''
+      const isWebContext = parentText.includes('website') || parentText.includes('web') || text.includes('www') || text.includes('example')
+
+      if (isWebContext || text.includes('www') || text.includes('example')) {
+        const displayUrl = listing.contact_website.replace(/^https?:\/\//, '')
+        el.textContent = displayUrl
+        if (isLink) {
+          const link = el as HTMLAnchorElement
+          link.href = listing.contact_website.startsWith('http')
+            ? listing.contact_website
+            : `https://${listing.contact_website}`
+          link.target = '_blank'
+        }
+        el.classList.remove('w-dyn-bind-empty')
+        websiteUpdated = true
       }
-      el.classList.remove('w-dyn-bind-empty')
-      websiteUpdated = true
     }
   })
 }
 
 function updateGallery(listing: PublicListing) {
-  // Update gallery images
-  const galleryImgs = document.querySelectorAll<HTMLImageElement>('.vibrant-gallery-img, [class*="gallery"] img')
+  // Get gallery images from CMS
   const images = (listing.gallery && listing.gallery.length > 0) ? listing.gallery : [listing.image]
+
+  // Store for preview modal
+  if (listing.gallery && listing.gallery.length > 0) {
+    galleryImages.value = listing.gallery
+  }
+
+  // Find Webflow gallery container
+  const galleryContainer = document.querySelector('.vibrant-gallery') || document.querySelector('[class*="gallery-wrapper"]')
+  if (!galleryContainer) return
+
+  // Find all gallery image elements
+  const galleryImgs = galleryContainer.querySelectorAll<HTMLImageElement>('img')
+
+  let visibleCount = 0
+  const hiddenImages: HTMLImageElement[] = []
 
   galleryImgs.forEach((img, index) => {
     if (images[index % images.length]) {
-      img.src = getImageUrl(images[index % images.length])
+      const imageUrl = getImageUrl(images[index % images.length])
+      img.src = imageUrl
       img.alt = listing.title
       img.classList.remove('w-dyn-bind-empty')
+
+      // Add click handler for preview modal
+      img.style.cursor = 'pointer'
+      img.addEventListener('click', () => {
+        galleryPreviewIndex.value = index % images.length
+        showGalleryPreview.value = true
+      })
+
+      // Hide images beyond 4th one initially
+      if (visibleCount >= 4) {
+        img.parentElement!.style.display = 'none'
+        hiddenImages.push(img)
+      }
+
+      visibleCount++
     }
   })
 
-  // Store for preview
-  if (listing.gallery && listing.gallery.length > 0) {
-    galleryImages.value = listing.gallery
+  // Add Load More button if there are hidden images
+  if (hiddenImages.length > 0) {
+    const existingButton = galleryContainer.querySelector('.gallery-load-more-btn')
+    if (!existingButton) {
+      const loadMoreBtn = document.createElement('button')
+      loadMoreBtn.className = 'gallery-load-more-btn'
+      loadMoreBtn.textContent = `Load More (${hiddenImages.length} more)`
+      loadMoreBtn.style.cssText = `
+        display: block;
+        margin: 20px auto;
+        padding: 12px 32px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+      `
+
+      loadMoreBtn.addEventListener('mouseover', () => {
+        loadMoreBtn.style.background = '#c0392b'
+      })
+      loadMoreBtn.addEventListener('mouseout', () => {
+        loadMoreBtn.style.background = '#e74c3c'
+      })
+
+      loadMoreBtn.addEventListener('click', () => {
+        hiddenImages.forEach(img => {
+          img.parentElement!.style.display = ''
+        })
+        loadMoreBtn.style.display = 'none'
+      })
+
+      galleryContainer.appendChild(loadMoreBtn)
+    }
   }
 }
 </script>
@@ -255,128 +345,35 @@ function updateGallery(listing: PublicListing) {
     @close="closeGalleryPreview"
   />
 
-  <!-- Enhanced Gallery Section with Load More -->
-  <div v-if="galleryImages.length > 0" class="gallery-enhancement">
-    <!-- Gallery images with click-to-preview -->
-    <div class="gallery-grid-enhanced">
-      <div
-        v-for="(image, index) in visibleGalleryImages"
-        :key="index"
-        class="gallery-item-enhanced"
-        @click="openGalleryPreview(index)"
-      >
-        <img :src="getImageUrl(image)" :alt="`Gallery image ${index + 1}`" />
-        <div class="gallery-overlay">🔍</div>
+  <!-- Popular Listing Collection Carousel (rendered into Webflow CTA section) -->
+  <Teleport to="body">
+    <div v-if="popularListings.length > 0" id="popular-listings-carousel" class="popular-listings-section">
+      <h2 class="popular-section-title">Popular Listing Collection</h2>
+      <div class="popular-listings-grid">
+        <a
+          v-for="listing in popularListings"
+          :key="listing.id"
+          :href="`/listings/${listing.slug}`"
+          class="popular-listing-card"
+        >
+          <div class="popular-card-image">
+            <img :src="getImageUrl(listing.image)" :alt="listing.title" />
+          </div>
+          <div class="popular-card-content">
+            <h3 class="popular-card-title">{{ listing.title }}</h3>
+            <p class="popular-card-category">{{ listing.category }}</p>
+            <p class="popular-card-location">{{ listing.location }}</p>
+            <p class="popular-card-summary">{{ listing.summary }}</p>
+          </div>
+        </a>
       </div>
     </div>
-
-    <!-- Load More Button -->
-    <div v-if="hasMoreGalleryImages" class="gallery-load-more">
-      <button @click="loadMoreGalleryImages" class="load-more-btn">
-        Load More ({{ galleryImages.length - visibleGalleryCount }} more)
-      </button>
-    </div>
-  </div>
-
-  <!-- Popular Listing Collection Carousel -->
-  <div v-if="popularListings.length > 0" class="popular-listings-section">
-    <h2 class="popular-section-title">Popular Listing Collection</h2>
-    <div class="popular-listings-grid">
-      <a
-        v-for="listing in popularListings"
-        :key="listing.id"
-        :href="`/listings/${listing.slug}`"
-        class="popular-listing-card"
-      >
-        <div class="popular-card-image">
-          <img :src="getImageUrl(listing.image)" :alt="listing.title" />
-        </div>
-        <div class="popular-card-content">
-          <h3 class="popular-card-title">{{ listing.title }}</h3>
-          <p class="popular-card-category">{{ listing.category }}</p>
-          <p class="popular-card-location">{{ listing.location }}</p>
-          <p class="popular-card-summary">{{ listing.summary }}</p>
-        </div>
-      </a>
-    </div>
-  </div>
+  </Teleport>
 
   <!-- This component populates Webflow listing page with real-time CMS data -->
 </template>
 
 <style scoped>
-.gallery-enhancement {
-  margin-top: 20px;
-  padding: 20px;
-}
-
-.gallery-grid-enhanced {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.gallery-item-enhanced {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #f0f0f0;
-}
-
-.gallery-item-enhanced img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.gallery-item-enhanced:hover img {
-  transform: scale(1.1);
-}
-
-.gallery-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  transition: background 0.3s;
-}
-
-.gallery-item-enhanced:hover .gallery-overlay {
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.gallery-load-more {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.load-more-btn {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 12px 32px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.load-more-btn:hover {
-  background: #c0392b;
-}
-
 .popular-listings-section {
   margin-top: 60px;
   padding: 40px 20px;

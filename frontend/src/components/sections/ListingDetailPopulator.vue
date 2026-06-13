@@ -17,35 +17,38 @@ onMounted(async () => {
   if (!slug) return
 
   try {
-    console.log('Waiting for DOM to be ready...')
-    await new Promise(resolve => setTimeout(resolve, 500))
+    console.log('[ListingDetail] Waiting for Webflow DOM to be ready...')
+    // Wait longer for Webflow to fully initialize and render
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     const listings = await fetchPublicListings()
-    console.log('All listings fetched:', listings.length)
+    console.log('[ListingDetail] Fetched listings:', listings.length)
 
     const listing = listings.find(l => l.slug === slug)
 
     if (listing) {
-      console.log('Found listing:', listing.slug, {
+      console.log('[ListingDetail] Found listing:', {
+        id: listing.id,
+        slug: listing.slug,
         title: listing.title,
-        gallery_heading: listing.gallery_heading,
-        gallery_count: listing.gallery?.length,
+        hasGallery: (listing.gallery?.length ?? 0) > 0,
       })
       currentListing.value = listing
 
-      // Try to populate Webflow HTML
+      // Populate Webflow HTML with listing data
       populateListingDetail(listing)
 
       // Load and deduplicate gallery images for preview modal
       if (listing.gallery && listing.gallery.length > 0) {
         galleryImages.value = deduplicateImages(listing.gallery)
-        console.log('Gallery deduped:', galleryImages.value.length, 'unique images')
+        console.log('[ListingDetail] Gallery deduplicated:', galleryImages.value.length, 'unique images')
       }
     } else {
-      console.warn('Listing not found:', slug)
+      console.warn('[ListingDetail] Listing not found with slug:', slug)
+      console.warn('[ListingDetail] Available slugs:', listings.map(l => l.slug).slice(0, 5), '...')
     }
   } catch (error) {
-    console.error('Failed to fetch listing:', error)
+    console.error('[ListingDetail] Error fetching listing:', error)
   }
 })
 
@@ -60,12 +63,19 @@ function closeGalleryPreview() {
 
 function populateListingDetail(listing: PublicListing) {
   const root = document.querySelector('.page-wrapper, .legacy-home') || document.body
+  console.log('[ListingDetail] Populating listing detail page...')
+  console.log('[ListingDetail] Root element found:', !!root)
+
+  let elementsUpdated = 0
 
   // Page title
   const pageTitle = root.querySelector('.page-banner-title')
   if (pageTitle) {
     pageTitle.textContent = listing.title
     pageTitle.classList.remove('w-dyn-bind-empty')
+    elementsUpdated++
+  } else {
+    console.warn('[ListingDetail] .page-banner-title not found')
   }
 
   // Breadcrumb
@@ -249,226 +259,7 @@ function escapeHtml(value: string): string {
     @close="closeGalleryPreview"
   />
 
-  <!-- Fallback: Display listing if Webflow HTML elements not found -->
-  <div v-if="currentListing" class="listing-detail-fallback">
-    <div class="listing-detail-header">
-      <h1>{{ currentListing.title }}</h1>
-      <p class="listing-category">{{ currentListing.category }}</p>
-      <p class="listing-location">📍 {{ currentListing.location }}</p>
-    </div>
-
-    <div class="listing-detail-info">
-      <div class="info-item">
-        <span class="info-label">📅 Days:</span>
-        <span>{{ currentListing.open_days || currentListing.days }}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">⏰ Hours:</span>
-        <span>{{ currentListing.open_time && currentListing.close_time ? `${currentListing.open_time} - ${currentListing.close_time}` : currentListing.hours }}</span>
-      </div>
-    </div>
-
-    <div class="listing-detail-description">
-      <h2>About</h2>
-      <p>{{ currentListing.description || currentListing.summary }}</p>
-    </div>
-
-    <div class="listing-detail-contact">
-      <h2>Contact Information</h2>
-      <div class="contact-item" v-if="currentListing.contact_phone">
-        <span class="contact-label">Phone:</span>
-        <a :href="`tel:${currentListing.contact_phone}`">{{ currentListing.contact_phone }}</a>
-      </div>
-      <div class="contact-item" v-if="currentListing.contact_email">
-        <span class="contact-label">Email:</span>
-        <a :href="`mailto:${currentListing.contact_email}`">{{ currentListing.contact_email }}</a>
-      </div>
-      <div class="contact-item" v-if="currentListing.contact_website">
-        <span class="contact-label">Website:</span>
-        <a :href="currentListing.contact_website" target="_blank">{{ currentListing.contact_website.replace(/^https?:\/\//, '') }}</a>
-      </div>
-      <div class="contact-item" v-if="currentListing.contact_address">
-        <span class="contact-label">Address:</span>
-        <span>{{ currentListing.contact_address }}</span>
-      </div>
-    </div>
-
-    <div class="listing-detail-gallery" v-if="galleryImages.length > 0">
-      <h2>{{ currentListing.gallery_heading || 'Vibrant Gallery' }}</h2>
-      <div class="gallery-grid-fallback">
-        <div
-          v-for="(image, index) in galleryImages"
-          :key="index"
-          class="gallery-item-fallback"
-          @click="openGalleryPreview(index)"
-        >
-          <img
-            :src="getImageUrl(image)"
-            :alt="`${currentListing.title} - Image ${index + 1}`"
-            class="gallery-image-fallback"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- This component populates the existing Webflow HTML with dynamic CMS data -->
-  <!-- If Webflow elements are found, they will be populated; otherwise the fallback above displays -->
+  <!-- No visible output - modifies Webflow content in place -->
 </template>
-
-<style scoped>
-.listing-detail-fallback {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
-.listing-detail-header {
-  margin-bottom: 40px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 20px;
-}
-
-.listing-detail-header h1 {
-  font-size: 36px;
-  font-weight: 700;
-  margin: 0 0 10px 0;
-  color: #222;
-}
-
-.listing-category {
-  display: inline-block;
-  background: #f0f0f0;
-  color: #666;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  margin: 0 0 15px 0;
-  text-transform: uppercase;
-}
-
-.listing-location {
-  font-size: 18px;
-  color: #555;
-  margin: 0;
-}
-
-.listing-detail-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
-  padding: 20px;
-  background: #f9f9f9;
-  border-radius: 8px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.info-label {
-  font-weight: 600;
-  color: #333;
-  font-size: 14px;
-}
-
-.listing-detail-description,
-.listing-detail-contact,
-.listing-detail-gallery {
-  margin-bottom: 40px;
-}
-
-.listing-detail-description h2,
-.listing-detail-contact h2,
-.listing-detail-gallery h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0 0 20px 0;
-  color: #222;
-}
-
-.listing-detail-description p {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #555;
-  margin: 0;
-}
-
-.contact-item {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 15px;
-  padding: 12px;
-  background: #f9f9f9;
-  border-radius: 6px;
-}
-
-.contact-label {
-  font-weight: 600;
-  color: #333;
-  min-width: 100px;
-}
-
-.contact-item a {
-  color: #e74c3c;
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.contact-item a:hover {
-  text-decoration: underline;
-}
-
-.gallery-grid-fallback {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.gallery-item-fallback {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #f0f0f0;
-  transition: transform 0.3s;
-}
-
-.gallery-item-fallback:hover {
-  transform: scale(1.05);
-}
-
-.gallery-image-fallback {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-@media (max-width: 768px) {
-  .listing-detail-fallback {
-    padding: 20px 15px;
-  }
-
-  .listing-detail-header h1 {
-    font-size: 24px;
-  }
-
-  .listing-detail-description h2,
-  .listing-detail-contact h2,
-  .listing-detail-gallery h2 {
-    font-size: 20px;
-  }
-
-  .gallery-grid-fallback {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-  }
-}
-</style>
 

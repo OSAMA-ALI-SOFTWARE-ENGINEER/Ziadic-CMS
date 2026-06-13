@@ -123,7 +123,7 @@ Route::prefix('api/v1')->group(function (): void {
 
     Route::get('public/listings', function (Request $request) {
         return Listing::query()
-            ->with(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'hours', 'facilities', 'contacts'])
+            ->with(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'mediaFiles', 'hours', 'facilities', 'contacts'])
             ->where('status', 'published')
             ->when($request->string('country')->isNotEmpty(), function (Builder $query) use ($request): void {
                 $country = $request->string('country')->toString();
@@ -154,7 +154,7 @@ Route::prefix('api/v1')->group(function (): void {
 
     Route::get('public/listings/popular', function () {
         return Listing::query()
-            ->with(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'hours', 'facilities', 'contacts'])
+            ->with(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'mediaFiles', 'hours', 'facilities', 'contacts'])
             ->where('status', 'published')
             ->where('is_popular', true)
             ->orderBy('popular_order', 'asc')
@@ -167,7 +167,7 @@ Route::prefix('api/v1')->group(function (): void {
     Route::get('public/listings/{listing:slug}', function (Listing $listing) {
         abort_unless((string) $listing->getAttribute('status') === 'published', 404);
 
-        $listing->load(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'hours', 'facilities', 'contacts']);
+        $listing->load(['categories:id,name,slug', 'city.country:id,name,iso2,iso3', 'images', 'mediaFiles', 'hours', 'facilities', 'contacts']);
 
         return publicListingPayload($listing);
     });
@@ -317,11 +317,26 @@ if (!function_exists('publicListingPayload')) {
     function publicListingPayload(Listing $listing): array
 {
     $featuredImage = $listing->images->firstWhere('is_featured', true) ?? $listing->images->sortBy('sort_order')->first();
-    $gallery = $listing->images
-        ->sortBy('sort_order')
-        ->map(fn($image) => $image->path)
-        ->filter()
-        ->values();
+
+    // Use mediaFiles if available (new CMS media library), fallback to legacy images
+    $gallery = collect();
+    if ($listing->relationLoaded('mediaFiles') && $listing->mediaFiles->isNotEmpty()) {
+        $gallery = $listing->mediaFiles
+            ->sortBy(fn($m) => $m->pivot?->sort_order ?? 0)
+            ->map(fn($media) => $media->public_url)
+            ->filter()
+            ->values();
+    }
+
+    // Fallback to legacy images if no mediaFiles
+    if ($gallery->isEmpty()) {
+        $gallery = $listing->images
+            ->sortBy('sort_order')
+            ->map(fn($image) => $image->path)
+            ->filter()
+            ->values();
+    }
+
     $contacts = $listing->contacts
         ->sortBy('sort_order')
         ->mapWithKeys(fn($contact) => [$contact->type => $contact->value]);

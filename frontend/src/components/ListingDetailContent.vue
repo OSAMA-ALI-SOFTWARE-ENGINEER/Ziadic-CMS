@@ -280,7 +280,6 @@ function loadMoreGalleryImages() {
               <img src="/images/Cta1.png" alt="" class="cta-img-1 _3" loading="lazy" decoding="async">
               <img src="/images/Mask-group-1.png" alt="" class="cta-img-1 _2" loading="lazy" decoding="async">
               <img src="/images/Best-Listing-Tab-Pane-Shape.png" alt="" class="cta-img-shape1" loading="lazy" decoding="async">
-              <img src="/images/cta-shap_1cta-shap.png" alt="" class="cta-img-shape2" loading="lazy" decoding="async">
             </div>
           </div>
         </div>

@@ -139,7 +139,14 @@ function loadMoreGalleryImages() {
 
     <!-- Featured Image -->
     <section class="featured-image-section">
-      <img v-if="listing.image" :src="getImageUrl(listing.image)" :alt="listing.title" class="featured-image">
+      <img
+        v-if="listing.image"
+        :src="getImageUrl(listing.image)"
+        :alt="listing.title"
+        class="featured-image"
+        loading="lazy"
+        decoding="async"
+      >
     </section>
 
     <!-- Main Content Section -->
@@ -178,7 +185,13 @@ function loadMoreGalleryImages() {
                     class="gallery-item-wrapper"
                     @click="openGalleryPreview(index)"
                   >
-                    <img :src="getImageUrl(image)" :alt="`Gallery ${index + 1}`" class="vibrant-gallery-img">
+                    <img
+                      :src="getImageUrl(image)"
+                      :alt="`Gallery ${index + 1}`"
+                      class="vibrant-gallery-img"
+                      loading="lazy"
+                      decoding="async"
+                    >
                   </div>
                 </div>
                 <!-- Load More Button -->
@@ -263,11 +276,11 @@ function loadMoreGalleryImages() {
           </div>
           <div class="cta-right">
             <div class="cta-img">
-              <img src="/images/Mask-group.png" alt="" class="cta-img-1 _1">
-              <img src="/images/Cta1.png" alt="" class="cta-img-1 _3">
-              <img src="/images/Mask-group-1.png" alt="" class="cta-img-1 _2">
-              <img src="/images/Best-Listing-Tab-Pane-Shape.png" alt="" class="cta-img-shape1">
-              <img src="/images/cta-shap_1cta-shap.png" alt="" class="cta-img-shape2">
+              <img src="/images/Mask-group.png" alt="" class="cta-img-1 _1" loading="lazy" decoding="async">
+              <img src="/images/Cta1.png" alt="" class="cta-img-1 _3" loading="lazy" decoding="async">
+              <img src="/images/Mask-group-1.png" alt="" class="cta-img-1 _2" loading="lazy" decoding="async">
+              <img src="/images/Best-Listing-Tab-Pane-Shape.png" alt="" class="cta-img-shape1" loading="lazy" decoding="async">
+              <img src="/images/cta-shap_1cta-shap.png" alt="" class="cta-img-shape2" loading="lazy" decoding="async">
             </div>
           </div>
         </div>

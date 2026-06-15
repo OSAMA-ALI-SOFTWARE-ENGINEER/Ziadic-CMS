@@ -244,16 +244,30 @@ function loadMoreGalleryImages() {
     <!-- CTA Section -->
     <section class="section cta">
       <div class="container">
-        <div class="cta-wrapper">
+        <div class="cta-wtapper">
           <div class="cta-left">
-            <h2 class="cta-title">Ready to Start? Click to Unlock Our Urban Wonders!</h2>
-            <div class="button-wrap">
-              <router-link to="/listings" class="cta-button primary">
-                <span>Explore Listings</span>
+            <div class="section-title-cta-wrap">
+              <h2 class="section-title cta">Ready to Start? Click to Unlock Our Urban Wonders!</h2>
+              <img src="/images/Blog.png" alt="" class="section-title-shape">
+            </div>
+            <div class="button-wrap left">
+              <router-link to="/listings" class="primary-button white">
+                <div class="style-button-text white">Explore Listings</div>
+                <div class="button-color active"></div>
               </router-link>
-              <router-link to="/add-listing" class="cta-button secondary">
-                <span>Add a Listing</span>
+              <router-link to="/add-listing" class="primary-button out-white">
+                <div class="style-button-text">Add a Listing</div>
+                <div class="button-color"></div>
               </router-link>
+            </div>
+          </div>
+          <div class="cta-right">
+            <div class="cta-img">
+              <img src="/images/Mask-group.png" alt="" class="cta-img-1 _1">
+              <img src="/images/Cta1.png" alt="" class="cta-img-1 _3">
+              <img src="/images/Mask-group-1.png" alt="" class="cta-img-1 _2">
+              <img src="/images/Best-Listing-Tab-Pane-Shape.png" alt="" class="cta-img-shape1">
+              <img src="/images/cta-shap_1cta-shap.png" alt="" class="cta-img-shape2">
             </div>
           </div>
         </div>
@@ -604,67 +618,179 @@ function loadMoreGalleryImages() {
 /* CTA Section */
 .section.cta {
   padding: 60px 20px;
-  background: linear-gradient(180deg, #8B4513 0%, #654321 100%);
   position: relative;
+  background: linear-gradient(rgba(90, 50, 30, 0.95), rgba(90, 50, 30, 0.95)), url('/images/All-Bg.png');
+  background-size: cover;
+  background-position: center;
+  min-height: 500px;
+  display: flex;
+  align-items: center;
 }
 
-.cta-wrapper {
+.cta-wtapper {
   max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 40px;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
   align-items: center;
 }
 
 .cta-left {
   color: white;
+  z-index: 2;
+  position: relative;
 }
 
-.cta-title {
-  font-size: clamp(32px, 4vw, 48px);
+.section-title-cta-wrap {
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.section-title.cta {
+  font-size: clamp(32px, 5vw, 56px);
   font-weight: 400;
-  margin: 0 0 30px 0;
+  color: white;
+  margin: 0 0 20px 0;
   font-family: Marcellus, serif;
   line-height: 1.2;
+  text-wrap: balance;
 }
 
-.button-wrap {
+.section-title-shape {
+  width: 80px;
+  height: auto;
+  margin-top: 10px;
+}
+
+.button-wrap.left {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
 }
 
-.cta-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 32px;
-  border-radius: 6px;
+.primary-button {
+  position: relative;
+  display: inline-block;
+  padding: 14px 28px;
   text-decoration: none;
-  font-weight: 600;
+  border-radius: 8px;
   font-size: 16px;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.cta-button.primary {
+  font-weight: 600;
+  overflow: hidden;
+  transition: all 0.3s ease;
   background: #f4d35e;
   color: #333;
 }
 
-.cta-button.primary:hover {
-  background: #e6c200;
+.primary-button.white {
+  background: #f4d35e;
+  color: #333;
 }
 
-.cta-button.secondary {
+.primary-button.white:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(244, 211, 94, 0.4);
+}
+
+.primary-button.out-white {
   background: transparent;
   color: white;
   border: 2px solid white;
 }
 
-.cta-button.secondary:hover {
+.primary-button.out-white:hover {
   background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.style-button-text {
+  font-size: 16px;
+  font-weight: 600;
+  display: block;
+}
+
+.style-button-text.white {
+  color: #333;
+}
+
+.button-color {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  background: rgba(0, 0, 0, 0.1);
+  transition: height 0.3s ease;
+  z-index: -1;
+}
+
+.button-color.active {
+  height: 100%;
+}
+
+.cta-right {
+  position: relative;
+  z-index: 1;
+  min-height: 350px;
+}
+
+.cta-img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 350px;
+}
+
+.cta-img-1 {
+  position: absolute;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.cta-img-1._1 {
+  width: 160px;
+  bottom: 10%;
+  left: 0;
+  z-index: 2;
+}
+
+.cta-img-1._2 {
+  width: 140px;
+  bottom: 5%;
+  right: 10%;
+  z-index: 1;
+}
+
+.cta-img-1._3 {
+  width: 200px;
+  top: 15%;
+  right: 15%;
+  z-index: 3;
+}
+
+.cta-img-shape1,
+.cta-img-shape2 {
+  position: absolute;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.cta-img-shape1 {
+  width: 250px;
+  top: -50px;
+  right: -30px;
+  z-index: 0;
+}
+
+.cta-img-shape2 {
+  width: 200px;
+  bottom: -40px;
+  left: -20px;
+  z-index: 0;
 }
 
 /* Loading */
@@ -708,6 +834,21 @@ function loadMoreGalleryImages() {
   .info-divider {
     display: none;
   }
+
+  .cta-wtapper {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .cta-right {
+    min-height: 250px;
+  }
+
+  .cta-img-1._1,
+  .cta-img-1._2,
+  .cta-img-1._3 {
+    width: 120px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -746,10 +887,20 @@ function loadMoreGalleryImages() {
 
   .section.cta {
     padding: 40px 20px;
+    min-height: auto;
   }
 
-  .cta-title {
-    font-size: 28px;
+  .cta-wtapper {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .section-title.cta {
+    font-size: 32px;
+  }
+
+  .cta-right {
+    display: none;
   }
 }
 
@@ -800,12 +951,25 @@ function loadMoreGalleryImages() {
     font-size: 18px;
   }
 
-  .button-wrap {
+  .button-wrap.left {
     flex-direction: column;
   }
 
-  .cta-button {
+  .primary-button {
     width: 100%;
+    text-align: center;
+  }
+
+  .section.cta {
+    padding: 30px 16px;
+  }
+
+  .section-title.cta {
+    font-size: 24px;
+  }
+
+  .cta-left {
+    text-align: center;
   }
 }
 </style>

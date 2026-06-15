@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import VueListingDetailPage from '@/components/VueListingDetailPage.vue'
+import ListingDetailContent from '@/components/ListingDetailContent.vue'
 </script>
 
 <template>
-  <VueListingDetailPage />
+  <ListingDetailContent />
 </template>

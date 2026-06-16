@@ -1,65 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-
-gsap.registerPlugin(ScrollTrigger)
 
 const ctaRef = ref<HTMLElement | null>(null)
-const ctaWrapperRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  if (!ctaRef.value || !ctaWrapperRef.value) return
-
-  // Animate CTA wrapper on scroll
-  gsap.to(ctaWrapperRef.value, {
-    scrollTrigger: {
-      trigger: ctaRef.value,
-      start: 'top center',
-      end: 'center center',
-      scrub: 1,
-      markers: false,
-    },
-    duration: 1,
-    opacity: 1,
-    y: 0,
-  })
-
-  // Animate CTA images
-  const images = ctaRef.value.querySelectorAll('.cta-img-1')
-  images.forEach((img, index) => {
-    gsap.from(img, {
-      scrollTrigger: {
-        trigger: ctaRef.value,
-        start: 'top center+=100',
-        end: 'center center',
-        scrub: 1,
-        markers: false,
-      },
-      y: 50 + index * 20,
-      opacity: 0,
-      duration: 1,
-      delay: index * 0.1,
-    })
-  })
+  if (!ctaRef.value) return
 
   // Animate buttons on hover
   const buttons = ctaRef.value.querySelectorAll('.primary-button')
   buttons.forEach((btn) => {
     btn.addEventListener('mouseenter', () => {
-      gsap.to(btn, {
-        duration: 0.3,
-        y: -4,
-        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
-      })
+      (btn as HTMLElement).style.transform = 'translateY(-4px)'
+      ;(btn as HTMLElement).style.transition = 'all 0.3s ease'
     })
 
     btn.addEventListener('mouseleave', () => {
-      gsap.to(btn, {
-        duration: 0.3,
-        y: 0,
-        boxShadow: 'none',
-      })
+      (btn as HTMLElement).style.transform = 'translateY(0)'
     })
   })
 })
@@ -68,20 +24,18 @@ onMounted(() => {
 <template>
   <section ref="ctaRef" class="section cta">
     <div class="container">
-      <div ref="ctaWrapperRef" class="cta-wtapper">
+      <div class="cta-wtapper">
         <div class="cta-left">
           <div class="section-title-cta-wrap">
-            <h2 class="section-title cta">
-              Ready to <span class="strike-through">Start?</span><br />Click to Unlock Our Urban Wonders!
-            </h2>
+            <h2 class="section-title cta">Ready to <u class="u-start">Start?</u> Click to Unlock Our Urban Wonders!</h2>
             <img src="/images/Blog.png" alt="" class="section-title-shape">
           </div>
           <div class="button-wrap left">
-            <router-link to="/listings" class="primary-button white">
+            <router-link to="/listings" class="primary-button white w-inline-block">
               <div class="style-button-text white">Explore Listings</div>
               <div class="button-color active"></div>
             </router-link>
-            <router-link to="/add-listing" class="primary-button out-white">
+            <router-link to="/add-listing" class="primary-button out-white w-inline-block">
               <div class="style-button-text">Add a Listing</div>
               <div class="button-color"></div>
             </router-link>
@@ -102,129 +56,112 @@ onMounted(() => {
 
 <style scoped>
 .section.cta {
-  padding: 60px 20px;
-  position: relative;
-  background: linear-gradient(rgba(90, 50, 30, 0.95), rgba(90, 50, 30, 0.95)), url('/images/All-Bg.png');
-  background-size: cover;
-  background-position: center;
-  min-height: 500px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .container {
-  max-width: 1350px;
-  margin: 0 auto;
-  padding: 0 15px;
   width: 100%;
+  max-width: 1350px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 .cta-wtapper {
-  max-width: 1100px;
-  width: 100%;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  grid-column-gap: 52px;
+  grid-row-gap: 52px;
+  background-image: url('/images/CTA-BG.png');
+  background-position: 50%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  border-radius: 30px;
   align-items: center;
+  padding: 46px 60px 46px 100px;
+  display: flex;
 }
 
 .cta-left {
-  color: white;
-  z-index: 2;
-  position: relative;
+  flex: none;
+  width: 572px;
+}
+
+.cta-right {
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  display: flex;
 }
 
 .section-title-cta-wrap {
   position: relative;
-  margin-bottom: 40px;
 }
 
 .section-title.cta {
-  font-size: clamp(32px, 5vw, 56px);
-  font-weight: 400;
-  color: white;
-  margin: 0 0 20px 0;
   font-family: Marcellus, serif;
-  line-height: 1.2;
-  text-wrap: balance;
+  color: #fff;
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 135.714%;
+  margin-bottom: 24px;
 }
 
-.strike-through {
-  position: relative;
-  display: inline-block;
-}
-
-.strike-through::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 100%;
-  height: 2px;
-  background: white;
-  transform: translateY(-50%);
+.u-start {
+  text-decoration: underline;
 }
 
 .section-title-shape {
+  z-index: 0;
+  position: absolute;
+  right: 124px;
+  top: 1px;
   width: 80px;
   height: auto;
-  margin-top: 10px;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
 }
 
 .button-wrap.left {
+  grid-column-gap: 20px;
+  grid-row-gap: 10px;
+  align-items: center;
   display: flex;
-  gap: 20px;
   flex-wrap: wrap;
 }
 
 .primary-button {
   position: relative;
-  display: inline-block;
+  background-color: #f4d35e;
+  color: #333;
   padding: 14px 28px;
-  text-decoration: none;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
-  overflow: hidden;
-  transition: all 0.3s ease;
+  text-decoration: none;
   border: none;
   cursor: pointer;
-  background: #f4d35e;
-  color: #333;
+  overflow: hidden;
+  display: inline-block;
+  transition: all 0.3s ease;
 }
 
 .primary-button.white {
-  background: #f4d35e;
+  background-color: #f4d35e;
   color: #333;
 }
 
 .primary-button.white:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(244, 211, 94, 0.4);
 }
 
 .primary-button.out-white {
-  background: transparent;
-  color: white;
-  border: 2px solid white;
+  background-color: transparent;
+  color: #fff;
+  border: 2px solid #fff;
 }
 
 .primary-button.out-white:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(255, 255, 255, 0.2);
 }
 
 .style-button-text {
@@ -252,85 +189,86 @@ onMounted(() => {
   height: 100%;
 }
 
-.cta-right {
-  position: relative;
-  z-index: 1;
-  min-height: 350px;
-}
-
 .cta-img {
-  position: relative;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   height: 100%;
+  display: flex;
+  position: relative;
   min-height: 350px;
 }
 
 .cta-img-1 {
-  position: absolute;
-  width: auto;
-  height: auto;
+  z-index: 3;
+  border: 4px solid #fdf5ed;
+  border-radius: 30px;
+  position: relative;
   max-width: 100%;
-  object-fit: contain;
+  height: auto;
 }
 
 .cta-img-1._1 {
+  z-index: 0;
+  position: absolute;
+  left: 42px;
   width: 160px;
-  bottom: 10%;
-  left: 0;
-  z-index: 2;
-}
-
-.cta-img-1._2 {
-  width: 140px;
-  bottom: 5%;
-  right: 10%;
-  z-index: 1;
+  transform: rotate(-5deg);
 }
 
 .cta-img-1._3 {
-  width: 200px;
-  top: 15%;
-  right: 15%;
   z-index: 3;
+  width: 200px;
+  position: relative;
+}
+
+.cta-img-1._2 {
+  z-index: 5;
+  position: absolute;
+  right: 16px;
+  width: 140px;
+  transform: rotate(5deg);
 }
 
 .cta-img-shape1 {
+  z-index: 2;
   position: absolute;
-  opacity: 0.6;
-  pointer-events: none;
+  bottom: -20px;
+  left: 61px;
   width: 250px;
-  top: -50px;
-  right: -30px;
-  z-index: 0;
+  height: auto;
+  opacity: 0.6;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
   .cta-wtapper {
     grid-template-columns: 1fr;
+    padding: 40px;
     gap: 30px;
   }
 
-  .cta-right {
+  .cta-left {
+    width: 100%;
+  }
+
+  .cta-img {
     min-height: 250px;
   }
 
   .cta-img-1._1,
-  .cta-img-1._2,
-  .cta-img-1._3 {
+  .cta-img-1._2 {
     width: 120px;
   }
 }
 
 @media (max-width: 768px) {
-  .section.cta {
-    padding: 40px 20px;
-    min-height: auto;
+  .cta-wtapper {
+    padding: 30px 20px;
   }
 
-  .cta-wtapper {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  .cta-left {
+    width: 100%;
   }
 
   .section-title.cta {
@@ -343,6 +281,7 @@ onMounted(() => {
 
   .button-wrap.left {
     flex-direction: column;
+    width: 100%;
   }
 
   .primary-button {
@@ -352,8 +291,8 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .section.cta {
-    padding: 30px 16px;
+  .cta-wtapper {
+    padding: 24px 16px;
   }
 
   .section-title.cta {
@@ -361,7 +300,7 @@ onMounted(() => {
   }
 
   .cta-left {
-    text-align: center;
+    width: 100%;
   }
 
   .section-title-shape {

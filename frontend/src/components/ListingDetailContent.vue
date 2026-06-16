@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { fetchPublicListings, type PublicListing } from '@/services/listings'
 import { getImageUrl } from '@/utils/imageUrl'
 import GalleryPreview from '@/components/GalleryPreview.vue'
+import CTASection from '@/components/sections/CTASection.vue'
 
 const route = useRoute()
 
@@ -255,36 +256,7 @@ function loadMoreGalleryImages() {
     </section>
 
     <!-- CTA Section -->
-    <section class="section cta">
-      <div class="container">
-        <div class="cta-wtapper">
-          <div class="cta-left">
-            <div class="section-title-cta-wrap">
-              <h2 class="section-title cta">Ready to Start? Click to Unlock Our Urban Wonders!</h2>
-              <img src="/images/Blog.png" alt="" class="section-title-shape">
-            </div>
-            <div class="button-wrap left">
-              <router-link to="/listings" class="primary-button white">
-                <div class="style-button-text white">Explore Listings</div>
-                <div class="button-color active"></div>
-              </router-link>
-              <router-link to="/add-listing" class="primary-button out-white">
-                <div class="style-button-text">Add a Listing</div>
-                <div class="button-color"></div>
-              </router-link>
-            </div>
-          </div>
-          <div class="cta-right">
-            <div class="cta-img">
-              <img src="/images/Mask-group.png" alt="" class="cta-img-1 _1" loading="lazy" decoding="async">
-              <img src="/images/Cta1.png" alt="" class="cta-img-1 _3" loading="lazy" decoding="async">
-              <img src="/images/Mask-group-1.png" alt="" class="cta-img-1 _2" loading="lazy" decoding="async">
-              <img src="/images/Best-Listing-Tab-Pane-Shape.png" alt="" class="cta-img-shape1" loading="lazy" decoding="async">
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <CTASection />
   </div>
 </template>
 

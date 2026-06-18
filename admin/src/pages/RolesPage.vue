@@ -65,8 +65,8 @@
                   <span class="permission-chip">{{ (role.permissions || '').split(',').length }} permissions</span>
                 </td>
                 <td class="cell-status">
-                  <span :class="['status-badge', `status-${role.status.toLowerCase()}`]">
-                    {{ role.status }}
+                  <span :class="['status-badge', `status-${(role.status || 'active').toLowerCase()}`]">
+                    {{ role.status || 'active' }}
                   </span>
                 </td>
                 <td class="cell-actions">
@@ -220,15 +220,21 @@ async function loadRoles() {
     const response = await api.get('/roles', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
+    console.log('[RolesPage] API Response:', response.data)
     // Handle paginated response: response.data.data contains the roles array
     let rolesData = response.data.data || response.data
+    console.log('[RolesPage] Extracted roles data:', rolesData)
     // Ensure we have an array
     if (!Array.isArray(rolesData)) {
+      console.warn('[RolesPage] Response is not an array, setting to empty')
       rolesData = []
     }
+    // Filter out any null/undefined items
+    rolesData = rolesData.filter((role: any) => role && role.id)
+    console.log('[RolesPage] Final roles after filtering:', rolesData)
     roles.value = rolesData
   } catch (error: any) {
-    console.error('Failed to load roles:', error)
+    console.error('[RolesPage] Failed to load roles:', error)
     roles.value = []
   } finally {
     loading.value = false

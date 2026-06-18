@@ -181,8 +181,13 @@ async function loadCategories() {
     const response = await api.get('/categories', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
-    categories.value = response.data.data || response.data || []
+    let categoriesData = response.data.data || response.data
+    if (!Array.isArray(categoriesData)) {
+      categoriesData = []
+    }
+    categories.value = categoriesData
   } catch (error: any) {
+    console.error('Failed to load categories:', error)
     categories.value = []
   } finally {
     loading.value = false

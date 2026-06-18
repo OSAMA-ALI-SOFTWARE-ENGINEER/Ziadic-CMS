@@ -199,8 +199,13 @@ async function loadUsers() {
     const response = await api.get('/users', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
-    users.value = response.data.data || response.data || []
+    let usersData = response.data.data || response.data
+    if (!Array.isArray(usersData)) {
+      usersData = []
+    }
+    users.value = usersData
   } catch (error: any) {
+    console.error('Failed to load users:', error)
     users.value = []
   } finally {
     loading.value = false

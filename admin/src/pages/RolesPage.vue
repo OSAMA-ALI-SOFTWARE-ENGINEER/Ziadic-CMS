@@ -220,8 +220,15 @@ async function loadRoles() {
     const response = await api.get('/roles', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
-    roles.value = response.data.data || response.data || []
+    // Handle paginated response: response.data.data contains the roles array
+    let rolesData = response.data.data || response.data
+    // Ensure we have an array
+    if (!Array.isArray(rolesData)) {
+      rolesData = []
+    }
+    roles.value = rolesData
   } catch (error: any) {
+    console.error('Failed to load roles:', error)
     roles.value = []
   } finally {
     loading.value = false

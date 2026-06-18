@@ -164,7 +164,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
 interface User {
@@ -174,13 +174,6 @@ interface User {
   role: string
   status: string
   created_at: string
-}
-
-function apiBase() {
-  const backend = import.meta.env.VITE_BACKEND_URL
-  if (backend) return backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000'
-  return window.location.origin
 }
 
 const users = ref<User[]>([])
@@ -203,7 +196,7 @@ function formatDate(dateString: string) {
 async function loadUsers() {
   loading.value = true
   try {
-    const response = await axios.get(`${apiBase()}/api/v1/admin/users`, {
+    const response = await api.get('/users', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     users.value = response.data.data || response.data || []
@@ -227,9 +220,9 @@ async function saveUser() {
   try {
     const isNew = !selectedUser.value.id
     if (isNew) {
-      await axios.post(`${apiBase()}/api/v1/admin/users`, selectedUser.value)
+      await api.post('/users', selectedUser.value)
     } else {
-      await axios.put(`${apiBase()}/api/v1/admin/users/${selectedUser.value.id}`, selectedUser.value)
+      await api.put(`/users/${selectedUser.value.id}`, selectedUser.value)
     }
     selectedUser.value = null
     await loadUsers()
@@ -244,7 +237,7 @@ async function deleteUser(user: User) {
   if (!confirm(`Delete user ${user.name}? This cannot be undone.`)) return
 
   try {
-    await axios.delete(`${apiBase()}/api/v1/admin/users/${user.id}`)
+    await api.delete(`/users/${user.id}`)
     await loadUsers()
   } catch (error: any) {
   }

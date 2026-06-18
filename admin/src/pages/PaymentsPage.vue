@@ -249,7 +249,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
 interface Payment {
@@ -264,12 +264,6 @@ interface Payment {
   created_at: string
 }
 
-function apiBase() {
-  const backend = import.meta.env.VITE_BACKEND_URL
-  if (backend) return backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000'
-  return window.location.origin
-}
 
 const payments = ref<Payment[]>([])
 const selectedPayment = ref<Payment | null>(null)
@@ -326,7 +320,7 @@ function formatDate(dateString: string) {
 
 async function checkPaymentsEnabled() {
   try {
-    const response = await axios.get(`${apiBase()}/api/v1/admin/settings/payments-enabled`)
+    const response = await api.get("/settings/payments-enabled")
     paymentsEnabled.value = response.data?.enabled || false
   } catch (error: any) {
     paymentsEnabled.value = false
@@ -338,7 +332,7 @@ async function loadPayments() {
 
   loading.value = true
   try {
-    const response = await axios.get(`${apiBase()}/api/v1/admin/payments`, {
+    const response = await api.get("/payments", {
       params: {
         ...(searchQuery.value && { search: searchQuery.value }),
         ...(statusFilter.value && { status: statusFilter.value })
@@ -360,7 +354,7 @@ async function refundPayment(payment: Payment) {
   if (!confirm(`Refund $${payment.amount.toFixed(2)} for transaction ${payment.transaction_id}?`)) return
 
   try {
-    await axios.post(`${apiBase()}/api/v1/admin/payments/${payment.id}/refund`)
+    await api.post("/payments/${payment.id}/refund")
     selectedPayment.value = null
     await loadPayments()
     alert('Refund processed successfully')

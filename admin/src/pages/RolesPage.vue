@@ -169,7 +169,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
 interface Role {
@@ -178,13 +178,6 @@ interface Role {
   user_count?: number
   permissions: string
   status: string
-}
-
-function apiBase() {
-  const backend = import.meta.env.VITE_BACKEND_URL
-  if (backend) return backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000'
-  return window.location.origin
 }
 
 const roles = ref<Role[]>([])
@@ -224,7 +217,7 @@ const filteredRoles = computed(() => {
 async function loadRoles() {
   loading.value = true
   try {
-    const response = await axios.get(`${apiBase()}/api/v1/admin/roles`, {
+    const response = await api.get('/roles', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     roles.value = response.data.data || response.data || []
@@ -248,9 +241,9 @@ async function saveRole() {
   try {
     const isNew = !selectedRole.value.id
     if (isNew) {
-      await axios.post(`${apiBase()}/api/v1/admin/roles`, selectedRole.value)
+      await api.post('/roles', selectedRole.value)
     } else {
-      await axios.put(`${apiBase()}/api/v1/admin/roles/${selectedRole.value.id}`, selectedRole.value)
+      await api.put(`/roles/${selectedRole.value.id}`, selectedRole.value)
     }
     selectedRole.value = null
     await loadRoles()
@@ -265,7 +258,7 @@ async function deleteRole(role: Role) {
   if (!confirm(`Delete role ${role.name}? This cannot be undone.`)) return
 
   try {
-    await axios.delete(`${apiBase()}/api/v1/admin/roles/${role.id}`)
+    await api.delete(`/roles/${role.id}`)
     await loadRoles()
   } catch (error: any) {
   }

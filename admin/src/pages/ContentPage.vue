@@ -185,7 +185,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
 interface Content {
@@ -198,12 +198,6 @@ interface Content {
   published_at?: string
 }
 
-function apiBase() {
-  const backend = import.meta.env.VITE_BACKEND_URL
-  if (backend) return backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000'
-  return window.location.origin
-}
 
 const contents = ref<Content[]>([])
 const pages = ref<Content[]>([])
@@ -239,7 +233,7 @@ function formatDate(dateString?: string) {
 async function loadContents() {
   loading.value = true
   try {
-    const response = await axios.get(`${apiBase()}/api/v1/admin/content`, {
+    const response = await api.get("/content", {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     contents.value = response.data.data || response.data || []
@@ -267,9 +261,9 @@ async function saveContent() {
   try {
     const isNew = !selectedContent.value.id
     if (isNew) {
-      await axios.post(`${apiBase()}/api/v1/admin/content`, selectedContent.value)
+      await api.post("/content", selectedContent.value)
     } else {
-      await axios.put(`${apiBase()}/api/v1/admin/content/${selectedContent.value.id}`, selectedContent.value)
+      await api.put("/content/${selectedContent.value.id}", selectedContent.value)
     }
     showModal.value = false
     await loadContents()
@@ -284,7 +278,7 @@ async function deleteContent(content: Content) {
   if (!confirm(`Delete "${content.title}"? This cannot be undone.`)) return
 
   try {
-    await axios.delete(`${apiBase()}/api/v1/admin/content/${content.id}`)
+    await api.delete("/content/${content.id}")
     await loadContents()
   } catch (error: any) {
   }

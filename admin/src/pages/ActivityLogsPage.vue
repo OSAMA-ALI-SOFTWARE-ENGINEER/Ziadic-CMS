@@ -126,15 +126,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import axios from 'axios'
+import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
-function apiBase() {
-  const backend = import.meta.env.VITE_BACKEND_URL
-  if (backend) return backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000'
-  return window.location.origin
-}
 
 const logs = ref([])
 const selected = ref(null)

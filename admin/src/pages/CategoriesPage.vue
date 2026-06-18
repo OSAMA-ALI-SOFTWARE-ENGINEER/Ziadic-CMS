@@ -151,7 +151,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
 interface Category {
@@ -161,13 +161,6 @@ interface Category {
   description?: string
   is_active: boolean
   item_count?: number
-}
-
-function apiBase() {
-  const backend = import.meta.env.VITE_BACKEND_URL
-  if (backend) return backend
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return 'http://127.0.0.1:8000'
-  return window.location.origin
 }
 
 const categories = ref<Category[]>([])
@@ -185,7 +178,7 @@ const filteredCategories = computed(() => {
 async function loadCategories() {
   loading.value = true
   try {
-    const response = await axios.get(`${apiBase()}/api/v1/admin/categories`, {
+    const response = await api.get('/categories', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     categories.value = response.data.data || response.data || []
@@ -209,9 +202,9 @@ async function saveCategory() {
   try {
     const isNew = !selectedCategory.value.id
     if (isNew) {
-      await axios.post(`${apiBase()}/api/v1/admin/categories`, selectedCategory.value)
+      await api.post('/categories', selectedCategory.value)
     } else {
-      await axios.put(`${apiBase()}/api/v1/admin/categories/${selectedCategory.value.id}`, selectedCategory.value)
+      await api.put(`/categories/${selectedCategory.value.id}`, selectedCategory.value)
     }
     selectedCategory.value = null
     await loadCategories()
@@ -226,7 +219,7 @@ async function deleteCategory(category: Category) {
   if (!confirm(`Delete category ${category.name}? This cannot be undone.`)) return
 
   try {
-    await axios.delete(`${apiBase()}/api/v1/admin/categories/${category.id}`)
+    await api.delete(`/categories/${category.id}`)
     await loadCategories()
   } catch (error: any) {
   }

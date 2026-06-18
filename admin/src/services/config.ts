@@ -41,14 +41,6 @@ export function getAppConfig(): AppConfig {
     environment: import.meta.env.MODE,
   }
 
-  // Debug logging (development only)
-  if (isDevelopment) {
-      '%c[CONFIG] App Configuration',
-      'background: #1e88e5; color: white; padding: 4px 8px; border-radius: 2px; font-weight: bold;',
-      config,
-    )
-  }
-
   return config
 }
 

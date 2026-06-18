@@ -164,13 +164,6 @@ function loadListingData() {
   } else if (form.country_id) {
     selectedCountry.value = form.country_id
   }
-
-    title: form.title,
-    city_id: form.city_id,
-    country_id: form.country_id,
-    category_ids: form.category_ids,
-    status: form.status,
-  })
 }
 
 function generateSlug() {
@@ -242,11 +235,6 @@ async function submit() {
       is_popular: form.is_popular,
       popular_order: form.is_popular ? form.popular_order : 0,
     }
-
-      isEditing,
-      listingId: props.listing?.id,
-      payload,
-    })
 
     let response
     if (isEditing) {

@@ -10,7 +10,7 @@ const isMobileMenuOpen = ref(false)
 
 const adminUrl = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5174'
 const adminLoginUrl = `${adminUrl}/admin/login`
-const adminDashboardUrl = `${adminUrl}/admin`
+
 
 const navItems = [
   { label: 'Home', to: '/' },
@@ -20,11 +20,7 @@ const navItems = [
   { label: 'Contact Us', to: '/contact' },
 ]
 
-function handleLogout() {
-  authStore.logout()
-  showUserMenu.value = false
-  isMobileMenuOpen.value = false
-}
+
 
 watch(
   () => route.fullPath,
@@ -34,13 +30,7 @@ watch(
   },
 )
 
-function getUserInitials() {
-  return authStore.user?.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase() || '?'
-}
+
 </script>
 
 <template>
@@ -68,44 +58,13 @@ function getUserInitials() {
               <span class="style-button-text">Login</span>
               <span class="button-color"></span>
             </a>
-            <RouterLink to="/register" class="primary-button site-header__animated-button site-header__animated-button--signup">
+            <RouterLink to="#" class="primary-button site-header__animated-button site-header__animated-button--signup">
               <span class="style-button-text">Get Started</span>
               <span class="button-color"></span>
             </RouterLink>
           </div>
 
-          <div v-else class="site-header__user-menu-wrap">
-            <button
-              @click="showUserMenu = !showUserMenu"
-              class="site-header__avatar"
-            >
-              {{ getUserInitials() }}
-            </button>
-
-            <div v-show="showUserMenu" class="site-header__user-menu">
-              <div class="site-header__user-meta">
-                <p class="site-header__user-name">{{ authStore.user?.name }}</p>
-                <p class="site-header__user-email">{{ authStore.user?.email }}</p>
-              </div>
-
-              <RouterLink to="/dashboard" class="site-header__user-link">
-                👤 My Dashboard
-              </RouterLink>
-
-              <a
-                v-if="authStore.isAdmin"
-                :href="adminDashboardUrl"
-                target="_blank"
-                class="site-header__user-link"
-              >
-                📊 Admin CMS
-              </a>
-
-              <button @click="handleLogout" class="site-header__user-logout">
-                Sign Out
-              </button>
-            </div>
-          </div>
+       
         </div>
 
         <button
@@ -136,15 +95,11 @@ function getUserInitials() {
             <span class="style-button-text">Login</span>
             <span class="button-color"></span>
           </a>
-          <RouterLink v-if="!authStore.isAuthenticated" to="/register" class="primary-button site-header__animated-button site-header__animated-button--signup site-header__mobile-cta">
+          <RouterLink v-if="!authStore.isAuthenticated" to="#" class="primary-button site-header__animated-button site-header__animated-button--signup site-header__mobile-cta">
             <span class="style-button-text">Get Started</span>
             <span class="button-color"></span>
           </RouterLink>
-          <div v-else class="site-header__mobile-user-section">
-            <RouterLink to="/dashboard" class="site-header__mobile-link">👤 My Dashboard</RouterLink>
-            <a href="http://localhost:5174/admin" target="_blank" class="site-header__mobile-link">📊 Admin CMS</a>
-            <button @click="handleLogout" class="site-header__mobile-logout">Sign Out</button>
-          </div>
+     
         </div>
       </div>
     </div>

@@ -2219,11 +2219,6 @@ async function handleLegacySubmit(event: SubmitEvent) {
       allFields[key] = String(value)
     })
 
-      name: (el as any).name,
-      type: (el as any).type,
-      value: (el as any).value,
-    })))
-
     // Note: Removing strict category requirement since we're building from legacy form
     // The form will submit with available data
 

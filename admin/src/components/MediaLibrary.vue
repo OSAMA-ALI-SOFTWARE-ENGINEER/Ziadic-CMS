@@ -61,10 +61,6 @@ async function fetchMedia() {
     })
     media.value = response.data.data || response.data || []
     total.value = response.data.total || 0
-      count: media.value.length,
-      total: total.value,
-      sample: media.value[0],
-    })
   } catch (error: any) {
     fetchError.value = error?.response?.data?.message || error?.message || 'Failed to load media'
     media.value = []

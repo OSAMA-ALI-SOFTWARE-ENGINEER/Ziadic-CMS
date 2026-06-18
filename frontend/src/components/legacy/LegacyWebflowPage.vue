@@ -942,6 +942,8 @@ function initializeHomeSearchForm() {
   }
 
   function handleSearchSubmit() {
+    if (!searchForm) return
+
     const filters: FilterState = {
       country: '',
       city: '',
@@ -2113,7 +2115,7 @@ function normalizeAddListingForm(root: HTMLElement | null) {
     const allForms = Array.from(root.querySelectorAll<HTMLFormElement>('form'))
 
     // Attach listener to each form that might be the add listing form
-    allForms.forEach((form, index) => {
+    allForms.forEach((form) => {
       try {
         const isAddListingForm =
           form.id?.includes('add-listing') ||
@@ -2150,7 +2152,8 @@ function normalizeAddListingForm(root: HTMLElement | null) {
             }
 
             // Call handler
-            handleLegacySubmit(event as SubmitEvent).catch((err) => {
+            handleLegacySubmit(event as SubmitEvent).catch(() => {
+              // Error handled silently
             })
 
             return false

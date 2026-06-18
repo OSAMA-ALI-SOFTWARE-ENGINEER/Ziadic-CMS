@@ -147,11 +147,6 @@ async function saveArticle() {
     resetForm()
     await load()
   } catch (err: any) {
-      status: err.response?.status,
-      statusText: err.response?.statusText,
-      message: err.response?.data?.message,
-      errors: err.response?.data?.errors,
-    })
     const errors = err.response?.data?.errors
     if (errors && typeof errors === 'object') {
       error.value = Object.entries(errors)

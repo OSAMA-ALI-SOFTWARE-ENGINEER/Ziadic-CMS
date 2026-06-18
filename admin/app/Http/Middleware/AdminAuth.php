@@ -14,10 +14,17 @@ class AdminAuth
 
         // Allow preview tokens in development
         if ($token && str_starts_with($token, 'local-preview-token-')) {
-            $user = new \App\Models\User();
-            $user->id = 1;
-            $user->name = 'Admin User';
-            $user->email = 'admin@test.local';
+            // Create preview user with super-admin role for testing
+            $user = \App\Models\User::find(1);
+
+            // If user doesn't exist, create a temporary one with super-admin role
+            if (!$user) {
+                $user = new \App\Models\User();
+                $user->id = 1;
+                $user->name = 'Admin User';
+                $user->email = 'admin@test.local';
+            }
+
             auth()->setUser($user);
             return $next($request);
         }

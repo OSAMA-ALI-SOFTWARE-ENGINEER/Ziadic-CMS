@@ -23,7 +23,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::before(function (User $user): ?bool {
-            return $user->hasRole('super-admin') ? true : null;
+            // Allow super-admin and preview users (used in development)
+            if ($user->hasRole('super-admin')) {
+                return true;
+            }
+
+            // Check if this is a preview user (from preview token in development)
+            if ($user->email === 'admin@test.local') {
+                return true;
+            }
+
+            return null;
         });
 
         // Define specific gates

@@ -26,17 +26,53 @@ class DatabaseSeeder extends Seeder
     {
         $this->seedRolesAndPermissions();
 
+        // Create Super Admin
+        $superAdmin = User::query()->firstOrCreate(
+            ['email' => 'superadmin@kukaqka.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ],
+        );
+        $superAdmin->assignRole('super-admin');
+
+        // Create Admin (fallback for ADMIN_EMAIL env var)
         $admin = User::query()->firstOrCreate(
             ['email' => env('ADMIN_EMAIL', 'admin@kukaqka.com')],
             [
-                'name' => env('ADMIN_NAME', 'Super Admin'),
+                'name' => env('ADMIN_NAME', 'Admin User'),
                 'password' => Hash::make(env('ADMIN_PASSWORD', 'password')),
                 'status' => 'active',
                 'email_verified_at' => now(),
             ],
         );
+        $admin->assignRole('admin');
 
-        $admin->assignRole('super-admin');
+        // Create Staff user for testing
+        $staff = User::query()->firstOrCreate(
+            ['email' => 'staff@kukaqka.com'],
+            [
+                'name' => 'Staff Editor',
+                'password' => Hash::make('password'),
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ],
+        );
+        $staff->assignRole('staff');
+
+        // Create Client user for testing
+        $client = User::query()->firstOrCreate(
+            ['email' => 'client@kukaqka.com'],
+            [
+                'name' => 'Client Account',
+                'password' => Hash::make('password'),
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ],
+        );
+        $client->assignRole('client');
 
         $countries = $this->seedLocations();
         $categories = $this->seedCategories();

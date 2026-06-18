@@ -126,7 +126,6 @@ async function populateBlogDetailContent() {
     }
 
   } catch (error) {
-    console.error('❌ Blog detail error:', error)
   }
 }
 

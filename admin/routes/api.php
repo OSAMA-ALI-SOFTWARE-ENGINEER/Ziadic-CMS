@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\Admin\CustomMediaController;
 use App\Http\Controllers\Admin\ContactMessageController;
@@ -506,6 +507,13 @@ if (!function_exists('popularPayload')) {
 Route::prefix('v1/auth')->group(function (): void {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
+
+    // OAuth routes
+    Route::get('google/redirect', [AuthController::class, 'redirectToGoogle']);
+    Route::get('google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::get('facebook/redirect', [AuthController::class, 'redirectToFacebook']);
+    Route::get('facebook/callback', [AuthController::class, 'handleFacebookCallback']);
+
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
@@ -564,9 +572,13 @@ Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
     Route::post('custom-media/bulk-delete', [CustomMediaController::class, 'bulkDelete']);
     Route::delete('media/{media}', [MediaController::class, 'destroy']);
 
-    // Settings endpoints (branding, theme, seo, payments)
+    // Settings endpoints (branding, theme, seo, payments, oauth)
     Route::get('settings/{section}', [AdminSettingsController::class, 'show']);
     Route::post('settings/{section}', [AdminSettingsController::class, 'update']);
+
+    // OAuth Settings
+    Route::get('settings/oauth', [SettingsController::class, 'getOAuth']);
+    Route::post('settings/oauth', [SettingsController::class, 'storeOAuth']);
 
     Route::apiResource('listings', ListingController::class);
     Route::patch('listings/{listing}/approve', [ListingController::class, 'approve']);
@@ -578,6 +590,8 @@ Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
     Route::apiResource('content', PageController::class);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('roles', \App\Http\Controllers\Admin\RoleController::class);
+    Route::get('roles-list', [\App\Http\Controllers\Admin\RoleController::class, 'getRolesList']);
+    Route::get('roles/{role}/permissions', [\App\Http\Controllers\Admin\RoleController::class, 'getRolePermissions']);
     Route::apiResource('cities', \App\Http\Controllers\Admin\CityController::class);
     Route::apiResource('countries', \App\Http\Controllers\Admin\CountryController::class);
 

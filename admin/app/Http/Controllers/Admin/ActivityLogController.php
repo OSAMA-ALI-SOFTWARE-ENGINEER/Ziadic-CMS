@@ -10,8 +10,6 @@ class ActivityLogController extends Controller
 {
     public function index(Request $request)
     {
-        // Only super admin
-        $this->authorize('viewActivityLogs');
         $query = ActivityLog::query()->latest();
 
         // Support queries against either schema (new: action/related_id, legacy: event/subject_id)

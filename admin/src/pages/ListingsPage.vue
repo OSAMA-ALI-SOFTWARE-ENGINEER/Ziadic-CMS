@@ -87,7 +87,6 @@ async function loadListings() {
       2000
     )
   } catch (err) {
-    console.error('Failed to load listings:', err)
     ui.pushToast('Failed to load listings', 'danger')
   } finally {
     loading.value = false
@@ -139,7 +138,6 @@ function editListing(listingRow: any) {
     const fullListing = listingRow.id ? fullListings.value.get(listingRow.id) : null
 
     if (!fullListing) {
-      console.error('Listing not found in cache')
       ui.pushToast('Failed to load listing', 'danger')
       return
     }
@@ -147,7 +145,6 @@ function editListing(listingRow: any) {
     editingListing.value = fullListing
     isModalOpen.value = true
   } catch (err) {
-    console.error('Failed to open listing editor:', err)
     ui.pushToast('Failed to open listing editor', 'danger')
   }
 }
@@ -193,7 +190,6 @@ async function confirmDelete() {
     // Refresh to sync with backend
     await loadListings()
   } catch (err: any) {
-    console.error('Failed to delete listing:', err)
     ui.pushToast(err.response?.data?.message || 'Failed to delete listing', 'danger')
   } finally {
     isDeleting.value = false
@@ -392,6 +388,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .listings-page {
   padding: 2rem;
+  max-width: 100%;
 }
 
 .primary-action,
@@ -405,6 +402,7 @@ onBeforeUnmount(() => {
   transition: all 0.2s;
   border: none;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .primary-action {
@@ -438,5 +436,137 @@ onBeforeUnmount(() => {
 
 .cms-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .listings-page {
+    padding: 1.5rem;
+  }
+
+  .primary-action,
+  .secondary-action {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .listings-page {
+    padding: 1rem;
+  }
+
+  :deep(.flex.items-center.justify-between) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  :deep(h1.text-2xl) {
+    font-size: 1.5rem;
+  }
+
+  :deep(p.text-sm.text---admin-muted) {
+    font-size: 0.875rem;
+  }
+
+  /* Stats cards responsive */
+  :deep(.grid.gap-4.md\:grid-cols-3) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .primary-action,
+  .secondary-action {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    gap: 0.375rem;
+  }
+
+  .primary-action i,
+  .secondary-action i {
+    font-size: 0.95rem;
+  }
+
+  :deep(.space-y-6 > section:nth-child(4) .flex.gap-2) {
+    gap: 0.5rem;
+  }
+
+  :deep(.space-y-6 > section:nth-child(4) button) {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.825rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .listings-page {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  :deep(.flex.items-center.justify-between) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  :deep(h1.text-2xl) {
+    font-size: 1.25rem;
+  }
+
+  :deep(p.text-sm.text---admin-muted) {
+    font-size: 0.8rem;
+  }
+
+  /* Stats cards full width on mobile */
+  :deep(.grid.gap-4.md\:grid-cols-3) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  :deep(.cms-card.p-6.border-l-4) {
+    padding: 1rem !important;
+  }
+
+  :deep(.cms-card.p-6.border-l-4 .text-3xl) {
+    font-size: 1.875rem;
+  }
+
+  :deep(.cms-card.p-6.border-l-4 .text-4xl) {
+    font-size: 2rem;
+  }
+
+  :deep(.flex.gap-3.flex-wrap) {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .primary-action,
+  .secondary-action {
+    width: 100%;
+    justify-content: center;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .primary-action i,
+  .secondary-action i {
+    font-size: 0.9rem;
+  }
+
+  :deep(.space-y-6 > section:nth-child(4)) {
+    padding: 1rem !important;
+  }
+
+  :deep(.space-y-6 > section:nth-child(4) .flex.gap-2) {
+    gap: 0.375rem;
+    grid-template-columns: 1fr;
+  }
+
+  :deep(.space-y-6 > section:nth-child(4) button) {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 0;
+  }
 }
 </style>

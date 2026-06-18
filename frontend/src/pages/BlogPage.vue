@@ -84,7 +84,6 @@ async function loadPosts() {
   try {
     posts.value = await fetchPublicPosts()
   } catch (err) {
-    console.error('Failed to load posts:', err)
   } finally {
     loading.value = false
   }

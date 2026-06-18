@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PasswordField from '@/components/PasswordField.vue'
-import { useCmsStore } from '@/stores/cms'
 import { useUiStore } from '@/stores/ui'
+import { authApi } from '@/services/api'
 
-const cms = useCmsStore()
 const ui = useUiStore()
 const router = useRouter()
 const baseUrl = import.meta.env.BASE_URL
+const isLoading = ref(false)
 
 const form = reactive({
   name: '',
@@ -23,22 +23,52 @@ async function submit() {
     return
   }
 
+  if (form.password.length < 8) {
+    ui.pushToast('Password must be at least 8 characters long.', 'danger')
+    return
+  }
+
   if (form.password !== form.password_confirmation) {
     ui.pushToast('Password confirmation does not match.', 'danger')
     return
   }
 
-  cms.upsertUser({
-    id: Date.now(),
-    name: form.name,
-    email: form.email,
-    role: 'client',
-    status: 'Pending',
-    tone: 'warning',
-  })
+  isLoading.value = true
 
-  ui.pushToast('Signup submitted. Your account is pending admin approval.', 'warning')
-  await router.push('/login')
+  try {
+    const { data } = await authApi.post('/register', {
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      password_confirmation: form.password_confirmation,
+    })
+
+    ui.pushToast('Account created successfully! Redirecting to login...', 'success')
+
+    setTimeout(async () => {
+      await router.push('/login')
+    }, 1000)
+  } catch (error: any) {
+    let errorMsg = 'Failed to create account'
+
+    // Extract validation errors from backend response
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const errorList = Object.entries(errors).map(([field, msgs]: [string, any]) => {
+        const messages = Array.isArray(msgs) ? msgs : [msgs]
+        return messages[0] || `${field} is invalid`
+      })
+      errorMsg = errorList.join(', ')
+    } else if (error.response?.data?.message) {
+      errorMsg = error.response.data.message
+    } else if (error.message) {
+      errorMsg = error.message
+    }
+
+    ui.pushToast(errorMsg, 'danger')
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -86,8 +116,8 @@ async function submit() {
 
     <div class="auth-pending-note">New users stay pending until an admin approves the account.</div>
 
-    <button class="submit-button" type="submit">
-      Sign Up
+    <button class="submit-button" type="submit" :disabled="isLoading">
+      {{ isLoading ? 'Creating account...' : 'Sign Up' }}
     </button>
   </form>
 </template>

@@ -22,13 +22,10 @@ onMounted(async () => {
     }
 
     if (!document.querySelector('.cities-slider')) {
-      console.error('Cities slider element not found in DOM after waiting')
       return
     }
 
-    console.log('Cities slider found, fetching cities...')
     const catalog = await fetchPublicCatalog()
-    console.log('Fetched cities:', catalog.cities)
 
     populateIconicCitiesSection(catalog.cities)
 
@@ -37,15 +34,12 @@ onMounted(async () => {
 
     if ((window as any).Webflow) {
       try {
-        console.log('🔄 Reinitializing Webflow for slider navigation...')
         ;(window as any).Webflow.ready?.()
-        console.log('✅ Webflow ready called')
 
         // Additional: manually bind slider events if Webflow.ready() wasn't enough
         await new Promise(resolve => setTimeout(resolve, 100))
         initializeSliderNavigation()
       } catch (error) {
-        console.warn('Could not reinitialize Webflow:', error)
         // Try manual initialization
         initializeSliderNavigation()
       }
@@ -54,7 +48,6 @@ onMounted(async () => {
       initializeSliderNavigation()
     }
   } catch (error) {
-    console.error('Failed to populate cities section:', error)
   }
 })
 
@@ -64,7 +57,6 @@ function initializeSliderNavigation() {
   const slides = sliderMask?.querySelectorAll<HTMLElement>('.cities-slide')
 
   if (!slider || !sliderMask || !slides || slides.length === 0) {
-    console.warn('Could not initialize slider navigation - missing elements')
     return
   }
 
@@ -105,7 +97,6 @@ function initializeSliderNavigation() {
       isAnimating = false
     }, 600)
 
-    console.log(`Slider moved to slide ${currentSlide + 1} of ${totalSlides}`)
   }
 
   // Bind click handlers to arrow buttons
@@ -147,32 +138,27 @@ function initializeSliderNavigation() {
     dot.style.cursor = 'pointer'
   })
 
-  console.log('✅ Slider navigation initialized with', totalSlides, 'slides')
 }
 
 function populateIconicCitiesSection(cities: any[]) {
   // Find the cities slider in the Webflow HTML
   const slider = document.querySelector<HTMLElement>('.cities-slider')
   if (!slider) {
-    console.warn('Could not find .cities-slider')
     return
   }
 
   // Find the slider mask where slides are contained
   const sliderMask = slider.querySelector<HTMLElement>('.cities-mask')
   if (!sliderMask) {
-    console.warn('Could not find .cities-mask')
     return
   }
 
   // Get the first slide as a template
   const templateSlide = slider.querySelector<HTMLElement>('.cities-slide')
   if (!templateSlide) {
-    console.warn('Could not find template slide')
     return
   }
 
-  console.log('Creating slides for', cities.length, 'cities')
 
   // Clear all existing slides
   const existingSlides = sliderMask.querySelectorAll('.cities-slide')
@@ -357,7 +343,6 @@ function populateIconicCitiesSection(cities: any[]) {
     // Append the new slide to the slider mask
     sliderMask.appendChild(newSlide)
 
-    console.log(`Created slide ${slideIndex + 1} with city: ${city.name}`)
   })
 
   // Rebuild slider navigation dots
@@ -365,7 +350,6 @@ function populateIconicCitiesSection(cities: any[]) {
   if (parentWrapper) {
     const navContainer = parentWrapper.querySelector('.slider-nav')
     if (navContainer) {
-      console.log('Found nav container, rebuilding dots for', cities.length, 'cities')
       navContainer.innerHTML = ''
       cities.forEach((_, index) => {
         const dot = document.createElement('div')
@@ -384,11 +368,9 @@ function populateIconicCitiesSection(cities: any[]) {
         navContainer.appendChild(dot)
       })
     } else {
-      console.warn('Could not find .slider-nav in parent wrapper')
     }
   }
 
-  console.log('✅ Successfully populated all', cities.length, 'cities in slider')
 }
 </script>
 

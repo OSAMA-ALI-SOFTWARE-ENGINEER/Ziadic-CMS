@@ -74,50 +74,70 @@ function handleUserMenuLeave() {
   }, 5000)
 }
 
-const navigationGroups = [
+// Define all navigation items with their required roles
+const allNavigationGroups = [
   {
     label: 'Core',
     items: [
-      { label: 'Dashboard', to: '/dashboard', icon: 'pi pi-home' },
-      { label: 'Listings', to: '/listings', icon: 'pi pi-building' },
-      { label: 'Approvals', to: '/approvals', icon: 'pi pi-check-circle' },
-      { label: 'Submitted Listings', to: '/submissions', icon: 'pi pi-inbox' },
-      { label: 'Categories', to: '/categories', icon: 'pi pi-tags' },
-      { label: 'Location Management', to: '/location-management', icon: 'pi pi-map' },
+      { label: 'Dashboard', to: '/dashboard', icon: 'pi pi-home', roles: ['super-admin', 'admin', 'staff', 'client'] },
+      { label: 'Listings', to: '/listings', icon: 'pi pi-building', roles: ['super-admin', 'admin', 'staff'] },
+      { label: 'Approvals', to: '/approvals', icon: 'pi pi-check-circle', roles: ['super-admin', 'admin'] },
+      { label: 'Submitted Listings', to: '/submissions', icon: 'pi pi-inbox', roles: ['super-admin', 'admin'] },
+      { label: 'Categories', to: '/categories', icon: 'pi pi-tags', roles: ['super-admin', 'admin'] },
+      { label: 'Location Management', to: '/location-management', icon: 'pi pi-map', roles: ['super-admin', 'admin'] },
     ],
   },
   {
     label: 'Content',
     items: [
-      { label: 'Content', to: '/content', icon: 'pi pi-file-edit' },
-      { label: 'Blog Articles', to: '/blog-articles', icon: 'pi pi-book' },
-      { label: 'Media', to: '/media', icon: 'pi pi-images' },
+      { label: 'Blog Articles', to: '/blog-articles', icon: 'pi pi-book', roles: ['super-admin', 'admin', 'staff'] },
+      { label: 'Media', to: '/media', icon: 'pi pi-images', roles: ['super-admin', 'admin', 'staff'] },
     ],
   },
   {
     label: 'Commerce',
     items: [
-      { label: 'Payments', to: '/payments', icon: 'pi pi-credit-card' },
-      { label: 'Subscriptions', to: '/subscriptions', icon: 'pi pi-envelope' },
+      { label: 'Payments', to: '/payments', icon: 'pi pi-credit-card', roles: ['super-admin', 'admin'] },
+      { label: 'Subscriptions', to: '/subscriptions', icon: 'pi pi-envelope', roles: ['super-admin', 'admin'] },
     ],
   },
   {
     label: 'Admin',
     items: [
-      { label: 'Users', to: '/users', icon: 'pi pi-users' },
-      { label: 'Roles', to: '/roles', icon: 'pi pi-shield' },
+      { label: 'Users', to: '/users', icon: 'pi pi-users', roles: ['super-admin', 'admin'] },
+      { label: 'Roles', to: '/roles', icon: 'pi pi-shield', roles: ['super-admin'] },
       {
         label: 'Settings',
         icon: 'pi pi-cog',
+        roles: ['super-admin', 'admin'],
         children: [
-          { label: 'Profile', to: '/profile', icon: 'pi pi-user' },
-          { label: 'System Settings', to: '/settings', icon: 'pi pi-cog' },
+          { label: 'Profile', to: '/profile', icon: 'pi pi-user', roles: ['super-admin', 'admin', 'staff', 'client'] },
+          { label: 'System Settings', to: '/settings', icon: 'pi pi-cog', roles: ['super-admin', 'admin'] },
         ],
       },
-      { label: 'Activity Logs', to: '/activity-logs', icon: 'pi pi-list' },
+      { label: 'Activity Logs', to: '/activity-logs', icon: 'pi pi-list', roles: ['super-admin', 'admin'] },
     ],
   },
 ]
+
+// Filter navigation based on user role
+function getFilteredNavigation() {
+  const userRole = auth.user?.role || 'client'
+
+  return allNavigationGroups.map(group => ({
+    ...group,
+    items: group.items
+      .filter(item => !item.roles || item.roles.includes(userRole))
+      .map(item => ({
+        ...item,
+        children: item.children
+          ? item.children.filter(child => !child.roles || child.roles.includes(userRole))
+          : undefined,
+      })),
+  })).filter(group => group.items.length > 0)
+}
+
+const navigationGroups = computed(() => getFilteredNavigation())
 
 const pageTitle = computed(() => String(route.meta.title || 'Dashboard').replace(' | Kukaqka CMS', ''))
 

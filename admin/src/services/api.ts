@@ -68,9 +68,6 @@ api.interceptors.request.use((config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
-    console.log(`[API] Sending request to ${config.url} with token: ${token.substring(0, 20)}...`)
-  } else {
-    console.warn(`[API] No token found! Request to ${config.url} will be unauthorized`)
   }
 
   // Don't override Content-Type for FormData (file uploads)

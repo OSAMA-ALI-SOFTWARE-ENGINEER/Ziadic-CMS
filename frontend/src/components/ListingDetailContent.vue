@@ -22,7 +22,6 @@ onMounted(async () => {
       populateContactInformation()
     }, 1500)
   } catch (error) {
-    console.error('Error initializing listing detail:', error)
   }
 })
 
@@ -234,6 +233,5 @@ function initializeAnimations() {
     })
   })
 
-  console.log('[CMS] Animations initialized successfully')
 }
 </script>

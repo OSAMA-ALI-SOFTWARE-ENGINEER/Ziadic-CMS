@@ -100,7 +100,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
       return listings
     } catch (err) {
-      console.error('Failed to fetch listings:', err)
       return []
     }
   }
@@ -122,7 +121,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
       return articles
     } catch (err) {
-      console.error('Failed to fetch articles:', err)
       return []
     }
   }
@@ -258,7 +256,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
       lastUpdatedTime.value = new Date()
     } catch (error) {
-      console.error('Failed to fetch dashboard metrics:', error)
     } finally {
       isLoading.value = false
     }

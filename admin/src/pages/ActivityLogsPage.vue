@@ -139,12 +139,9 @@ let pollInterval
 
 async function load() {
   try {
-    const useDebug = import.meta.env.DEV
-    const path = useDebug ? '/api/admin/debug/activity-logs' : '/api/v1/admin/activity-logs'
-    const res = await axios.get(apiBase() + path)
+    const res = await api.get('/activity-logs')
     logs.value = res.data.data ?? res.data
   } catch (e) {
-    console.error('Failed to load activity logs', e)
     logs.value = []
   }
 }
@@ -642,10 +639,10 @@ async function trySubscribeRealtime(loadFn: () => void) {
   word-break: break-word;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive Design */
+@media (max-width: 1024px) {
   .activity-logs-container {
-    padding: 1rem;
+    padding: 1.25rem;
   }
 
   .logs-title {
@@ -661,16 +658,98 @@ async function trySubscribeRealtime(loadFn: () => void) {
     padding: 0.75rem 0.625rem;
   }
 
+  /* Hide IP on tablet */
+  .cell-ip,
+  .logs-table thead th:nth-child(5),
+  .logs-table tbody td:nth-child(5) {
+    display: none;
+  }
+
   .modal-container {
     max-height: 95vh;
   }
 
   .summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .activity-logs-container {
+    padding: 1rem;
   }
 
-  .logs-table thead th:nth-child(n + 5),
-  .logs-table tbody td:nth-child(n + 5) {
+  .logs-title {
+    font-size: 1.375rem;
+  }
+
+  .logs-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .logs-table {
+    font-size: 0.775rem;
+  }
+
+  .logs-table thead th,
+  .logs-table tbody td {
+    padding: 0.625rem 0.5rem;
+  }
+
+  .date-badge {
+    font-size: 0.8rem;
+  }
+
+  .action-badge {
+    padding: 0.3rem 0.625rem;
+    font-size: 0.7rem;
+  }
+
+  .user-avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.75rem;
+  }
+
+  .preview-button {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  /* Hide Related column on tablet */
+  .cell-related,
+  .logs-table thead th:nth-child(4),
+  .logs-table tbody td:nth-child(4) {
+    display: none;
+  }
+
+  .modal-container {
+    max-height: 95vh;
+    margin: 1rem;
+  }
+
+  .modal-header {
+    padding: 1.25rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+  }
+
+  .summary-value {
+    font-size: 0.875rem;
+  }
+
+  .json-viewer pre {
     font-size: 0.75rem;
   }
 }
@@ -681,15 +760,15 @@ async function trySubscribeRealtime(loadFn: () => void) {
   }
 
   .logs-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
 
   .logs-subtitle {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .logs-table {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .logs-table thead th,
@@ -697,10 +776,55 @@ async function trySubscribeRealtime(loadFn: () => void) {
     padding: 0.5rem 0.375rem;
   }
 
-  .user-avatar {
-    width: 2rem;
-    height: 2rem;
+  .date-badge {
     font-size: 0.75rem;
+  }
+
+  .action-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .user-info {
+    gap: 0.5rem;
+  }
+
+  .user-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.7rem;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+  }
+
+  .preview-button {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.7rem;
+  }
+
+  .preview-button i {
+    font-size: 0.65rem;
+  }
+
+  /* Hide Action and User columns on mobile, show Date and Details only */
+  .cell-action,
+  .cell-user,
+  .logs-table thead th:nth-child(2),
+  .logs-table thead th:nth-child(3),
+  .logs-table tbody td:nth-child(2),
+  .logs-table tbody td:nth-child(3) {
+    display: none;
+  }
+
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal-container {
+    max-height: 100vh;
+    margin: 0;
   }
 
   .modal-header {
@@ -711,8 +835,40 @@ async function trySubscribeRealtime(loadFn: () => void) {
     padding: 1rem;
   }
 
+  .modal-title {
+    font-size: 1.125rem;
+  }
+
   .summary-grid {
-    gap: 1rem;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .summary-label {
+    font-size: 0.7rem;
+  }
+
+  .summary-value {
+    font-size: 0.825rem;
+  }
+
+  .summary-value code {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .section-title {
+    font-size: 0.85rem;
+  }
+
+  .json-viewer {
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+  }
+
+  .json-viewer pre {
+    font-size: 0.7rem;
+    line-height: 1.4;
   }
 }
 

@@ -69,7 +69,6 @@ export const useAuthStore = defineStore('auth', () => {
         },
       })
     } catch (error) {
-      console.error('Logout error:', error)
     }
 
     token.value = null

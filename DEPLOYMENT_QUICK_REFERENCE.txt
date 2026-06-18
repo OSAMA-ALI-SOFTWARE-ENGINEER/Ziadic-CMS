@@ -1,0 +1,368 @@
+================================================================================
+KUKAQKA CMS - DEPLOYMENT QUICK REFERENCE
+================================================================================
+
+YOUR DOMAIN SETUP:
+  Main Website:   https://kukaqka.com
+  Admin Panel:    https://admin.kukaqka.com
+  API Backend:    https://admin.kukaqka.com/api/v1/admin
+
+================================================================================
+LOCAL MACHINE - BUILD PHASE (Do This First)
+================================================================================
+
+1. UPDATE ENVIRONMENT FILE:
+   Edit: admin/.env.production
+
+   Required values:
+   - APP_KEY=base64:... (generate via: php artisan key:generate --env=production)
+   - DB_DATABASE=kukaqka_prod
+   - DB_USERNAME=kukaqka_admin
+   - DB_PASSWORD=YOUR_PASSWORD
+   - MAIL_USERNAME=your-email@kukaqka.com
+   - MAIL_PASSWORD=YOUR_EMAIL_PASSWORD
+
+2. RUN BUILD SCRIPT:
+   powershell -ExecutionPolicy Bypass -File BUILD_FOR_PRODUCTION.ps1
+
+3. VERIFY BUILD OUTPUT:
+   ✓ admin/dist/ folder exists with files
+   ✓ frontend/dist/ folder exists with files
+
+================================================================================
+HOSTINGER CONTROL PANEL - SETUP PHASE
+================================================================================
+
+1. CREATE SUBDOMAIN:
+   - Domains → kukaqka.com → Manage → Subdomains
+   - Create: admin → Document Root: /home/username/public_html/admin/public
+
+2. CREATE DATABASE:
+   - MySQL Databases → Create Database
+   - Name: kukaqka_prod
+   - Create User: kukaqka_admin
+   - Set Strong Password
+   - Grant all permissions
+
+3. VERIFY PHP:
+   - PHP Configuration → Version 8.2+ ✓
+   - Extensions enabled: PDO, OpenSSL, ZIP, JSON, MBString, Fileinfo ✓
+
+================================================================================
+UPLOAD FILES VIA SFTP
+================================================================================
+
+ADMIN BACKEND → /home/username/public_html/admin/
+  ✓ app/
+  ✓ bootstrap/
+  ✓ config/
+  ✓ database/
+  ✓ public/
+  ✓ resources/
+  ✓ routes/
+  ✓ .env (from .env.production)
+  ✓ artisan
+  ✓ composer.json
+  ✓ composer.lock
+  ✗ vendor/ (install on server)
+  ✗ node_modules/
+
+ADMIN FRONTEND → /home/username/public_html/admin/public/admin/
+  Upload contents of: admin/dist/
+  ✓ index.html
+  ✓ assets/
+
+PUBLIC FRONTEND → /home/username/public_html/
+  Upload contents of: frontend/dist/
+  ✓ index.html
+  ✓ assets/
+  ✓ .htaccess (create for SPA routing)
+
+================================================================================
+SERVER CONFIGURATION - SSH COMMANDS
+================================================================================
+
+CONNECT:
+  ssh username@hostinger-domain.com
+
+INSTALL DEPENDENCIES:
+  cd ~/public_html/admin
+  composer install --no-dev --optimize-autoloader
+
+SETUP ENVIRONMENT:
+  cd ~/public_html/admin
+  cp .env.production .env
+  nano .env  # Edit with your credentials
+
+RUN MIGRATIONS:
+  php artisan migrate --force
+
+CREATE ADMIN USER:
+  php artisan tinker
+  $user = App\Models\User::create([
+      'name' => 'Admin',
+      'email' => 'admin@kukaqka.com',
+      'password' => bcrypt('YOUR_PASSWORD'),
+  ]);
+  $user->assignRole('super-admin');
+  exit
+
+SET PERMISSIONS:
+  chmod -R 755 .
+  chmod -R 777 storage bootstrap/cache
+
+CACHE CONFIGURATION:
+  php artisan config:cache
+  php artisan route:cache
+  php artisan view:cache
+
+================================================================================
+CREATE .HTACCESS FILES
+================================================================================
+
+FILE: /public_html/.htaccess (Frontend SPA routing)
+---
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ index.html [QSA,L]
+</IfModule>
+---
+
+FILE: /public_html/admin/public/.htaccess (Laravel API)
+---
+<IfModule mod_rewrite.c>
+  <IfModule mod_negotiation.c>
+    Options -MultiViews
+  </IfModule>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)/$ /$1 [L,R=301]
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L]
+</IfModule>
+---
+
+================================================================================
+TESTING & VERIFICATION
+================================================================================
+
+TEST API ENDPOINT:
+  curl -i https://admin.kukaqka.com/api/v1/health
+  Expected: 200 OK
+
+LOGIN TO ADMIN:
+  URL: https://admin.kukaqka.com
+  Email: admin@kukaqka.com
+  Password: (your password from setup)
+
+CHECK FRONTEND:
+  URL: https://kukaqka.com
+  Should load without 404 errors
+
+VIEW ERROR LOGS:
+  ssh to server
+  tail -f ~/public_html/admin/storage/logs/laravel.log
+
+CHECK BROWSER CONSOLE:
+  Press F12 → Console tab
+  Should show 0 errors
+
+================================================================================
+COMMON ISSUES & FIXES
+================================================================================
+
+ISSUE: Blank admin page
+  FIX:
+    cd ~/public_html/admin
+    php artisan config:clear
+    php artisan cache:clear
+    tail -f storage/logs/laravel.log
+
+ISSUE: API 404 errors
+  FIX:
+    Check APP_URL in .env = https://admin.kukaqka.com/api/v1
+    php artisan route:cache
+    Verify .htaccess exists in public/
+
+ISSUE: Database connection error
+  FIX:
+    Verify DB credentials in .env
+    Test: php artisan tinker → DB::connection()->getPdo();
+
+ISSUE: CORS errors in browser
+  FIX:
+    Update config/cors.php with your domains
+    php artisan config:cache
+
+ISSUE: File upload fails
+  FIX:
+    chmod -R 777 storage
+    chown -R nobody:nobody storage
+
+================================================================================
+POST-DEPLOYMENT TASKS
+================================================================================
+
+1. ENABLE SSL:
+   Hostinger Control Panel → Security → SSL → AutoSSL (should be enabled)
+
+2. SETUP BACKUPS:
+   Hostinger Control Panel → Backups → Enable Automatic Backups
+
+3. SETUP CRON (optional):
+   SSH → crontab -e
+   Add: * * * * * cd ~/public_html/admin && php artisan schedule:run >> /dev/null 2>&1
+
+4. CHANGE DEFAULT PASSWORD:
+   Login to admin → Settings → Change password
+
+================================================================================
+DEPLOYMENT CHECKLIST
+================================================================================
+
+LOCAL PREPARATION:
+  ☐ Update .env.production with all credentials
+  ☐ Generate APP_KEY
+  ☐ Run build script
+  ☐ Verify admin/dist/ exists
+  ☐ Verify frontend/dist/ exists
+
+HOSTINGER SETUP:
+  ☐ Create subdomain admin.kukaqka.com
+  ☐ Create database kukaqka_prod
+  ☐ Create user kukaqka_admin
+  ☐ Verify PHP 8.2+
+  ☐ Verify required PHP extensions
+
+FILE UPLOADS:
+  ☐ Upload admin backend files
+  ☐ Upload admin frontend to public/admin/
+  ☐ Upload public frontend to public_html/
+  ☐ Create .htaccess files
+
+SERVER CONFIGURATION:
+  ☐ Run composer install --no-dev
+  ☐ Copy .env file
+  ☐ Run php artisan migrate --force
+  ☐ Create admin user
+  ☐ Set file permissions
+  ☐ Cache configuration
+
+TESTING:
+  ☐ Test API health check
+  ☐ Test admin login
+  ☐ Test frontend loading
+  ☐ Check for console errors
+  ☐ Check server logs
+
+POST-DEPLOYMENT:
+  ☐ Enable SSL certificate
+  ☐ Setup automatic backups
+  ☐ Setup cron job
+  ☐ Change default password
+
+================================================================================
+IMPORTANT FILES
+================================================================================
+
+DOCUMENTATION:
+  - DEPLOYMENT_GUIDE.md (comprehensive guide)
+  - STEP_BY_STEP_DEPLOYMENT.md (detailed walkthrough)
+  - QUICK_DEPLOYMENT_CHECKLIST.md (checklist format)
+  - This file: DEPLOYMENT_QUICK_REFERENCE.txt
+
+CONFIGURATION:
+  - admin/.env.production (template with your values)
+  - admin/public/.htaccess (Laravel routing)
+  - public_html/.htaccess (SPA routing)
+
+BUILD OUTPUT:
+  - admin/dist/ (admin frontend - ready to upload)
+  - frontend/dist/ (public frontend - ready to upload)
+
+================================================================================
+USEFUL URLS
+================================================================================
+
+AFTER DEPLOYMENT:
+
+Admin Panel:          https://admin.kukaqka.com
+Admin Dashboard:      https://admin.kukaqka.com/#/dashboard
+Admin API:            https://admin.kukaqka.com/api/v1
+API Health Check:     https://admin.kukaqka.com/api/v1/health
+Public Website:       https://kukaqka.com
+
+API ENDPOINTS:
+
+Users:                https://admin.kukaqka.com/api/v1/admin/users
+Listings:             https://admin.kukaqka.com/api/v1/admin/listings
+Categories:           https://admin.kukaqka.com/api/v1/admin/categories
+Activity Logs:        https://admin.kukaqka.com/api/v1/admin/activity-logs
+
+================================================================================
+SUPPORT & RESOURCES
+================================================================================
+
+For Full Details:    See DEPLOYMENT_GUIDE.md
+Step-by-Step Help:   See STEP_BY_STEP_DEPLOYMENT.md
+Detailed Checklist:  See QUICK_DEPLOYMENT_CHECKLIST.md
+SSH Commands:        See command reference above
+Error Logs:          ssh → tail -f ~/public_html/admin/storage/logs/laravel.log
+Browser Console:     Press F12 → Console tab
+Hostinger Help:      https://support.hostinger.com/
+
+================================================================================
+CRITICAL REMINDERS
+================================================================================
+
+⚠️ SECURITY:
+   • Never commit .env files to Git
+   • Change default admin password immediately
+   • Use strong database password
+   • Enable HTTPS (SSL) ✓
+   • Keep software updated
+
+📧 BACKUPS:
+   • Enable automated backups immediately
+   • Test backup restoration
+   • Keep local copy of database
+
+🚀 DEPLOYMENT:
+   • Double-check all credentials before uploading
+   • Test thoroughly before going public
+   • Monitor error logs regularly
+   • Keep .env file safe and backed up
+
+================================================================================
+SUCCESS INDICATORS ✅
+================================================================================
+
+You're successfully deployed when:
+
+  ✅ https://admin.kukaqka.com loads
+  ✅ Admin can login successfully
+  ✅ Dashboard displays data
+  ✅ https://kukaqka.com loads
+  ✅ API returns 200 on /api/v1/health
+  ✅ No 404 or 500 errors in logs
+  ✅ No CORS errors in browser console
+  ✅ SSL certificate active (HTTPS)
+  ✅ Database connects successfully
+  ✅ File uploads work
+
+🎉 YOU'RE LIVE!
+
+================================================================================
+
+For questions or issues, check:
+  1. Error logs: ssh → tail -f ~/public_html/admin/storage/logs/laravel.log
+  2. Browser console: F12 → Console tab
+  3. Full guides in DEPLOYMENT_GUIDE.md
+  4. Hostinger support: support.hostinger.com
+
+================================================================================

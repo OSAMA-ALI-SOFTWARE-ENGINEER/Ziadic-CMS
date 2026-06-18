@@ -8,12 +8,10 @@ const isLoading = ref(true)
 onMounted(async () => {
   try {
     const listings = await fetchPopularListings()
-    console.log('Popular listings fetched:', listings.length)
 
     // Populate the existing Webflow HTML with dynamic data
     populateWebflowContent(listings)
   } catch (error) {
-    console.error('Failed to fetch popular listings:', error)
     // Keep static content visible if API fails
   } finally {
     isLoading.value = false
@@ -24,18 +22,15 @@ function populateWebflowContent(listings: PublicListing[]) {
   // Find the listings wrapper in the Webflow HTML
   const wrapper = document.querySelector('.listings-content-wrapper')
   if (!wrapper) {
-    console.warn('Could not find .listings-content-wrapper')
     return
   }
 
   // Get all card elements
   const cards = wrapper.querySelectorAll<HTMLElement>('.listings-content-slide-collection-item')
   if (!cards.length) {
-    console.warn('Could not find listing cards')
     return
   }
 
-  console.log('Found', cards.length, 'card slots, populating with', listings.length, 'listings')
 
   // Populate each card with listing data
   listings.forEach((listing, index) => {
@@ -99,7 +94,6 @@ function populateWebflowContent(listings: PublicListing[]) {
     cards[i].style.display = 'none'
   }
 
-  console.log('Popular listings populated successfully')
 }
 
 </script>

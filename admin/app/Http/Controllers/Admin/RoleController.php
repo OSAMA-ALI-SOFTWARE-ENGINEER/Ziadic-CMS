@@ -25,9 +25,23 @@ class RoleController
 
         $perPage = (int) $request->input('per_page', 20);
 
-        return response()->json(
-            $query->paginate($perPage)
-        );
+        $roles = $query->paginate($perPage);
+
+        // Format the response to include proper permission counts
+        $roles->getCollection()->transform(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'permissions' => $role->permissions->pluck('name')->implode(','),
+                'permission_count' => $role->permissions->count(),
+                'user_count' => $role->users_count,
+                'status' => 'active',
+                'created_at' => $role->created_at?->toIso8601String(),
+                'updated_at' => $role->updated_at?->toIso8601String(),
+            ];
+        });
+
+        return response()->json($roles);
     }
 
     public function store(Request $request)
@@ -132,6 +146,34 @@ class RoleController
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete role: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function getRolesList()
+    {
+        $roles = Role::all(['id', 'name'])->map(fn($role) => [
+            'id' => $role->id,
+            'name' => $role->name,
+            'label' => ucfirst(str_replace('-', ' ', $role->name)),
+        ]);
+
+        return response()->json($roles);
+    }
+
+    public function getRolePermissions(Role $role)
+    {
+        $permissions = $role->permissions()->get(['id', 'name'])->map(fn($permission) => [
+            'id' => $permission->id,
+            'name' => $permission->name,
+            'label' => ucfirst(str_replace('-', ' ', str_replace('_', ' ', $permission->name))),
+        ]);
+
+        return response()->json([
+            'role' => [
+                'id' => $role->id,
+                'name' => $role->name,
+            ],
+            'permissions' => $permissions,
+        ]);
     }
 
     private function formatRoleResponse(Role $role)

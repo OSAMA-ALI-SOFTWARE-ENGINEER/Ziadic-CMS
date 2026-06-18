@@ -55,7 +55,6 @@ async function fetchMedia() {
     })
     mediaList.value = response.data.data
   } catch (error) {
-    console.error('Failed to fetch media:', error)
   } finally {
     loading.value = false
   }
@@ -112,7 +111,6 @@ async function onFileUpload(event: Event) {
         emitValue()
       }
     } catch (error) {
-      console.error('Failed to upload file:', error)
     }
   }
 }

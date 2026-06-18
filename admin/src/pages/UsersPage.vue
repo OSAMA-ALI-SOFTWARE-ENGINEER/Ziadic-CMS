@@ -47,9 +47,22 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id" class="user-row">
+            <tr
+              v-for="user in filteredUsers"
+              :key="user.id"
+              class="user-row"
+              draggable="true"
+              @dragstart="dragStart($event, user)"
+              @dragover="dragOver"
+              @drop="dropUser($event, user)"
+              @dragend="dragEnd"
+              :class="{ 'dragging': draggedUser?.id === user.id }"
+            >
               <td class="cell-name">
                 <div class="user-cell">
+                  <div class="drag-handle" title="Drag to reorder">
+                    <i class="pi pi-bars"></i>
+                  </div>
                   <div class="user-avatar">{{ user.name.charAt(0) }}</div>
                   <div class="user-info">
                     <div class="user-name">{{ user.name }}</div>
@@ -75,7 +88,13 @@
                   <button class="action-btn edit-btn" @click="openUser(user)" title="Edit user">
                     <i class="pi pi-pencil"></i>
                   </button>
-                  <button class="action-btn delete-btn" @click="deleteUser(user)" title="Delete user">
+                  <button
+                    class="action-btn delete-btn"
+                    @click="deleteUser(user)"
+                    title="Delete user"
+                    :disabled="user.role === 'super-admin'"
+                    :class="{ 'disabled': user.role === 'super-admin' }"
+                  >
                     <i class="pi pi-trash"></i>
                   </button>
                 </div>
@@ -127,15 +146,25 @@
             />
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Password {{ selectedUser.id ? '(leave blank to keep current)' : '*' }}</label>
+            <input
+              v-model="selectedUser.password"
+              type="password"
+              class="form-input"
+              placeholder="••••••••"
+              :required="!selectedUser.id"
+            />
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Role *</label>
-              <select v-model="selectedUser.role" class="form-input" required>
-                <option value="">Select role</option>
-                <option value="super-admin">Super Admin</option>
-                <option value="admin">Admin</option>
-                <option value="staff">Staff</option>
-                <option value="client">Client</option>
+              <select v-model="selectedUser.role" class="form-input" required :disabled="rolesLoading">
+                <option value="">{{ rolesLoading ? 'Loading roles...' : 'Select role' }}</option>
+                <option v-for="role in roles" :key="role.id" :value="role.name">
+                  {{ role.label }}
+                </option>
               </select>
             </div>
 
@@ -165,7 +194,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { api } from '@/services/api'
+import { useUiStore } from '@/stores/ui'
 import SkeletonCard from '@/components/SkeletonCard.vue'
+
+const ui = useUiStore()
 
 interface User {
   id: number
@@ -174,6 +206,7 @@ interface User {
   role: string
   status: string
   created_at: string
+  password?: string
 }
 
 const users = ref<User[]>([])
@@ -181,6 +214,9 @@ const selectedUser = ref<User | null>(null)
 const loading = ref(false)
 const isSaving = ref(false)
 const searchQuery = ref('')
+const draggedUser = ref<User | null>(null)
+const roles = ref<Array<{ id: number; name: string; label: string }>>([])
+const rolesLoading = ref(false)
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value
@@ -205,17 +241,32 @@ async function loadUsers() {
     }
     users.value = usersData
   } catch (error: any) {
-    console.error('Failed to load users:', error)
     users.value = []
   } finally {
     loading.value = false
   }
 }
 
+async function loadRoles() {
+  rolesLoading.value = true
+  try {
+    const response = await api.get('/roles-list')
+    let rolesData = response.data || []
+    if (!Array.isArray(rolesData)) {
+      rolesData = []
+    }
+    roles.value = rolesData
+  } catch (error: any) {
+    roles.value = []
+  } finally {
+    rolesLoading.value = false
+  }
+}
+
 function openUser(user?: User) {
   selectedUser.value = user
-    ? { ...user }
-    : { id: 0, name: '', email: '', role: 'client', status: 'active', created_at: new Date().toISOString() }
+    ? { ...user, password: '' }
+    : { id: 0, name: '', email: '', password: '', role: 'client', status: 'active', created_at: new Date().toISOString() }
 }
 
 async function saveUser() {
@@ -224,31 +275,100 @@ async function saveUser() {
 
   try {
     const isNew = !selectedUser.value.id
+    const payload = isNew
+      ? {
+          name: selectedUser.value.name,
+          email: selectedUser.value.email,
+          password: selectedUser.value.password || undefined,
+          role: selectedUser.value.role,
+          status: selectedUser.value.status,
+        }
+      : {
+          name: selectedUser.value.name,
+          email: selectedUser.value.email,
+          role: selectedUser.value.role,
+          status: selectedUser.value.status,
+          ...(selectedUser.value.password && { password: selectedUser.value.password }),
+        }
+
     if (isNew) {
-      await api.post('/users', selectedUser.value)
+      await api.post('/users', payload)
+      ui.pushToast('User created successfully', 'success')
     } else {
-      await api.put(`/users/${selectedUser.value.id}`, selectedUser.value)
+      await api.put(`/users/${selectedUser.value.id}`, payload)
+      ui.pushToast('User updated successfully', 'success')
     }
     selectedUser.value = null
     await loadUsers()
   } catch (error: any) {
-    selectedUser.value = null
+    const errorMessage = error.response?.data?.message || error.response?.data?.errors?.role?.[0] || 'Failed to save user'
+    ui.pushToast(errorMessage, 'danger')
   } finally {
     isSaving.value = false
   }
 }
 
 async function deleteUser(user: User) {
+  if (user.role === 'super-admin') {
+    ui.pushToast('Cannot delete super admin users', 'warning')
+    return
+  }
   if (!confirm(`Delete user ${user.name}? This cannot be undone.`)) return
 
   try {
     await api.delete(`/users/${user.id}`)
+    ui.pushToast('User deleted successfully', 'success')
     await loadUsers()
   } catch (error: any) {
+    const errorMessage = error.response?.data?.message || 'Failed to delete user'
+    ui.pushToast(errorMessage, 'danger')
   }
 }
 
-onMounted(loadUsers)
+function dragStart(event: DragEvent, user: User) {
+  draggedUser.value = user
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function dragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function dropUser(event: DragEvent, targetUser: User) {
+  event.preventDefault()
+  if (!draggedUser.value || draggedUser.value.id === targetUser.id) {
+    draggedUser.value = null
+    return
+  }
+
+  const usersCopy = [...users.value]
+  const draggedIdx = usersCopy.findIndex(u => u.id === draggedUser.value!.id)
+  const targetIdx = usersCopy.findIndex(u => u.id === targetUser.id)
+
+  if (draggedIdx !== -1 && targetIdx !== -1) {
+    [usersCopy[draggedIdx], usersCopy[targetIdx]] = [
+      usersCopy[targetIdx],
+      usersCopy[draggedIdx]
+    ]
+    users.value = usersCopy
+  }
+
+  draggedUser.value = null
+}
+
+function dragEnd() {
+  draggedUser.value = null
+}
+
+onMounted(() => {
+  loadUsers()
+  loadRoles()
+})
 </script>
 
 <style scoped>
@@ -395,6 +515,35 @@ onMounted(loadUsers)
 
 .users-table tbody tr:hover {
   background-color: #f9fafb;
+}
+
+.users-table tbody tr[draggable="true"] {
+  cursor: move;
+}
+
+.users-table tbody tr.dragging {
+  opacity: 0.5;
+  background-color: #f0f9ff;
+}
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #9ca3af;
+  cursor: grab;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  color: #6b7280;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .users-table tbody td {
@@ -549,9 +698,17 @@ onMounted(loadUsers)
   color: #7f1d1d;
 }
 
-.delete-btn:hover {
+.delete-btn:hover:not(:disabled) {
   background-color: #fecaca;
   color: #7f1d1d;
+}
+
+.delete-btn:disabled,
+.delete-btn.disabled {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Empty State */
@@ -747,7 +904,60 @@ onMounted(loadUsers)
   color: #1f2937;
 }
 
-/* Responsive */
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .users-container {
+    padding: 1.25rem;
+  }
+
+  .users-header {
+    gap: 0.875rem;
+  }
+
+  .users-title {
+    font-size: 1.625rem;
+  }
+
+  .users-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .add-user-button {
+    padding: 0.6rem 1.125rem;
+    font-size: 0.85rem;
+  }
+
+  .users-table {
+    font-size: 0.825rem;
+  }
+
+  .users-table thead th,
+  .users-table tbody td {
+    padding: 0.875rem 1rem;
+  }
+
+  .cell-name {
+    min-width: 160px;
+  }
+
+  .cell-email {
+    min-width: 180px;
+  }
+
+  .user-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modal-container {
+    max-width: 26rem;
+  }
+}
+
 @media (max-width: 768px) {
   .users-container {
     padding: 1rem;
@@ -756,11 +966,37 @@ onMounted(loadUsers)
   .users-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .users-title {
+    font-size: 1.375rem;
+  }
+
+  .users-subtitle {
+    font-size: 0.85rem;
   }
 
   .add-user-button {
     width: 100%;
     justify-content: center;
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .search-bar {
+    padding: 0.875rem 1rem;
+  }
+
+  .search-input {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
+  }
+
+  .search-button {
+    width: 2.25rem;
+    height: 2.25rem;
   }
 
   .users-table {
@@ -769,11 +1005,115 @@ onMounted(loadUsers)
 
   .users-table thead th,
   .users-table tbody td {
-    padding: 0.75rem 0.625rem;
+    padding: 0.625rem 0.5rem;
+  }
+
+  .cell-name {
+    min-width: 140px;
+  }
+
+  .cell-email {
+    min-width: 150px;
+    display: none;
+  }
+
+  .users-table thead th:nth-child(2),
+  .users-table tbody td:nth-child(2) {
+    display: none;
+  }
+
+  .cell-date {
+    min-width: 80px;
+    font-size: 0.75rem;
+  }
+
+  .cell-actions {
+    min-width: 80px;
+  }
+
+  .action-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.75rem;
+  }
+
+  .user-avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8rem;
+  }
+
+  .email-code {
+    font-size: 0.75rem;
+  }
+
+  .role-badge {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.625rem;
+  }
+
+  .status-badge {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.625rem;
+  }
+
+  .empty-state {
+    padding: 2.5rem 1rem;
+  }
+
+  .empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .empty-state h3 {
+    font-size: 1rem;
+  }
+
+  .empty-state p {
+    font-size: 0.8rem;
+  }
+
+  .modal-container {
+    max-width: 24rem;
+  }
+
+  .modal-header {
+    padding: 1.25rem;
+  }
+
+  .modal-title {
+    font-size: 1.125rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+    gap: 1rem;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-label {
+    font-size: 0.8rem;
+  }
+
+  .form-input {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
+  }
+
+  .form-actions {
+    gap: 0.75rem;
+    padding-top: 0.375rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -782,30 +1122,249 @@ onMounted(loadUsers)
     padding: 0.75rem;
   }
 
+  .users-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
   .users-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .users-subtitle {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .add-user-button {
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
+  }
+
+  .users-content {
+    border-radius: 0.5rem;
   }
 
   .search-bar {
     flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.75rem;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
 
   .search-button {
-    width: auto;
-    padding: 0.625rem 1rem;
+    width: 100%;
+    height: auto;
+    padding: 0.5rem;
   }
 
   .users-table {
     font-size: 0.75rem;
   }
 
+  .users-table thead {
+    display: none;
+  }
+
+  .users-table tbody tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    background: white;
+  }
+
+  .users-table tbody td {
+    display: block;
+    padding: 0.375rem 0;
+    border: none;
+    text-align: left;
+  }
+
+  .users-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    margin-right: 0.5rem;
+    display: inline;
+  }
+
+  .cell-name::before { content: "Name: "; }
+  .cell-email::before { content: "Email: "; display: inline; }
+  .cell-role::before { content: "Role: "; }
+  .cell-status::before { content: "Status: "; }
+  .cell-date::before { content: "Joined: "; }
+  .cell-actions::before { content: ""; }
+
+  .users-table tbody td:nth-child(2) {
+    display: block;
+  }
+
+  .users-table tbody tr:hover {
+    background-color: white;
+  }
+
+  .cell-name {
+    min-width: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .user-cell {
+    gap: 0.5rem;
+  }
+
+  .user-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.7rem;
+  }
+
+  .user-name {
+    font-size: 0.85rem;
+  }
+
+  .cell-email {
+    padding: 0.5rem 0;
+  }
+
+  .email-code {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.7rem;
+  }
+
+  .cell-role {
+    min-width: auto;
+    padding: 0.375rem 0;
+  }
+
+  .role-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .cell-status {
+    min-width: auto;
+    padding: 0.375rem 0;
+  }
+
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .cell-date {
+    min-width: auto;
+    padding: 0.375rem 0;
+    font-size: 0.75rem;
+  }
+
+  .cell-actions {
+    min-width: auto;
+    padding: 0.5rem 0;
+    text-align: left;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
   .action-buttons {
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.375rem;
   }
 
   .action-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.65rem;
+  }
+
+  .empty-state {
+    padding: 2rem 0.75rem;
+  }
+
+  .empty-state i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state h3 {
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .empty-state p {
+    font-size: 0.75rem;
+  }
+
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+
+  .modal-container {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0.5rem;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+  }
+
+  .modal-close {
     width: 1.75rem;
     height: 1.75rem;
+    font-size: 1.125rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .form-group {
+    gap: 0.375rem;
+  }
+
+  .form-row {
+    gap: 0.75rem;
+  }
+
+  .form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .form-input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
   }
 }
 

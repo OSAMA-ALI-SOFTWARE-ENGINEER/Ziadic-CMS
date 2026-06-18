@@ -31,7 +31,6 @@ function setStorage(data: MockStorage): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   } catch (error) {
-    console.warn('Failed to save to localStorage:', error)
   }
 }
 

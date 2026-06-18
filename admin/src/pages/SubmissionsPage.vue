@@ -77,7 +77,6 @@ async function loadCitiesAndCategories() {
     cities.value = citiesRes.data?.data || []
     categories.value = categoriesRes.data?.data || []
   } catch (error) {
-    console.warn('Could not load cities/categories', error)
   }
 }
 
@@ -228,7 +227,6 @@ async function confirmPublish(submission: any) {
           detail: errorMsg,
           life: 4000,
         })
-        console.error('Publish error:', error)
       }
     },
   })

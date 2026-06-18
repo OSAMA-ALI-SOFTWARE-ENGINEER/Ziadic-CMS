@@ -27,7 +27,6 @@ export async function uploadImage(file: File, category: UploadCategory = 'brandi
   } catch (error: any) {
     // If backend endpoint doesn't exist yet, use mock API
     if (error.response?.status === 404) {
-      console.info('📁 Using mock file upload (backend not ready yet)')
       return await mockApi.uploadFile(file)
     }
 

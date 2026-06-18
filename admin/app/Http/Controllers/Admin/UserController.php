@@ -26,9 +26,21 @@ class UserController
 
         $perPage = (int) $request->input('per_page', 15);
 
-        return response()->json(
-            $query->paginate($perPage)
-        );
+        $users = $query->paginate($perPage);
+
+        // Add role information to each user
+        $users->getCollection()->transform(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'created_at' => $user->created_at,
+                'role' => $user->getRoleNames()->first() ?? 'client',
+            ];
+        });
+
+        return response()->json($users);
     }
 
     public function show(User $user)
@@ -85,6 +97,10 @@ class UserController
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
+            'bio' => 'nullable|string|max:500',
+            'department' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
             'current_password' => 'nullable|string',
             'new_password' => 'nullable|string|min:6',
             'new_password_confirmation' => 'nullable|string',
@@ -116,6 +132,10 @@ class UserController
         $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'bio' => $validated['bio'] ?? null,
+            'department' => $validated['department'] ?? null,
+            'location' => $validated['location'] ?? null,
         ];
 
         // Add password to update if provided
@@ -182,6 +202,10 @@ class UserController
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'bio' => $user->bio,
+                'department' => $user->department,
+                'location' => $user->location,
                 'profile_picture' => $user->profile_picture ? asset('storage/' . $user->profile_picture) : null,
                 'role' => $user->getRoleNames()->first(),
             ],
@@ -196,7 +220,7 @@ class UserController
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'nullable|string|min:6',
-            'role' => 'required|string|in:super-admin,admin,staff,client',
+            'role' => 'required|string|exists:roles,name',
             'status' => 'required|string|in:active,pending,suspended',
         ]);
 
@@ -235,7 +259,7 @@ class UserController
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'required|string|in:super-admin,admin,staff,client',
+            'role' => 'required|string|exists:roles,name',
             'status' => 'required|string|in:active,pending,suspended',
             'password' => 'nullable|string|min:6',
         ]);
@@ -254,7 +278,7 @@ class UserController
                 'status' => $validated['status'],
             ];
 
-            if ($validated['password']) {
+            if (!empty($validated['password'])) {
                 $updateData['password'] = Hash::make($validated['password']);
             }
 

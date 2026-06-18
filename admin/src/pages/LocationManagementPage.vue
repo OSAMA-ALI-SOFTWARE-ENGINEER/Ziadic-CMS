@@ -43,7 +43,6 @@ async function loadCities() {
     const response = await api.get('/cities')
     cities.value = Array.isArray(response.data) ? response.data : response.data?.data || []
   } catch (error: any) {
-    console.warn('Failed to load cities:', error.message)
   } finally {
     citiesLoading.value = false
   }
@@ -55,7 +54,6 @@ async function loadCountries() {
     const response = await api.get('/countries')
     countries.value = Array.isArray(response.data) ? response.data : response.data?.data || []
   } catch (error: any) {
-    console.warn('Failed to load countries:', error.message)
   } finally {
     countriesLoading.value = false
   }
@@ -91,7 +89,6 @@ async function addCity() {
     cityImagePreview.value = ''
     await loadCities()
   } catch (error: any) {
-    console.error('Failed to save city:', error)
     toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Failed to save city' })
   }
 }
@@ -142,7 +139,6 @@ function deleteCity(city: any) {
         toast.add({ severity: 'success', summary: 'Success', detail: 'City deleted' })
         await loadCities()
       } catch (error: any) {
-        console.error('Failed to delete city:', error)
         toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Failed to delete city' })
       }
     },
@@ -168,7 +164,6 @@ async function addCountry() {
     editingCountry.value = null
     await loadCountries()
   } catch (error: any) {
-    console.error('Failed to save country:', error)
     toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Failed to save country' })
   }
 }
@@ -190,7 +185,6 @@ function deleteCountry(country: any) {
         toast.add({ severity: 'success', summary: 'Success', detail: 'Country deleted' })
         await loadCountries()
       } catch (error: any) {
-        console.error('Failed to delete country:', error)
         toast.add({ severity: 'error', summary: 'Error', detail: error.response?.data?.message || 'Failed to delete country' })
       }
     },

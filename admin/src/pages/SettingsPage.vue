@@ -1,29 +1,80 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { onMounted, ref, watch } from "vue"
-import Button from "primevue/button"
-import InputText from "primevue/inputtext"
-import InputNumber from "primevue/inputnumber"
-import TextArea from "primevue/textarea"
-import Toast from "primevue/toast"
-import ConfirmDialog from "primevue/confirmdialog"
-import ColorPicker from "primevue/colorpicker"
-import Select from "primevue/select"
-import Accordion from "primevue/accordion"
-import AccordionPanel from "primevue/accordionpanel"
-import { useToast } from "primevue/usetoast"
-import { useConfirm } from "primevue/useconfirm"
-import SkeletonCard from "@/components/SkeletonCard.vue"
 import { api } from "@/services/api"
 
-const toast = useToast()
-const confirm = useConfirm()
+const baseUrl = import.meta.env.BASE_URL
 
-// General Settings
-const appSettings = ref({ app_name: "Kukaqka", app_email: "hello@kukaqka.com" })
-const appLoading = ref(true)
+interface AppSettings {
+  app_name: string
+  app_email: string
+}
 
-// Branding Settings
-const brandingSettings = ref({
+interface BrandingSettings {
+  mainLogo: string
+  darkLogo: string
+  lightLogo: string
+  favicon: string
+  appleTouchIcon: string
+  loginPageLogo: string
+}
+
+interface ThemeSettings {
+  primaryColor: string
+  secondaryColor: string
+  accentColor: string
+  successColor: string
+  warningColor: string
+  errorColor: string
+  backgroundColor: string
+  sidebarColor: string
+  headerColor: string
+  cardColor: string
+  buttonColor: string
+  fontFamily: string
+  headingFont: string
+  bodyFont: string
+  sidebarWidth: number
+  cardBorderRadius: number
+  containerWidth: number
+  isCollapsedDefault: boolean
+  isFixedHeader: boolean
+  isFixedSidebar: boolean
+  themeMode: string
+}
+
+interface SeoSettings {
+  defaultMetaTitle: string
+  defaultMetaDescription: string
+  defaultKeywords: string
+  robotsMetaTag: string
+  openGraphTitle: string
+  openGraphDescription: string
+  openGraphImage: string
+  twitterTitle: string
+  twitterDescription: string
+  twitterCardImage: string
+  sitemapURL: string
+  robotsTxt: string
+  canonicalURL: string
+  googleVerificationCode: string
+  bingVerificationCode: string
+}
+
+interface OAuthSettings {
+  google_client_id: string
+  google_client_secret: string
+  google_redirect_uri: string
+  facebook_app_id: string
+  facebook_app_secret: string
+  facebook_redirect_uri: string
+  oauth_enabled: boolean
+}
+
+// Settings state with save indicators
+const appSettings = ref<AppSettings>({ app_name: "Kukaqka", app_email: "hello@kukaqka.com" })
+const appSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
+
+const brandingSettings = ref<BrandingSettings>({
   mainLogo: "",
   darkLogo: "",
   lightLogo: "",
@@ -31,10 +82,9 @@ const brandingSettings = ref({
   appleTouchIcon: "",
   loginPageLogo: "",
 })
-const brandingLoading = ref(true)
+const brandingSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 
-// Theme Settings
-const themeSettings = ref({
+const themeSettings = ref<ThemeSettings>({
   primaryColor: "#3b82f6",
   secondaryColor: "#6366f1",
   accentColor: "#06b6d4",
@@ -57,15 +107,14 @@ const themeSettings = ref({
   isFixedSidebar: true,
   themeMode: "light",
 })
-const themeLoading = ref(true)
+const themeSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 const themeModeOptions = [
   { label: "Light", value: "light" },
   { label: "Dark", value: "dark" },
   { label: "System", value: "system" },
 ]
 
-// SEO Settings
-const seoSettings = ref({
+const seoSettings = ref<SeoSettings>({
   defaultMetaTitle: "Kukaqka",
   defaultMetaDescription: "Discover amazing places and listings",
   defaultKeywords: "listings, places, directory",
@@ -82,31 +131,50 @@ const seoSettings = ref({
   googleVerificationCode: "",
   bingVerificationCode: "",
 })
-const seoLoading = ref(true)
+const seoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 
-// Payments Settings
 const paymentSettings = ref({ status: "coming-soon" })
-const paymentLoading = ref(true)
+const paymentSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 const paymentStatusOptions = [
   { label: "Coming Soon", value: "coming-soon" },
   { label: "Active", value: "active" },
 ]
 
-// Debounce timer
+const oauthSettings = ref<OAuthSettings>({
+  google_client_id: "",
+  google_client_secret: "",
+  google_redirect_uri: "https://admin.kukaqka.com/auth/callback/google",
+  facebook_app_id: "",
+  facebook_app_secret: "",
+  facebook_redirect_uri: "https://admin.kukaqka.com/auth/callback/facebook",
+  oauth_enabled: false,
+})
+const oauthSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
+
+// Debounce timers
 let appSettingsDebounce: any = null
 let brandingSettingsDebounce: any = null
 let themeSettingsDebounce: any = null
 let seoSettingsDebounce: any = null
 let paymentSettingsDebounce: any = null
+let oauthSettingsDebounce: any = null
+
+// Reset save state after delay
+function resetSaveState(state: typeof appSaveState, delay = 2500) {
+  setTimeout(() => {
+    state.value = 'idle'
+  }, delay)
+}
 
 // Auto-save watchers with debouncing
 watch(
   () => appSettings.value,
   () => {
+    appSaveState.value = 'idle'
     if (appSettingsDebounce) clearTimeout(appSettingsDebounce)
     appSettingsDebounce = setTimeout(() => {
       saveAppSettings()
-    }, 1500)
+    }, 1000)
   },
   { deep: true }
 )
@@ -114,10 +182,11 @@ watch(
 watch(
   () => brandingSettings.value,
   () => {
+    brandingSaveState.value = 'idle'
     if (brandingSettingsDebounce) clearTimeout(brandingSettingsDebounce)
     brandingSettingsDebounce = setTimeout(() => {
       saveBrandingSettings()
-    }, 1500)
+    }, 1000)
   },
   { deep: true }
 )
@@ -125,10 +194,11 @@ watch(
 watch(
   () => themeSettings.value,
   () => {
+    themeSaveState.value = 'idle'
     if (themeSettingsDebounce) clearTimeout(themeSettingsDebounce)
     themeSettingsDebounce = setTimeout(() => {
       saveThemeSettings()
-    }, 1500)
+    }, 1000)
   },
   { deep: true }
 )
@@ -136,10 +206,11 @@ watch(
 watch(
   () => seoSettings.value,
   () => {
+    seoSaveState.value = 'idle'
     if (seoSettingsDebounce) clearTimeout(seoSettingsDebounce)
     seoSettingsDebounce = setTimeout(() => {
       saveSeoSettings()
-    }, 1500)
+    }, 1000)
   },
   { deep: true }
 )
@@ -147,435 +218,854 @@ watch(
 watch(
   () => paymentSettings.value,
   () => {
+    paymentSaveState.value = 'idle'
     if (paymentSettingsDebounce) clearTimeout(paymentSettingsDebounce)
     paymentSettingsDebounce = setTimeout(() => {
       savePaymentSettings()
-    }, 1500)
+    }, 1000)
   },
   { deep: true }
 )
 
-// Load all settings
-async function loadAllSettings() {
-  // Settings only - location management moved to separate page
-  appLoading.value = false
-  brandingLoading.value = false
-  themeLoading.value = false
-  seoLoading.value = false
-  paymentLoading.value = false
-}
+watch(
+  () => oauthSettings.value,
+  () => {
+    oauthSaveState.value = 'idle'
+    if (oauthSettingsDebounce) clearTimeout(oauthSettingsDebounce)
+    oauthSettingsDebounce = setTimeout(() => {
+      saveOAuthSettings()
+    }, 1000)
+  },
+  { deep: true }
+)
 
 async function saveAppSettings() {
   try {
-    appLoading.value = true
+    appSaveState.value = 'saving'
     const settings = [
       { group: "app", key: "name", value: appSettings.value.app_name },
       { group: "app", key: "email", value: appSettings.value.app_email },
     ]
     await api.post("/settings", { settings })
-    toast.add({ severity: "success", summary: "Success", detail: "Settings saved" })
+    appSaveState.value = 'saved'
+    resetSaveState(appSaveState)
   } catch (error: any) {
-    console.error("Failed to save app settings:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save settings" })
-  } finally {
-    appLoading.value = false
+    appSaveState.value = 'idle'
   }
 }
 
 async function saveBrandingSettings() {
   try {
-    brandingLoading.value = true
+    brandingSaveState.value = 'saving'
     await api.post("/settings/branding", brandingSettings.value)
-    toast.add({ severity: "success", summary: "Success", detail: "Branding settings saved" })
+    brandingSaveState.value = 'saved'
+    resetSaveState(brandingSaveState)
   } catch (error: any) {
-    console.error("Failed to save branding settings:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save branding settings" })
-  } finally {
-    brandingLoading.value = false
+    brandingSaveState.value = 'idle'
   }
 }
 
 async function saveThemeSettings() {
   try {
-    themeLoading.value = true
+    themeSaveState.value = 'saving'
     await api.post("/settings/theme", themeSettings.value)
-    toast.add({ severity: "success", summary: "Success", detail: "Theme settings saved" })
+    themeSaveState.value = 'saved'
+    resetSaveState(themeSaveState)
   } catch (error: any) {
-    console.error("Failed to save theme settings:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save theme settings" })
-  } finally {
-    themeLoading.value = false
+    themeSaveState.value = 'idle'
   }
 }
 
 async function saveSeoSettings() {
   try {
-    seoLoading.value = true
+    seoSaveState.value = 'saving'
     await api.post("/settings/seo", seoSettings.value)
-    toast.add({ severity: "success", summary: "Success", detail: "SEO settings saved" })
+    seoSaveState.value = 'saved'
+    resetSaveState(seoSaveState)
   } catch (error: any) {
-    console.error("Failed to save SEO settings:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save SEO settings" })
-  } finally {
-    seoLoading.value = false
+    seoSaveState.value = 'idle'
   }
 }
 
 async function savePaymentSettings() {
   try {
-    paymentLoading.value = true
+    paymentSaveState.value = 'saving'
     await api.post("/settings/payments", paymentSettings.value)
-    toast.add({ severity: "success", summary: "Success", detail: "Payment settings saved" })
+    paymentSaveState.value = 'saved'
+    resetSaveState(paymentSaveState)
   } catch (error: any) {
-    console.error("Failed to save payment settings:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save payment settings" })
-  } finally {
-    paymentLoading.value = false
+    paymentSaveState.value = 'idle'
   }
 }
 
+async function saveOAuthSettings() {
+  try {
+    oauthSaveState.value = 'saving'
+    await api.post("/settings/oauth", oauthSettings.value)
+    oauthSaveState.value = 'saved'
+    resetSaveState(oauthSaveState)
+  } catch (error: any) {
+    oauthSaveState.value = 'idle'
+  }
+}
 
 onMounted(async () => {
-  await loadAllSettings()
+  // Settings initialized with defaults
 })
 </script>
 
 <template>
-  <div class="settings-page">
-    <Toast />
-    <ConfirmDialog />
+  <div class="settings-container">
+    <!-- Header -->
     <div class="settings-header">
-      <h1 class="text-4xl font-bold text-gray-900 mb-2">Settings</h1>
-      <p class="text-gray-600">Manage application configuration and content</p>
+      <div>
+        <h1 class="settings-title">System Settings</h1>
+        <p class="settings-subtitle">Configure application settings and preferences</p>
+      </div>
     </div>
 
-    <Accordion class="settings-accordion">
-      <!-- General Settings -->
-      <AccordionPanel>
-        <template #header>
-          <span class="flex items-center gap-3">
-            <span class="text-xl">⚙️</span>
-            <span class="font-semibold text-gray-900">General Settings</span>
-          </span>
-        </template>
-        <div v-if="appLoading" class="p-6">
-          <SkeletonCard type="table-row" :count="3" />
-        </div>
-        <div v-else class="p-6 max-w-2xl">
-          <div class="space-y-6">
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">App Name</label>
-              <InputText v-model="appSettings.app_name" class="w-full" placeholder="Application name" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Admin Email</label>
-              <InputText v-model="appSettings.app_email" type="email" class="w-full" placeholder="admin@example.com" />
-            </div>
-            <div class="flex gap-2">
-              <Button label="Save Settings" icon="pi pi-save" class="p-button-success" @click="saveAppSettings" :loading="appLoading" />
-            </div>
+    <!-- General Settings Card -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-content">
+          <div class="card-icon">⚙️</div>
+          <div>
+            <h2 class="card-title">General Settings</h2>
+            <p class="card-description">Manage basic application configuration</p>
           </div>
         </div>
-      </AccordionPanel>
+        <div :class="['save-indicator', appSaveState]">
+          <i v-if="appSaveState === 'saving'" class="pi pi-spin pi-spinner"></i>
+          <i v-if="appSaveState === 'saved'" class="pi pi-check"></i>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Application Name</label>
+          <input
+            v-model="appSettings.app_name"
+            type="text"
+            class="form-input"
+            placeholder="Enter application name"
+          />
+          <p class="form-hint">The name displayed throughout the application</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admin Email</label>
+          <input
+            v-model="appSettings.app_email"
+            type="email"
+            class="form-input"
+            placeholder="admin@example.com"
+          />
+          <p class="form-hint">Primary contact email for system notifications</p>
+        </div>
+      </div>
+    </div>
 
-      <!-- Branding Settings -->
-      <AccordionPanel>
-        <template #header>
-          <span class="flex items-center gap-3">
-            <span class="text-xl">🎨</span>
-            <span class="font-semibold text-gray-900">Branding Settings</span>
-          </span>
-        </template>
-        <div v-if="brandingLoading" class="p-6">
-          <SkeletonCard type="table-row" :count="3" />
-        </div>
-        <div v-else class="p-6 max-w-2xl">
-          <div class="space-y-4">
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Main Logo URL</label>
-              <InputText v-model="brandingSettings.mainLogo" class="w-full" placeholder="https://example.com/logo.png" type="url" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Dark Logo URL</label>
-              <InputText v-model="brandingSettings.darkLogo" class="w-full" placeholder="https://example.com/logo-dark.png" type="url" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Login Page Logo URL</label>
-              <InputText v-model="brandingSettings.loginPageLogo" class="w-full" placeholder="https://example.com/login-logo.png" type="url" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Favicon URL</label>
-              <InputText v-model="brandingSettings.favicon" class="w-full" placeholder="https://example.com/favicon.ico" type="url" />
-            </div>
-            <div class="flex gap-2 pt-4">
-              <Button label="Save Branding" icon="pi pi-save" class="p-button-success" @click="saveBrandingSettings" :loading="brandingLoading" />
-            </div>
+    <!-- Branding Settings Card -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-content">
+          <div class="card-icon">🎨</div>
+          <div>
+            <h2 class="card-title">Branding Settings</h2>
+            <p class="card-description">Configure logos and brand assets</p>
           </div>
         </div>
-      </AccordionPanel>
+        <div :class="['save-indicator', brandingSaveState]">
+          <i v-if="brandingSaveState === 'saving'" class="pi pi-spin pi-spinner"></i>
+          <i v-if="brandingSaveState === 'saved'" class="pi pi-check"></i>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Main Logo URL</label>
+          <input
+            v-model="brandingSettings.mainLogo"
+            type="url"
+            class="form-input"
+            placeholder="https://example.com/logo.png"
+          />
+          <p class="form-hint">URL to your primary logo image</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dark Logo URL</label>
+          <input
+            v-model="brandingSettings.darkLogo"
+            type="url"
+            class="form-input"
+            placeholder="https://example.com/logo-dark.png"
+          />
+          <p class="form-hint">Logo for dark theme display</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Login Page Logo URL</label>
+          <input
+            v-model="brandingSettings.loginPageLogo"
+            type="url"
+            class="form-input"
+            placeholder="https://example.com/login-logo.png"
+          />
+          <p class="form-hint">Logo displayed on login page</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Favicon URL</label>
+          <input
+            v-model="brandingSettings.favicon"
+            type="url"
+            class="form-input"
+            placeholder="https://example.com/favicon.ico"
+          />
+          <p class="form-hint">Icon displayed in browser tab</p>
+        </div>
+      </div>
+    </div>
 
-      <!-- Theme Settings -->
-      <AccordionPanel>
-        <template #header>
-          <span class="flex items-center gap-3">
-            <span class="text-xl">🎭</span>
-            <span class="font-semibold text-gray-900">Theme Settings</span>
-          </span>
-        </template>
-        <div v-if="themeLoading" class="p-6">
-          <SkeletonCard type="table-row" :count="3" />
-        </div>
-        <div v-else class="p-6 max-w-3xl">
-          <div class="grid grid-cols-2 gap-6">
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Primary Color</label>
-              <ColorPicker v-model="themeSettings.primaryColor" :inline="false" class="w-full" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Secondary Color</label>
-              <ColorPicker v-model="themeSettings.secondaryColor" :inline="false" class="w-full" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Success Color</label>
-              <ColorPicker v-model="themeSettings.successColor" :inline="false" class="w-full" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Error Color</label>
-              <ColorPicker v-model="themeSettings.errorColor" :inline="false" class="w-full" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Theme Mode</label>
-              <Select v-model="themeSettings.themeMode" :options="themeModeOptions" option-label="label" option-value="value" class="w-full" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Sidebar Width</label>
-              <InputNumber v-model="themeSettings.sidebarWidth" class="w-full" :min="200" :max="400" />
-            </div>
-          </div>
-          <div class="flex gap-2 pt-6">
-            <Button label="Save Theme" icon="pi pi-save" class="p-button-success" @click="saveThemeSettings" :loading="themeLoading" />
+    <!-- Theme Settings Card -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-content">
+          <div class="card-icon">🎭</div>
+          <div>
+            <h2 class="card-title">Theme Settings</h2>
+            <p class="card-description">Customize colors and layout preferences</p>
           </div>
         </div>
-      </AccordionPanel>
+        <div :class="['save-indicator', themeSaveState]">
+          <i v-if="themeSaveState === 'saving'" class="pi pi-spin pi-spinner"></i>
+          <i v-if="themeSaveState === 'saved'" class="pi pi-check"></i>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-group-row">
+          <div class="form-group">
+            <label class="form-label">Primary Color</label>
+            <div class="color-input-wrapper">
+              <input
+                v-model="themeSettings.primaryColor"
+                type="color"
+                class="color-input"
+              />
+              <span class="color-value">{{ themeSettings.primaryColor }}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Secondary Color</label>
+            <div class="color-input-wrapper">
+              <input
+                v-model="themeSettings.secondaryColor"
+                type="color"
+                class="color-input"
+              />
+              <span class="color-value">{{ themeSettings.secondaryColor }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label class="form-label">Success Color</label>
+            <div class="color-input-wrapper">
+              <input
+                v-model="themeSettings.successColor"
+                type="color"
+                class="color-input"
+              />
+              <span class="color-value">{{ themeSettings.successColor }}</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Error Color</label>
+            <div class="color-input-wrapper">
+              <input
+                v-model="themeSettings.errorColor"
+                type="color"
+                class="color-input"
+              />
+              <span class="color-value">{{ themeSettings.errorColor }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label class="form-label">Theme Mode</label>
+            <select v-model="themeSettings.themeMode" class="form-input">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="system">System</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sidebar Width (px)</label>
+            <input
+              v-model.number="themeSettings.sidebarWidth"
+              type="number"
+              class="form-input"
+              min="200"
+              max="400"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <!-- SEO Settings -->
-      <AccordionPanel>
-        <template #header>
-          <span class="flex items-center gap-3">
-            <span class="text-xl">🔍</span>
-            <span class="font-semibold text-gray-900">SEO Settings</span>
-          </span>
-        </template>
-        <div v-if="seoLoading" class="p-6">
-          <SkeletonCard type="table-row" :count="3" />
-        </div>
-        <div v-else class="p-6 max-w-2xl">
-          <div class="space-y-4">
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Meta Title</label>
-              <InputText v-model="seoSettings.defaultMetaTitle" class="w-full" placeholder="Page title for search engines" maxlength="60" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Meta Description</label>
-              <textarea v-model="seoSettings.defaultMetaDescription" class="w-full p-2 border border-gray-200 rounded-lg" rows="3" maxlength="160" placeholder="Page description for search engines"></textarea>
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Keywords</label>
-              <InputText v-model="seoSettings.defaultKeywords" class="w-full" placeholder="keyword1, keyword2, keyword3" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Google Verification Code</label>
-              <InputText v-model="seoSettings.googleVerificationCode" class="w-full" placeholder="Google verification code" />
-            </div>
-            <div class="flex gap-2 pt-4">
-              <Button label="Save SEO" icon="pi pi-save" class="p-button-success" @click="saveSeoSettings" :loading="seoLoading" />
-            </div>
+    <!-- SEO Settings Card -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-content">
+          <div class="card-icon">🔍</div>
+          <div>
+            <h2 class="card-title">SEO Settings</h2>
+            <p class="card-description">Configure search engine optimization</p>
           </div>
         </div>
-      </AccordionPanel>
+        <div :class="['save-indicator', seoSaveState]">
+          <i v-if="seoSaveState === 'saving'" class="pi pi-spin pi-spinner"></i>
+          <i v-if="seoSaveState === 'saved'" class="pi pi-check"></i>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Meta Title</label>
+          <input
+            v-model="seoSettings.defaultMetaTitle"
+            type="text"
+            class="form-input"
+            placeholder="Page title for search engines"
+            maxlength="60"
+          />
+          <p class="form-hint">{{ seoSettings.defaultMetaTitle.length }}/60 characters</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Meta Description</label>
+          <textarea
+            v-model="seoSettings.defaultMetaDescription"
+            class="form-textarea"
+            placeholder="Page description for search engines"
+            rows="3"
+            maxlength="160"
+          ></textarea>
+          <p class="form-hint">{{ seoSettings.defaultMetaDescription.length }}/160 characters</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Keywords</label>
+          <input
+            v-model="seoSettings.defaultKeywords"
+            type="text"
+            class="form-input"
+            placeholder="keyword1, keyword2, keyword3"
+          />
+          <p class="form-hint">Comma-separated list of keywords</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Google Verification Code</label>
+          <input
+            v-model="seoSettings.googleVerificationCode"
+            type="text"
+            class="form-input"
+            placeholder="Google verification code"
+          />
+          <p class="form-hint">From Google Search Console</p>
+        </div>
+      </div>
+    </div>
 
-      <!-- Payments Settings -->
-      <AccordionPanel>
-        <template #header>
-          <span class="flex items-center gap-3">
-            <span class="text-xl">💳</span>
-            <span class="font-semibold text-gray-900">Payment Settings</span>
-          </span>
-        </template>
-        <div v-if="paymentLoading" class="p-6">
-          <SkeletonCard type="table-row" :count="2" />
+    <!-- Payment Settings Card -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-content">
+          <div class="card-icon">💳</div>
+          <div>
+            <h2 class="card-title">Payment Settings</h2>
+            <p class="card-description">Configure payment system options</p>
+          </div>
         </div>
-        <div v-else class="p-6 max-w-2xl">
-          <div class="space-y-4">
-            <div>
-              <label class="block font-semibold mb-2 text-gray-700">Payment Status</label>
-              <Select v-model="paymentSettings.status" :options="paymentStatusOptions" option-label="label" option-value="value" class="w-full" />
+        <div :class="['save-indicator', paymentSaveState]">
+          <i v-if="paymentSaveState === 'saving'" class="pi pi-spin pi-spinner"></i>
+          <i v-if="paymentSaveState === 'saved'" class="pi pi-check"></i>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Payment Status</label>
+          <select v-model="paymentSettings.status" class="form-input">
+            <option value="coming-soon">Coming Soon</option>
+            <option value="active">Active</option>
+          </select>
+          <p class="form-hint">Whether payment functionality is active or coming soon</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- OAuth Settings Card -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="card-header-content">
+          <div class="card-icon">🔐</div>
+          <div>
+            <h2 class="card-title">OAuth Settings</h2>
+            <p class="card-description">Configure social authentication providers</p>
+          </div>
+        </div>
+        <div :class="['save-indicator', oauthSaveState]">
+          <i v-if="oauthSaveState === 'saving'" class="pi pi-spin pi-spinner"></i>
+          <i v-if="oauthSaveState === 'saved'" class="pi pi-check"></i>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <div class="checkbox-wrapper">
+            <input
+              v-model="oauthSettings.oauth_enabled"
+              type="checkbox"
+              id="oauth-enabled"
+              class="oauth-checkbox"
+            />
+            <label for="oauth-enabled" class="checkbox-label">Enable OAuth / Social Login</label>
+          </div>
+          <p class="form-hint">Enable social authentication for users</p>
+        </div>
+
+        <!-- Google OAuth Section -->
+        <div class="oauth-section">
+          <h3 class="oauth-section-title">
+            <img :src="`${baseUrl}images/Google.svg`" alt="Google" class="oauth-logo" />
+            Google OAuth
+          </h3>
+          <div class="form-group">
+            <label class="form-label">Client ID</label>
+            <input
+              v-model="oauthSettings.google_client_id"
+              type="text"
+              class="form-input"
+              placeholder="Your Google OAuth Client ID"
+              :disabled="!oauthSettings.oauth_enabled"
+            />
+            <p class="form-hint">From Google Cloud Console → OAuth 2.0 Credentials</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Client Secret</label>
+            <input
+              v-model="oauthSettings.google_client_secret"
+              type="password"
+              class="form-input"
+              placeholder="Your Google OAuth Client Secret"
+              :disabled="!oauthSettings.oauth_enabled"
+            />
+            <p class="form-hint">Keep this secret safe - never share publicly</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Redirect URI</label>
+            <input
+              v-model="oauthSettings.google_redirect_uri"
+              type="url"
+              class="form-input"
+              placeholder="https://admin.kukaqka.com/auth/callback/google"
+              :disabled="!oauthSettings.oauth_enabled"
+            />
+            <p class="form-hint">Must match exactly with Google Cloud Console settings</p>
+          </div>
+        </div>
+
+        <!-- Facebook OAuth Section -->
+        <div class="oauth-section">
+          <h3 class="oauth-section-title">
+            <img :src="`${baseUrl}images/Facebook.svg`" alt="Facebook" class="oauth-logo" />
+            Facebook OAuth
+          </h3>
+          <div class="form-group">
+            <label class="form-label">App ID</label>
+            <input
+              v-model="oauthSettings.facebook_app_id"
+              type="text"
+              class="form-input"
+              placeholder="Your Facebook App ID"
+              :disabled="!oauthSettings.oauth_enabled"
+            />
+            <p class="form-hint">From Facebook Developers → My Apps → App ID</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">App Secret</label>
+            <input
+              v-model="oauthSettings.facebook_app_secret"
+              type="password"
+              class="form-input"
+              placeholder="Your Facebook App Secret"
+              :disabled="!oauthSettings.oauth_enabled"
+            />
+            <p class="form-hint">Keep this secret safe - never share publicly</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Redirect URI</label>
+            <input
+              v-model="oauthSettings.facebook_redirect_uri"
+              type="url"
+              class="form-input"
+              placeholder="https://admin.kukaqka.com/auth/callback/facebook"
+              :disabled="!oauthSettings.oauth_enabled"
+            />
+            <p class="form-hint">Must match exactly with Facebook App settings</p>
+          </div>
+        </div>
+
+        <!-- Documentation Section -->
+        <div class="documentation-section">
+          <h3 class="documentation-title">📚 Setup Guide</h3>
+          <div class="guide-steps">
+            <div class="guide-step">
+              <strong>1. Google OAuth Setup:</strong>
+              <ol>
+                <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                <li>Create a new project or select existing</li>
+                <li>Enable Google+ API</li>
+                <li>Go to "Credentials" → Create OAuth 2.0 Client ID</li>
+                <li>Set Authorized redirect URIs to: {{ oauthSettings.google_redirect_uri }}</li>
+                <li>Copy Client ID and Secret above</li>
+              </ol>
             </div>
-            <div class="flex gap-2 pt-4">
-              <Button label="Save Payments" icon="pi pi-save" class="p-button-success" @click="savePaymentSettings" :loading="paymentLoading" />
+            <div class="guide-step">
+              <strong>2. Facebook OAuth Setup:</strong>
+              <ol>
+                <li>Go to <a href="https://developers.facebook.com" target="_blank">Facebook Developers</a></li>
+                <li>Create a new app or select existing</li>
+                <li>Add "Facebook Login" product</li>
+                <li>In Settings → Basic, get App ID and App Secret</li>
+                <li>In Settings → Basic, add Valid OAuth Redirect URIs: {{ oauthSettings.facebook_redirect_uri }}</li>
+                <li>Copy App ID and Secret above</li>
+              </ol>
             </div>
           </div>
         </div>
-      </AccordionPanel>
-    </Accordion>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.settings-page {
-  padding: 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+.settings-container {
+  padding: 1.5rem;
   min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
 }
 
+/* Header */
 .settings-header {
   margin-bottom: 2rem;
-  padding: 2rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.settings-accordion {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-:deep(.p-accordion) {
-  border: none;
-}
-
-:deep(.p-accordion .p-accordion-header) {
-  background-color: white;
-  border: none;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 0;
-}
-
-:deep(.p-accordion .p-accordion-header button) {
-  padding: 1.5rem;
-  font-weight: 600;
-  font-size: 1rem;
+.settings-title {
+  font-size: 1.875rem;
+  font-weight: 700;
   color: #1f2937;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.025em;
+}
+
+.settings-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Card Container */
+.settings-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
   transition: all 0.3s ease;
 }
 
-:deep(.p-accordion .p-accordion-header:hover button) {
-  background-color: #f3f4f6;
+.settings-card:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-:deep(.p-accordion .p-accordion-header.p-highlight button) {
-  background-color: #f0f9ff;
-  color: #0369a1;
-}
-
-:deep(.p-accordion .p-accordion-content) {
-  padding: 0;
-  background-color: white;
-  border: none;
-}
-
-:deep(.p-accordion .p-accordion-content > p) {
+/* Card Header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 1.5rem;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-bottom: 1px solid #e5e7eb;
 }
 
-:deep(.nested-tabs .p-tabs) {
-  border: none;
+.card-header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-:deep(.nested-tabs .p-tablist) {
-  background-color: #f9fafb;
-  border: none;
-  border-bottom: 2px solid #e5e7eb;
-  padding: 0;
+.card-icon {
+  font-size: 1.75rem;
+  line-height: 1;
 }
 
-:deep(.nested-tabs .p-tab button) {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #6b7280;
-  border: none;
-}
-
-:deep(.nested-tabs .p-tab button.p-highlight) {
-  color: #0369a1;
-  border-bottom: 3px solid #0369a1;
-}
-
-:deep(.nested-tabs .p-tabpanels) {
-  background-color: white;
-  border: none;
-  padding: 0;
-}
-
-:deep(.p-datatable) {
-  border: none;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-:deep(.p-datatable .p-datatable-thead > tr > th) {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
+.card-title {
+  font-size: 1.125rem;
   font-weight: 700;
-  border: none;
-  padding: 1rem;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr > td) {
-  border-color: #e5e7eb;
-  padding: 1rem;
+.card-description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Save Indicator */
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.save-indicator.idle {
+  opacity: 0;
+}
+
+.save-indicator.saving {
+  background: #f0f9ff;
+  color: #0369a1;
+  opacity: 1;
+}
+
+.save-indicator.saved {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #065f46;
+  opacity: 1;
+}
+
+/* Card Body */
+.card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Forms */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.875rem;
   color: #374151;
 }
 
-:deep(.p-datatable .p-datatable-tbody > tr:hover) {
-  background-color: #f9fafb;
+.form-input,
+.form-textarea {
+  padding: 0.625rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
 }
 
-:deep(.p-inputtext),
-:deep(.p-select),
-:deep(.p-inputnumber) {
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  transition: all 0.3s ease;
-}
-
-:deep(.p-inputtext:focus),
-:deep(.p-select:focus),
-:deep(.p-inputnumber:focus) {
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-:deep(.p-button) {
-  border-radius: 6px;
+.form-textarea {
+  resize: none;
+  font-family: inherit;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0;
+  margin-top: 0.25rem;
+}
+
+/* Color Input */
+.color-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.color-input {
+  width: 3rem;
+  height: 2.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-input:hover {
+  border-color: #d1d5db;
+}
+
+.color-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.color-value {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+}
+
+/* OAuth Checkbox */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.oauth-checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.checkbox-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+/* OAuth Sections */
+.oauth-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.oauth-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.oauth-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.oauth-logo {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+/* Documentation Section */
+.documentation-section {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.documentation-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0369a1;
+  margin: 0 0 1rem 0;
+}
+
+.guide-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.guide-step {
+  font-size: 0.875rem;
+  color: #0c4a6e;
+}
+
+.guide-step strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #075985;
+}
+
+.guide-step ol {
+  margin: 0.5rem 0 0 1.25rem;
+  padding: 0;
+}
+
+.guide-step li {
+  margin-bottom: 0.375rem;
+  line-height: 1.5;
+}
+
+.guide-step a {
+  color: #0284c7;
+  text-decoration: none;
   font-weight: 500;
-  transition: all 0.3s ease;
 }
 
-:deep(.p-button-success) {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border: none;
+.guide-step a:hover {
+  text-decoration: underline;
 }
 
-:deep(.p-button-success:hover) {
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-}
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 1rem;
+  }
 
-:deep(.p-dialog) {
-  border-radius: 12px;
-}
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
 
-:deep(.p-dialog .p-dialog-header) {
-  background-color: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
-  border-radius: 12px 12px 0 0;
-}
+  .form-group-row {
+    grid-template-columns: 1fr;
+  }
 
-:deep(.p-colorpicker) {
-  border-radius: 6px;
+  .guide-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .oauth-section-title {
+    font-size: 0.95rem;
+  }
+
+  .documentation-section {
+    padding: 1rem;
+  }
 }
 </style>

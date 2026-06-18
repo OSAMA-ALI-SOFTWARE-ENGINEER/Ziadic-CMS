@@ -106,6 +106,18 @@
               type="text"
               class="form-input"
               placeholder="e.g., Restaurants, Hotels"
+              @input="generateSlug"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Slug *</label>
+            <input
+              v-model="selectedCategory.slug"
+              type="text"
+              class="form-input"
+              placeholder="category-slug"
               required
             />
           </div>
@@ -115,8 +127,7 @@
             <select v-model="selectedCategory.type" class="form-input" required>
               <option value="">Select type</option>
               <option value="listing">Listing</option>
-              <option value="article">Article</option>
-              <option value="service">Service</option>
+              <option value="post">Post</option>
             </select>
           </div>
 
@@ -157,6 +168,7 @@ import SkeletonCard from '@/components/SkeletonCard.vue'
 interface Category {
   id: number
   name: string
+  slug: string
   type: string
   description?: string
   is_active: boolean
@@ -178,26 +190,39 @@ const filteredCategories = computed(() => {
 async function loadCategories() {
   loading.value = true
   try {
-    const response = await api.get('/categories', {
-      params: searchQuery.value ? { search: searchQuery.value } : {}
-    })
+    const params: any = { type: 'listing' }
+    if (searchQuery.value) {
+      params.search = searchQuery.value
+    }
+    const response = await api.get('/categories', { params })
     let categoriesData = response.data.data || response.data
     if (!Array.isArray(categoriesData)) {
       categoriesData = []
     }
-    categories.value = categoriesData
+    // Filter to show only listing categories
+    categories.value = categoriesData.filter(c => c.type === 'listing' || c.type === 'Listing')
   } catch (error: any) {
-    console.error('Failed to load categories:', error)
     categories.value = []
   } finally {
     loading.value = false
   }
 }
 
+function generateSlug() {
+  if (!selectedCategory.value) return
+  selectedCategory.value.slug = selectedCategory.value.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 function openCategory(category?: Category) {
   selectedCategory.value = category
     ? { ...category }
-    : { id: 0, name: '', type: 'listing', description: '', is_active: true, item_count: 0 }
+    : { id: 0, name: '', slug: '', type: 'listing', description: '', is_active: true, item_count: 0 }
 }
 
 async function saveCategory() {

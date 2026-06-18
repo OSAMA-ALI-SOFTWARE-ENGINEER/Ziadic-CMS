@@ -8,45 +8,45 @@
       </div>
     </div>
 
-    <!-- Stats Cards -->
+    <!-- Stats Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">
-          <i class="pi pi-users"></i>
-        </div>
-        <div class="stat-info">
+        <div class="stat-content">
           <p class="stat-label">Total Subscribers</p>
           <p class="stat-value">{{ total }}</p>
         </div>
+        <div class="stat-icon default">
+          <i class="pi pi-users"></i>
+        </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon confirmed">
-          <i class="pi pi-check"></i>
-        </div>
-        <div class="stat-info">
+        <div class="stat-content">
           <p class="stat-label">Confirmed</p>
           <p class="stat-value">{{ confirmedCount }}</p>
         </div>
+        <div class="stat-icon confirmed">
+          <i class="pi pi-check"></i>
+        </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon pending">
-          <i class="pi pi-clock"></i>
-        </div>
-        <div class="stat-info">
+        <div class="stat-content">
           <p class="stat-label">Pending</p>
           <p class="stat-value">{{ pendingCount }}</p>
         </div>
+        <div class="stat-icon pending">
+          <i class="pi pi-clock"></i>
+        </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon unsubscribed">
-          <i class="pi pi-times"></i>
-        </div>
-        <div class="stat-info">
+        <div class="stat-content">
           <p class="stat-label">Unsubscribed</p>
           <p class="stat-value">{{ unsubscribedCount }}</p>
+        </div>
+        <div class="stat-icon unsubscribed">
+          <i class="pi pi-times"></i>
         </div>
       </div>
     </div>
@@ -60,7 +60,7 @@
 
       <!-- Subscriptions Table -->
       <div v-else class="subscriptions-table-wrapper">
-        <!-- Search & Filter -->
+        <!-- Search & Filter Bar -->
         <div class="search-bar">
           <input
             v-model="search"
@@ -75,87 +75,75 @@
             <option value="footer">Footer</option>
             <option value="other">Other</option>
           </select>
-          <button class="search-button" @click="fetchSubscribers">
+          <button class="search-button" @click="fetchSubscribers" title="Search">
             <i class="pi pi-search"></i>
           </button>
         </div>
 
-        <table class="subscriptions-table">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Source</th>
-              <th>Status</th>
-              <th>Subscribed At</th>
-              <th>Confirmed At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in rows" :key="row.id" class="subscription-row">
-              <td class="cell-email">
-                <div class="email-cell">
-                  <div class="email-avatar">{{ row.email.charAt(0) }}</div>
-                  <code class="email-address">{{ row.email }}</code>
-                </div>
-              </td>
-              <td class="cell-source">
-                <span class="source-chip">{{ sourceLabel(row.source) }}</span>
-              </td>
-              <td class="cell-status">
-                <span :class="['status-badge', `status-${row.status.toLowerCase()}`]">
-                  {{ row.status }}
-                </span>
-              </td>
-              <td class="cell-date">
-                {{ formatDate(row.subscribed_at) }}
-              </td>
-              <td class="cell-date">
-                {{ formatDate(row.confirmation_sent_at) }}
-              </td>
-              <td class="cell-actions">
-                <div class="action-buttons">
-                  <button
-                    class="action-btn delete-btn"
-                    :disabled="deletingId === row.id"
-                    @click="deleteSubscriber(row)"
-                    title="Delete subscriber"
-                  >
-                    <i class="pi pi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- Responsive Table -->
+        <div class="table-scroll">
+          <table class="subscriptions-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th class="hidden sm:table-cell">Source</th>
+                <th>Status</th>
+                <th class="hidden md:table-cell">Subscribed</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in rows" :key="row.id" class="subscription-row">
+                <!-- Email Column -->
+                <td class="cell-email">
+                  <div class="email-cell">
+                    <div class="email-avatar">{{ row.email.charAt(0).toUpperCase() }}</div>
+                    <div class="email-info">
+                      <code class="email-address">{{ row.email }}</code>
+                      <p class="email-source sm:hidden">{{ row.source }}</p>
+                    </div>
+                  </div>
+                </td>
 
+                <!-- Source Column (hidden on mobile) -->
+                <td class="cell-source hidden sm:table-cell">
+                  <span class="source-badge">{{ row.source }}</span>
+                </td>
+
+                <!-- Status Column -->
+                <td class="cell-status">
+                  <span :class="['status-badge', `status-${row.status.toLowerCase()}`]">
+                    {{ row.status }}
+                  </span>
+                </td>
+
+                <!-- Subscribed Date (hidden on mobile) -->
+                <td class="cell-date hidden md:table-cell">
+                  <span class="date-text">{{ formatDate(row.subscribedAt) }}</span>
+                </td>
+
+                <!-- Actions Column -->
+                <td class="cell-actions">
+                  <div class="action-buttons">
+                    <button
+                      class="action-btn delete-btn"
+                      @click="deleteSubscriber(row)"
+                      title="Delete"
+                    >
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
         <div v-if="rows.length === 0" class="empty-state">
           <i class="pi pi-inbox"></i>
           <h3>No subscribers yet</h3>
           <p>Newsletter subscribers will appear here</p>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="rows.length > 0" class="pagination">
-        <span class="pagination-info">Page {{ currentPage }} of {{ totalPages }}</span>
-        <div class="pagination-buttons">
-          <button
-            class="pagination-btn"
-            :disabled="currentPage === 1"
-            @click="prevPage"
-          >
-            <i class="pi pi-chevron-left"></i>
-            Previous
-          </button>
-          <button
-            class="pagination-btn"
-            :disabled="currentPage === totalPages"
-            @click="nextPage"
-          >
-            Next
-            <i class="pi pi-chevron-right"></i>
-          </button>
         </div>
       </div>
     </div>
@@ -163,114 +151,57 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
-type SubscriberRow = {
+interface Subscriber {
   id: number
   email: string
-  status: string
   source: string
-  subscribed_at: string | null
-  confirmation_sent_at: string | null
-  created_at: string
+  status: string
+  subscribedAt: string
+  confirmedAt?: string
 }
 
-const rows = ref<SubscriberRow[]>([])
+const rows = ref<Subscriber[]>([])
 const loading = ref(false)
 const search = ref('')
 const sourceFilter = ref('')
-const currentPage = ref(1)
-const perPage = ref(20)
-const total = ref(0)
-const deletingId = ref<number | null>(null)
 
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
+const total = computed(() => rows.value.length)
+const confirmedCount = computed(() => rows.value.filter(r => r.status === 'Confirmed').length)
+const pendingCount = computed(() => rows.value.filter(r => r.status === 'Pending').length)
+const unsubscribedCount = computed(() => rows.value.filter(r => r.status === 'Unsubscribed').length)
 
-const confirmedCount = computed(() =>
-  rows.value.filter(r => r.status === 'confirmed').length
-)
-
-const pendingCount = computed(() =>
-  rows.value.filter(r => r.status === 'pending').length
-)
-
-const unsubscribedCount = computed(() =>
-  rows.value.filter(r => r.status === 'unsubscribed').length
-)
-
-function formatDate(value: string | null) {
-  if (!value) return '-'
-  const date = new Date(value)
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function sourceLabel(value: string) {
-  if (value === 'sticky-bar') return 'Sticky Bar'
-  if (value === 'footer') return 'Footer'
-  return value
 }
 
 async function fetchSubscribers() {
   loading.value = true
   try {
-    const response = await api.get('/newsletter-subscribers', {
-      params: {
-        page: currentPage.value,
-        per_page: perPage.value,
-        ...(search.value && { search: search.value }),
-        ...(sourceFilter.value && { source: sourceFilter.value }),
-      },
-    })
+    const params: any = {}
+    if (search.value) params.search = search.value
+    if (sourceFilter.value) params.source = sourceFilter.value
 
-    const data = response.data.data || response.data
-
-    rows.value = Array.isArray(data) ? data : data.data || []
-    total.value = response.data.total || 0
-    currentPage.value = response.data.current_page || 1
-    perPage.value = response.data.per_page || 20
-  } catch (error) {
-    console.error('Unable to load subscriptions:', error)
+    const response = await api.get('/newsletter-subscribers', { params })
+    rows.value = response.data.data || response.data || []
+  } catch (error: any) {
     rows.value = []
   } finally {
     loading.value = false
   }
 }
 
-async function deleteSubscriber(row: SubscriberRow) {
-  const ok = window.confirm(`Delete ${row.email}? This cannot be undone.`)
-  if (!ok) return
-
-  deletingId.value = row.id
+async function deleteSubscriber(subscriber: Subscriber) {
+  if (!confirm(`Delete subscriber ${subscriber.email}? This cannot be undone.`)) return
 
   try {
-    await api.delete(`/newsletter-subscribers/${row.id}`)
-
-    if (rows.value.length === 1 && currentPage.value > 1) {
-      currentPage.value -= 1
-    }
-
+    await api.delete(`/newsletter-subscribers/${subscriber.id}`)
     await fetchSubscribers()
   } catch (error: any) {
-    console.error('Failed to delete subscriber:', error)
-    alert(error.response?.data?.message || 'Failed to delete subscriber.')
-  } finally {
-    deletingId.value = null
-  }
-}
-
-function nextPage() {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value += 1
-    fetchSubscribers()
-  }
-}
-
-function prevPage() {
-  if (currentPage.value > 1) {
-    currentPage.value -= 1
-    fetchSubscribers()
   }
 }
 
@@ -308,18 +239,44 @@ onMounted(fetchSubscribers)
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .stat-card {
   background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   padding: 1.5rem;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0.5rem 0 0 0;
 }
 
 .stat-icon {
@@ -328,49 +285,33 @@ onMounted(fetchSubscribers)
   justify-content: center;
   width: 3rem;
   height: 3rem;
-  border-radius: 50%;
+  border-radius: 0.5rem;
   font-size: 1.25rem;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #0369a1;
   flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.stat-icon.default {
+  background: #eff6ff;
+  color: #0369a1;
 }
 
 .stat-icon.confirmed {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #16a34a;
+  background: #ecfdf5;
+  color: #065f46;
 }
 
 .stat-icon.pending {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: #fffbeb;
   color: #92400e;
 }
 
 .stat-icon.unsubscribed {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
+  background: #fef2f2;
+  color: #7f1d1d;
 }
 
-.stat-info {
-  flex: 1;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0.25rem 0 0 0;
-}
-
-/* Main Content */
+/* Content Area */
 .subscriptions-content {
   background: white;
   border-radius: 0.75rem;
@@ -382,16 +323,19 @@ onMounted(fetchSubscribers)
   padding: 2rem;
 }
 
+/* Search Bar */
 .search-bar {
   display: flex;
   gap: 0.5rem;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #e5e7eb;
   background-color: #f9fafb;
+  flex-wrap: wrap;
 }
 
 .search-input {
   flex: 1;
+  min-width: 200px;
   padding: 0.625rem 1rem;
   border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
@@ -418,7 +362,6 @@ onMounted(fetchSubscribers)
 .filter-select:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .search-button {
@@ -440,7 +383,8 @@ onMounted(fetchSubscribers)
   color: #1f2937;
 }
 
-.subscriptions-table-wrapper {
+/* Table Wrapper */
+.table-scroll {
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: #d1d5db #f3f4f6;
@@ -481,13 +425,14 @@ onMounted(fetchSubscribers)
   vertical-align: middle;
 }
 
+/* Email Column */
 .cell-email {
-  min-width: 220px;
+  min-width: 200px;
 }
 
 .email-cell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 
@@ -505,9 +450,15 @@ onMounted(fetchSubscribers)
   flex-shrink: 0;
 }
 
+.email-info {
+  min-width: 0;
+  flex: 1;
+}
+
 .email-address {
+  display: block;
   padding: 0.375rem 0.5rem;
-  background: #f3f4f6;
+  background-color: #f3f4f6;
   color: #374151;
   border-radius: 0.25rem;
   font-size: 0.8rem;
@@ -517,22 +468,29 @@ onMounted(fetchSubscribers)
   white-space: nowrap;
 }
 
-.cell-source {
-  min-width: 120px;
+.email-source {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0.25rem 0 0 0;
 }
 
-.source-chip {
+/* Source Column */
+.cell-source {
+  min-width: 110px;
+}
+
+.source-badge {
   display: inline-block;
   padding: 0.375rem 0.75rem;
-  background: #f0f9ff;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   color: #0369a1;
   border-radius: 0.375rem;
   font-size: 0.8rem;
   font-weight: 500;
   border: 1px solid #bae6fd;
-  text-transform: capitalize;
 }
 
+/* Status Column */
 .cell-status {
   min-width: 110px;
 }
@@ -560,17 +518,22 @@ onMounted(fetchSubscribers)
 }
 
 .status-unsubscribed {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  color: #374151;
-  border-color: #d1d5db;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #7f1d1d;
+  border-color: #fecaca;
 }
 
+/* Date Column */
 .cell-date {
-  min-width: 120px;
+  min-width: 100px;
+}
+
+.date-text {
   color: #6b7280;
   font-size: 0.8rem;
 }
 
+/* Actions Column */
 .cell-actions {
   min-width: 80px;
   text-align: right;
@@ -595,20 +558,17 @@ onMounted(fetchSubscribers)
   font-size: 0.875rem;
 }
 
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .delete-btn {
   background-color: #fee2e2;
   color: #7f1d1d;
 }
 
-.delete-btn:hover:not(:disabled) {
+.delete-btn:hover {
   background-color: #fecaca;
+  color: #7f1d1d;
 }
 
+/* Empty State */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -638,88 +598,64 @@ onMounted(fetchSubscribers)
   color: #9ca3af;
 }
 
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.25rem;
-  border-top: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-}
-
-.pagination-info {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.pagination-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.pagination-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  color: #374151;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  color: #1f2937;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* Responsive Design */
 @media (max-width: 768px) {
   .subscriptions-container {
     padding: 1rem;
   }
 
+  .subscriptions-title {
+    font-size: 1.5rem;
+  }
+
+  .subscriptions-subtitle {
+    font-size: 0.85rem;
+  }
+
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-left: 0;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
   }
 
   .search-bar {
-    flex-direction: column;
+    padding: 0.75rem;
+    gap: 0.375rem;
   }
 
-  .filter-select,
   .search-input {
-    width: 100%;
-  }
-
-  .search-button {
-    width: auto;
-    padding: 0.625rem 1rem;
-  }
-
-  .subscriptions-table {
+    min-width: 150px;
     font-size: 0.8rem;
   }
 
-  .subscriptions-table thead th,
-  .subscriptions-table tbody td {
+  .subscriptions-table thead th {
     padding: 0.75rem 0.625rem;
+    font-size: 0.8rem;
   }
 
-  .pagination {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+  .subscriptions-table tbody td {
+    padding: 0.75rem 0.625rem;
+    font-size: 0.8rem;
+  }
+
+  .search-button {
+    width: 2.25rem;
+    height: 2.25rem;
   }
 }
 
@@ -729,34 +665,79 @@ onMounted(fetchSubscribers)
   }
 
   .subscriptions-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .search-bar {
+    padding: 0.5rem;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+
+  .search-input,
+  .filter-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .search-button {
+    width: 2rem;
+    height: 2rem;
   }
 
   .subscriptions-table {
     font-size: 0.75rem;
   }
 
+  .subscriptions-table thead th {
+    padding: 0.5rem 0.375rem;
+  }
+
+  .subscriptions-table tbody td {
+    padding: 0.5rem 0.375rem;
+  }
+
+  .email-avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.75rem;
+  }
+
   .action-btn {
     width: 1.75rem;
     height: 1.75rem;
+    font-size: 0.7rem;
   }
 }
 
 /* Scrollbar Styling */
-.subscriptions-table-wrapper::-webkit-scrollbar {
+.table-scroll::-webkit-scrollbar {
   height: 6px;
 }
 
-.subscriptions-table-wrapper::-webkit-scrollbar-track {
+.table-scroll::-webkit-scrollbar-track {
   background: #f3f4f6;
 }
 
-.subscriptions-table-wrapper::-webkit-scrollbar-thumb {
+.table-scroll::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 3px;
 }
 
-.subscriptions-table-wrapper::-webkit-scrollbar-thumb:hover {
+.table-scroll::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
 </style>

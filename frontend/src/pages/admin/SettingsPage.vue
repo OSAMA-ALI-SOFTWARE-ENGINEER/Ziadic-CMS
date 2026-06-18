@@ -27,7 +27,6 @@ onMounted(async () => {
     const branding = await adminService.fetchAdminSettings('branding')
     settings.value = { ...settings.value, ...branding }
   } catch (error) {
-    console.error('Failed to load settings')
   } finally {
     loading.value = false
   }

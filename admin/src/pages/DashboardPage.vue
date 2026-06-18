@@ -324,4 +324,310 @@ onBeforeUnmount(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  :deep(.space-y-6) {
+    gap: 1.25rem;
+  }
+
+  :deep(h1.text-2xl) {
+    font-size: 1.75rem;
+  }
+
+  :deep(.grid.gap-3.grid-cols-1) {
+    gap: 0.875rem;
+  }
+
+  :deep(.p-6.sm\:p-6) {
+    padding: 1.25rem;
+  }
+
+  :deep(.text-3xl) {
+    font-size: 2rem;
+  }
+
+  :deep(.grid.gap-4.sm\:gap-6.grid-cols-1) {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  :deep(.space-y-6) {
+    gap: 1rem;
+  }
+
+  :deep(h1.text-2xl.sm\:text-3xl) {
+    font-size: 1.5rem;
+  }
+
+  :deep(p.text-xs.sm\:text-sm.text---admin-muted) {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  :deep(.grid.gap-3.grid-cols-1.sm\:grid-cols-2) {
+    gap: 0.75rem;
+  }
+
+  :deep(.grid.gap-3.grid-cols-1.sm\:grid-cols-2.xl\:grid-cols-4) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  :deep(.p-6.shadow-sm) {
+    padding: 1rem;
+  }
+
+  :deep(.p-6.shadow-sm .text-3xl) {
+    font-size: 1.75rem;
+  }
+
+  :deep(.p-6.shadow-sm .text-sm) {
+    font-size: 0.85rem;
+  }
+
+  :deep(.p-6.shadow-sm .p-3) {
+    padding: 0.5rem;
+  }
+
+  :deep(.p-4.sm\:p-6.min-w-0) {
+    padding: 1rem;
+  }
+
+  :deep(.mb-4.sm\:mb-6) {
+    margin-bottom: 0.75rem;
+  }
+
+  :deep(.text-base.sm\:text-lg) {
+    font-size: 1rem;
+  }
+
+  :deep(.text-xs.sm\:text-sm.text-gray-600) {
+    font-size: 0.75rem;
+  }
+
+  :deep(.py-2.sm\:py-3) {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  :deep(.px-2.sm\:px-3) {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  :deep(.grid.gap-4.sm\:gap-6.grid-cols-1.xl\:grid-cols-\[1\.5fr_0\.8fr\]) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  :deep(.flex.gap-1\.5.sm\:gap-2) {
+    gap: 0.375rem;
+  }
+
+  :deep(.px-2.sm\:px-3.py-0\.5.sm\:py-1) {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  :deep(.p-3.rounded-lg) {
+    padding: 0.75rem;
+  }
+
+  :deep(.text-lg) {
+    font-size: 1.125rem;
+  }
+
+  :deep(.p-6) {
+    padding: 1rem;
+  }
+
+  :deep(.mb-6) {
+    margin-bottom: 1rem;
+  }
+
+  :deep(.text-sm.text-gray-600) {
+    font-size: 0.8rem;
+  }
+
+  :deep(.py-3.px-3) {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  :deep(.space-y-6) {
+    gap: 0.75rem;
+  }
+
+  :deep(.w-full.overflow-hidden) {
+    padding: 0;
+    margin: 0;
+  }
+
+  :deep(h1.text-2xl.sm\:text-3xl) {
+    font-size: 1.25rem;
+  }
+
+  :deep(p.text-xs.sm\:text-sm.text---admin-muted) {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  :deep(.grid.gap-3.grid-cols-1.sm\:grid-cols-2.xl\:grid-cols-4) {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  :deep(.rounded-lg.p-6.shadow-sm) {
+    padding: 0.875rem;
+    border-radius: 0.5rem;
+  }
+
+  :deep(.rounded-lg.p-6.shadow-sm .text-3xl) {
+    font-size: 1.5rem;
+  }
+
+  :deep(.rounded-lg.p-6.shadow-sm .text-sm) {
+    font-size: 0.8rem;
+  }
+
+  :deep(.flex.items-start.justify-between.mb-4) {
+    gap: 0.5rem;
+  }
+
+  :deep(.flex.items-start.justify-between.mb-4 .p-3) {
+    padding: 0.375rem;
+  }
+
+  :deep(.p-4.sm\:p-6.min-w-0) {
+    padding: 0.75rem;
+  }
+
+  :deep(.mb-4.sm\:mb-6) {
+    margin-bottom: 0.5rem;
+  }
+
+  :deep(.text-base.sm\:text-lg.font-semibold) {
+    font-size: 0.95rem;
+  }
+
+  :deep(.text-xs.sm\:text-sm.text-gray-600) {
+    font-size: 0.7rem;
+  }
+
+  :deep(.py-2.sm\:py-3.px-2.sm\:px-3) {
+    padding: 0.375rem 0.25rem;
+  }
+
+  :deep(.overflow-x-auto) {
+    overflow-x: hidden;
+  }
+
+  :deep(table) {
+    font-size: 0.8rem;
+  }
+
+  :deep(th) {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.375rem;
+  }
+
+  :deep(td) {
+    padding: 0.5rem 0.375rem;
+  }
+
+  :deep(.grid.gap-4.sm\:gap-6.grid-cols-1.xl\:grid-cols-\[1\.5fr_0\.8fr\]) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  :deep(.flex.flex-col.sm\:flex-row.items-start.sm\:items-center) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  :deep(.gap-3.sm\:gap-4.mb-4) {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  :deep(.flex.gap-1\.5.sm\:gap-2.mb-3) {
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  :deep(.px-2.sm\:px-3.py-0\.5.sm\:py-1.rounded-full) {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  :deep(.space-y-3) {
+    gap: 0.5rem;
+  }
+
+  :deep(.flex.gap-3.p-3.rounded-lg) {
+    gap: 0.5rem;
+    padding: 0.625rem;
+  }
+
+  :deep(.text-sm.text-gray-700) {
+    font-size: 0.8rem;
+  }
+
+  :deep(.text-xs.text-gray-500) {
+    font-size: 0.7rem;
+  }
+
+  :deep(.p-2.sm\:p-3.rounded-lg) {
+    padding: 0.375rem;
+  }
+
+  :deep(.text-lg) {
+    font-size: 1rem;
+  }
+
+  :deep(.p-6) {
+    padding: 0.75rem;
+  }
+
+  :deep(.mb-6) {
+    margin-bottom: 0.75rem;
+  }
+
+  :deep(.text-lg.font-semibold) {
+    font-size: 1rem;
+  }
+
+  :deep(.py-3.px-3) {
+    padding: 0.5rem 0.375rem;
+  }
+
+  :deep(thead) {
+    display: none;
+  }
+
+  :deep(tr) {
+    display: block;
+    margin-bottom: 0.75rem;
+    border-radius: 0.5rem;
+  }
+
+  :deep(td) {
+    display: block;
+    padding-left: 0;
+  }
+
+  :deep(td::before) {
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+
+  :deep(.text-left.py-3.px-3.font-semibold) {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.375rem;
+  }
+}
 </style>

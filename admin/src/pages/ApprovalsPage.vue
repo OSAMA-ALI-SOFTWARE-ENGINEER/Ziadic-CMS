@@ -64,7 +64,6 @@ async function loadPendingListings() {
       2000
     )
   } catch (err) {
-    console.error('Failed to load pending listings:', err)
     ui.pushToast('Failed to load pending listings', 'danger')
   } finally {
     loading.value = false
@@ -83,7 +82,6 @@ async function approveListing(listing: PendingListing) {
 
     ui.pushToast(`✓ ${listing.title} approved successfully`, 'success')
   } catch (err: any) {
-    console.error('Failed to approve listing:', err)
     ui.pushToast(err.response?.data?.message || 'Failed to approve listing', 'danger')
   } finally {
     approvingId.value = null
@@ -105,7 +103,6 @@ async function rejectListing(listing: PendingListing) {
 
     ui.pushToast(`✗ ${listing.title} rejected`, 'warning')
   } catch (err: any) {
-    console.error('Failed to reject listing:', err)
     ui.pushToast(err.response?.data?.message || 'Failed to reject listing', 'danger')
   } finally {
     rejectingId.value = null

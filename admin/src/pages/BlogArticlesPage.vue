@@ -73,7 +73,6 @@ async function load() {
     )
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load data'
-    console.error(err)
   } finally {
     loading.value = false
   }
@@ -132,7 +131,6 @@ async function saveArticle() {
     }
 
     // Log formData for debugging
-    console.log('📤 Submitting article:', {
       title: form.value.title,
       slug: generateSlug(form.value.title),
       excerpt: form.value.excerpt?.substring(0, 30),
@@ -144,26 +142,22 @@ async function saveArticle() {
     })
 
     if (editingId.value) {
-      console.log(`✏️ Updating article ${editingId.value}...`)
       await api.post(`/articles/${editingId.value}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       success.value = 'Article updated successfully'
     } else {
-      console.log('✨ Creating new article...')
       await api.post('/articles', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       success.value = 'Article created successfully'
     }
 
-    console.log('✅ Success!')
     showForm.value = false
     editingId.value = null
     resetForm()
     await load()
   } catch (err: any) {
-    console.error('❌ Save article error:', {
       status: err.response?.status,
       statusText: err.response?.statusText,
       message: err.response?.data?.message,
@@ -239,7 +233,6 @@ async function editArticle(article: Article) {
     const response = await api.get(`/articles/${article.id}`)
     const fullArticle = response.data.data
 
-    console.log('Loaded article for editing:', fullArticle)
 
     editingId.value = fullArticle.id
     form.value = {
@@ -252,7 +245,6 @@ async function editArticle(article: Article) {
       seo_title: fullArticle.seo_title || '',
     }
 
-    console.log('Form loaded:', form.value)
 
     // Show existing image preview if available - use full URL
     if (fullArticle.featured_image) {
@@ -264,7 +256,6 @@ async function editArticle(article: Article) {
     showForm.value = true
   } catch (err: any) {
     error.value = 'Failed to load article details'
-    console.error('Error loading article:', err)
   }
 }
 

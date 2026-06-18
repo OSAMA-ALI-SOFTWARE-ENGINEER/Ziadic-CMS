@@ -107,7 +107,6 @@ export const useSettingsStore = defineStore('settings', () => {
           // Mock API also failed, use defaults (already set)
         }
       } else {
-        console.error(`Failed to load ${section} settings:`, error.message)
       }
     }
   }
@@ -132,10 +131,8 @@ export const useSettingsStore = defineStore('settings', () => {
           sections[section].value = result as any
           originalState.value[section] = JSON.parse(JSON.stringify(result))
           errors.value[section] = {}
-          console.info(`✅ Settings saved locally (mock API - backend not ready yet)`)
           return true
         } catch (mockError) {
-          console.error('Mock API failed:', mockError)
           if (errors.value[section] === undefined) {
             errors.value[section] = {}
           }

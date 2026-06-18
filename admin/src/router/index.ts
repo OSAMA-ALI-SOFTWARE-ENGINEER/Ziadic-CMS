@@ -3,8 +3,8 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 import ApprovalsPage from '@/pages/ApprovalsPage.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import BlogArticlesPage from '@/pages/BlogArticlesPage.vue'
+// import ContentPage from '@/pages/ContentPage.vue' // Hidden: Content Management
 import CategoriesPage from '@/pages/CategoriesPage.vue'
-import ContentPage from '@/pages/ContentPage.vue'
 import LocationManagementPage from '@/pages/LocationManagementPage.vue'
 import DashboardPage from '@/pages/DashboardPage.vue'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage.vue'
@@ -141,14 +141,15 @@ const router = createRouter({
             title: 'Location Management | Kukaqka CMS',
           },
         },
-        {
-          path: 'content',
-          name: 'content',
-          component: ContentPage,
-          meta: {
-            title: 'Content | Kukaqka CMS',
-          },
-        },
+        // Content - Hidden for now
+        // {
+        //   path: 'content',
+        //   name: 'content',
+        //   component: ContentPage,
+        //   meta: {
+        //     title: 'Content | Kukaqka CMS',
+        //   },
+        // },
         {
           path: 'blog-articles',
           name: 'blog-articles',

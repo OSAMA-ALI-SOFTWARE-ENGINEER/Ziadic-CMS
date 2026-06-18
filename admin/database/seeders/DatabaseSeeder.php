@@ -22,94 +22,220 @@ use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Run the database seeders.
+     *
+     * Seeds the database with test users, roles, permissions, locations,
+     * categories, listings, and blog posts for development and testing.
+     */
     public function run(): void
     {
+        // Step 1: Create roles and permissions
         $this->seedRolesAndPermissions();
 
-        // Create Super Admin
-        $superAdmin = User::query()->firstOrCreate(
-            ['email' => 'superadmin@kukaqka.com'],
-            [
-                'name' => 'Super Admin',
-                'password' => Hash::make('password'),
-                'status' => 'active',
-                'email_verified_at' => now(),
-            ],
+        // Step 2: Create test users with different roles
+        $superAdmin = $this->createUser(
+            'superadmin@kukaqka.com',
+            'Super Admin',
+            'Super Admin User',
+            '+1 (555) 123-0000',
+            'Administrator',
+            'System Management',
+            'New York, USA',
+            'password'
         );
         $superAdmin->assignRole('super-admin');
 
         // Create Admin (fallback for ADMIN_EMAIL env var)
-        $admin = User::query()->firstOrCreate(
-            ['email' => env('ADMIN_EMAIL', 'admin@kukaqka.com')],
-            [
-                'name' => env('ADMIN_NAME', 'Admin User'),
-                'password' => Hash::make(env('ADMIN_PASSWORD', 'password')),
-                'status' => 'active',
-                'email_verified_at' => now(),
-            ],
+        $admin = $this->createUser(
+            env('ADMIN_EMAIL', 'admin@kukaqka.com'),
+            env('ADMIN_NAME', 'Admin User'),
+            'System administrator responsible for content and user management',
+            '+1 (555) 234-0000',
+            'Administration',
+            'Content Management',
+            'Los Angeles, USA',
+            env('ADMIN_PASSWORD', 'password')
         );
         $admin->assignRole('admin');
 
         // Create Staff user for testing
-        $staff = User::query()->firstOrCreate(
-            ['email' => 'staff@kukaqka.com'],
-            [
-                'name' => 'Staff Editor',
-                'password' => Hash::make('password'),
-                'status' => 'active',
-                'email_verified_at' => now(),
-            ],
+        $staff = $this->createUser(
+            'staff@kukaqka.com',
+            'Staff Editor',
+            'Content editor and listing moderator',
+            '+1 (555) 345-0000',
+            'Content',
+            'Editing & Moderation',
+            'Chicago, USA',
+            'password'
         );
         $staff->assignRole('staff');
 
         // Create Client user for testing
-        $client = User::query()->firstOrCreate(
-            ['email' => 'client@kukaqka.com'],
-            [
-                'name' => 'Client Account',
-                'password' => Hash::make('password'),
-                'status' => 'active',
-                'email_verified_at' => now(),
-            ],
+        $client = $this->createUser(
+            'client@kukaqka.com',
+            'Client Account',
+            'Standard client user account',
+            '+1 (555) 456-0000',
+            'Business',
+            'Listing Management',
+            'Houston, USA',
+            'password'
         );
         $client->assignRole('client');
 
+        // Step 3: Seed locations and categories
         $countries = $this->seedLocations();
         $categories = $this->seedCategories();
         $tags = $this->seedTags();
 
+        // Step 4: Seed system configuration
         $this->seedSettings();
         $this->seedPlans();
         $this->seedPages();
         $this->seedServices();
         $this->seedTeam();
+
+        // Step 5: Seed sample content
         $this->seedListings($admin, $countries, $categories, $tags);
         $this->seedPosts($admin, $categories, $tags);
+
+        $this->command->info('Database seeding completed successfully!');
+        $this->command->table(['Email', 'Password', 'Role'], [
+            ['superadmin@kukaqka.com', 'password', 'Super Admin'],
+            ['admin@kukaqka.com', 'password', 'Admin'],
+            ['staff@kukaqka.com', 'password', 'Staff'],
+            ['client@kukaqka.com', 'password', 'Client'],
+        ]);
     }
 
+    /**
+     * Create a user with complete profile information.
+     */
+    private function createUser(
+        string $email,
+        string $name,
+        string $bio,
+        string $phone,
+        string $department,
+        string $location,
+        string $address,
+        string $password
+    ): User {
+        return User::query()->firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'email' => $email,
+                'password' => Hash::make($password),
+                'phone' => $phone,
+                'bio' => $bio,
+                'department' => $department,
+                'location' => $address,
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ],
+        );
+    }
+
+    /**
+     * Seed roles and permissions using Spatie Permissions.
+     *
+     * Creates 4 roles with specific permission sets:
+     * - super-admin: Full system access (all permissions)
+     * - admin: All permissions except role deletion
+     * - staff: Limited permissions for content management
+     * - client: Minimal permissions for viewing only
+     */
     private function seedRolesAndPermissions(): void
     {
+        // Define all available permissions
         $permissions = [
+            // User management
             'users.view', 'users.create', 'users.update', 'users.delete',
+            // Role management
             'roles.view', 'roles.create', 'roles.update', 'roles.delete',
-            'listings.view', 'listings.create', 'listings.update', 'listings.delete', 'listings.approve', 'listings.publish',
+            // Listing management
+            'listings.view', 'listings.create', 'listings.update', 'listings.delete',
+            'listings.approve', 'listings.publish',
+            // Content management
             'categories.manage', 'posts.manage', 'pages.manage', 'services.manage',
-            'media.manage', 'settings.manage', 'payments.view', 'payments.refund',
+            // Media & settings
+            'media.manage', 'settings.manage',
+            // Payments
+            'payments.view', 'payments.refund',
         ];
 
+        // Create all permissions
         foreach ($permissions as $permission) {
-            Permission::query()->firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+            Permission::query()->firstOrCreate(
+                ['name' => $permission, 'guard_name' => 'web'],
+                ['name' => $permission, 'guard_name' => 'web']
+            );
         }
 
-        $superAdmin = Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
-        $admin = Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        Role::query()->firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
-        Role::query()->firstOrCreate(['name' => 'client', 'guard_name' => 'web']);
+        // Create roles
+        $superAdmin = Role::query()->firstOrCreate(
+            ['name' => 'super-admin', 'guard_name' => 'web'],
+            ['name' => 'super-admin', 'guard_name' => 'web']
+        );
+        $admin = Role::query()->firstOrCreate(
+            ['name' => 'admin', 'guard_name' => 'web'],
+            ['name' => 'admin', 'guard_name' => 'web']
+        );
+        $staff = Role::query()->firstOrCreate(
+            ['name' => 'staff', 'guard_name' => 'web'],
+            ['name' => 'staff', 'guard_name' => 'web']
+        );
+        $client = Role::query()->firstOrCreate(
+            ['name' => 'client', 'guard_name' => 'web'],
+            ['name' => 'client', 'guard_name' => 'web']
+        );
+        $user = Role::query()->firstOrCreate(
+            ['name' => 'user', 'guard_name' => 'web'],
+            ['name' => 'user', 'guard_name' => 'web']
+        );
 
+        // Assign permissions to roles
+        // Super Admin: All permissions
         $superAdmin->syncPermissions(Permission::all());
-        $admin->syncPermissions(Permission::query()->whereNotIn('name', ['roles.delete'])->get());
+
+        // Admin: All except role deletion
+        $admin->syncPermissions(
+            Permission::query()->whereNotIn('name', ['roles.delete'])->get()
+        );
+
+        // Staff: Content management permissions
+        $staffPerms = Permission::whereIn('name', [
+            'listings.view', 'listings.create', 'listings.update', 'listings.approve', 'listings.publish',
+            'posts.manage', 'pages.manage', 'categories.manage',
+            'media.manage',
+        ])->get();
+        $staff->syncPermissions($staffPerms);
+
+        // Client: View and create listings
+        $clientPerms = Permission::whereIn('name', [
+            'listings.view', 'listings.create',
+        ])->get();
+        $client->syncPermissions($clientPerms);
+
+        // User (standard registered users): Minimal view permissions
+        $userPerms = Permission::whereIn('name', [
+            'listings.view',
+        ])->get();
+        $user->syncPermissions($userPerms);
     }
 
+    /**
+     * Seed countries and cities.
+     *
+     * Creates test locations in Balkans and Central Europe:
+     * - 6 countries (Albania, Kosovo, Macedonia, Germany, Austria, Switzerland)
+     * - 10+ cities for testing location-based features
+     *
+     * @return array Array of Country models keyed by ISO-2 code
+     */
     private function seedLocations(): array
     {
         $countries = [];
@@ -153,6 +279,19 @@ class DatabaseSeeder extends Seeder
         return $countries;
     }
 
+    /**
+     * Seed listing and blog categories.
+     *
+     * Creates 8 listing categories and 3 blog categories for organizing content:
+     *
+     * Listing Categories:
+     * - Arts and Culture, Dining, Sports, Shopping, Travel, Entertainment, Events, Car Rental
+     *
+     * Blog Categories:
+     * - City Life, Travelling, Artistry
+     *
+     * @return array Array of Category models keyed by category name
+     */
     private function seedCategories(): array
     {
         $categories = [];
@@ -194,6 +333,14 @@ class DatabaseSeeder extends Seeder
         return $tags;
     }
 
+    /**
+     * Seed system settings.
+     *
+     * Initializes basic site configuration:
+     * - Site name: Kukaqka
+     * - Site URL: http://kukaqka.com
+     * - SEO default title: Kukaqka Directory
+     */
     private function seedSettings(): void
     {
         foreach ([
@@ -274,6 +421,19 @@ class DatabaseSeeder extends Seeder
         );
     }
 
+    /**
+     * Seed sample listings for testing and development.
+     *
+     * Creates 8 realistic business listings across various categories:
+     * - Museums, Restaurants, Spas, Bars, Shops, Event Venues, Entertainment, Car Rentals
+     *
+     * All listings are marked as published and featured.
+     *
+     * @param User $admin The admin user who owns the listings
+     * @param array $countries Array of Country models
+     * @param array $categories Array of Category models
+     * @param array $tags Array of Tag models
+     */
     private function seedListings(User $admin, array $countries, array $categories, array $tags): void
     {
         $samples = [
@@ -380,6 +540,16 @@ class DatabaseSeeder extends Seeder
         }
     }
 
+    /**
+     * Seed sample blog posts.
+     *
+     * Creates a sample blog post in the "City Life" category about celebrating
+     * diverse communities and local discovery.
+     *
+     * @param User $admin The admin user who authors the post
+     * @param array $categories Array of Category models (not used here but available)
+     * @param array $tags Array of Tag models for tagging content
+     */
     private function seedPosts(User $admin, array $categories, array $tags): void
     {
         $category = Category::query()->where('type', 'blog')->where('slug', 'city-life')->first();

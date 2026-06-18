@@ -359,7 +359,6 @@ async function refundPayment(payment: Payment) {
     await loadPayments()
     alert('Refund processed successfully')
   } catch (error: any) {
-    console.error('Failed to refund:', error)
     alert(error.response?.data?.message || 'Failed to process refund')
   }
 }

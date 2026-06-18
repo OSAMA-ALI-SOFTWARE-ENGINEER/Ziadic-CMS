@@ -1,5 +1,17 @@
 <template>
-  <div class="roles-container">
+  <!-- Access Denied Message (non-super-admin) -->
+  <div v-if="!isAccessGranted" class="access-denied-container">
+    <div class="access-denied-box">
+      <i class="pi pi-lock"></i>
+      <h1 class="denied-title">Access Denied</h1>
+      <p class="denied-message">This page is only accessible to Super Administrators.</p>
+      <p class="denied-subtext">If you believe you should have access, please contact your administrator.</p>
+      <RouterLink to="/dashboard" class="btn-back">Back to Dashboard</RouterLink>
+    </div>
+  </div>
+
+  <!-- Main Content (super-admin only) -->
+  <div v-else class="roles-container">
     <!-- Header -->
     <div class="roles-header">
       <div>
@@ -62,7 +74,7 @@
                   <span class="user-count">{{ role.user_count || 0 }}</span>
                 </td>
                 <td class="cell-permissions">
-                  <span class="permission-chip">{{ (role.permissions || '').split(',').length }} permissions</span>
+                  <span class="permission-chip">{{ role.permission_count || 0 }} permissions</span>
                 </td>
                 <td class="cell-status">
                   <span :class="['status-badge', `status-${(role.status || 'active').toLowerCase()}`]">
@@ -71,10 +83,20 @@
                 </td>
                 <td class="cell-actions">
                   <div class="action-buttons">
-                    <button class="action-btn edit-btn" @click="openRole(role)" title="Edit role">
+                    <button
+                      class="action-btn edit-btn"
+                      @click="openRole(role)"
+                      :disabled="role.name === 'super-admin'"
+                      title="Edit role"
+                    >
                       <i class="pi pi-pencil"></i>
                     </button>
-                    <button class="action-btn delete-btn" @click="deleteRole(role)" title="Delete role">
+                    <button
+                      class="action-btn delete-btn"
+                      @click="deleteRole(role)"
+                      :disabled="role.name === 'super-admin'"
+                      title="Delete role"
+                    >
                       <i class="pi pi-trash"></i>
                     </button>
                   </div>
@@ -135,14 +157,29 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Permissions</label>
+            <div class="permissions-header">
+              <label class="form-label">Permissions</label>
+              <div class="select-all-wrapper">
+                <input
+                  id="select-all"
+                  type="checkbox"
+                  :checked="allPermissionsSelected"
+                  @change="toggleSelectAll"
+                  class="checkbox-input"
+                />
+                <label for="select-all" class="select-all-label">
+                  {{ allPermissionsSelected ? 'Deselect All' : 'Select All' }}
+                </label>
+              </div>
+            </div>
             <div class="permissions-checkboxes">
               <div v-for="permission in permissionGroups" :key="permission" class="checkbox-item">
                 <input
                   :id="`perm-${permission}`"
                   type="checkbox"
-                  :checked="(selectedRole.permissions || '').includes(permission)"
+                  :checked="isPermissionSelected(permission)"
                   @change="togglePermission(permission)"
+                  :disabled="selectedRole.name === 'super-admin'"
                   class="checkbox-input"
                 />
                 <label :for="`perm-${permission}`" class="checkbox-label">
@@ -176,6 +213,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { api } from '@/services/api'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
@@ -187,11 +226,19 @@ interface Role {
   status: string
 }
 
+const auth = useAuthStore()
+const router = useRouter()
+
 const roles = ref<Role[]>([])
 const selectedRole = ref<Role | null>(null)
 const loading = ref(false)
 const isSaving = ref(false)
 const searchQuery = ref('')
+
+const isAccessGranted = computed(() => {
+  const userRoles = auth.user?.roles || []
+  return userRoles.includes('super-admin')
+})
 
 const permissionGroups = [
   'users.view',
@@ -221,27 +268,36 @@ const filteredRoles = computed(() => {
   return roles.value.filter(r => r.name.toLowerCase().includes(query))
 })
 
+const allPermissionsSelected = computed(() => {
+  if (!selectedRole.value) return false
+  const perms = selectedRole.value.permissions
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p)
+  return permissionGroups.length > 0 && perms.length === permissionGroups.length
+})
+
 async function loadRoles() {
+  // Check access before loading
+  if (!isAccessGranted.value) {
+    return
+  }
+
   loading.value = true
   try {
     const response = await api.get('/roles', {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
-    console.log('[RolesPage] API Response:', response.data)
     // Handle paginated response: response.data.data contains the roles array
     let rolesData = response.data.data || response.data
-    console.log('[RolesPage] Extracted roles data:', rolesData)
     // Ensure we have an array
     if (!Array.isArray(rolesData)) {
-      console.warn('[RolesPage] Response is not an array, setting to empty')
       rolesData = []
     }
     // Filter out any null/undefined items
     rolesData = rolesData.filter((role: any) => role && role.id)
-    console.log('[RolesPage] Final roles after filtering:', rolesData)
     roles.value = rolesData
   } catch (error: any) {
-    console.error('[RolesPage] Failed to load roles:', error)
     roles.value = []
   } finally {
     loading.value = false
@@ -282,6 +338,27 @@ function togglePermission(permission: string) {
   }
 
   selectedRole.value.permissions = perms.join(',')
+}
+
+function isPermissionSelected(permission: string): boolean {
+  if (!selectedRole.value) return false
+  const perms = selectedRole.value.permissions
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p)
+  return perms.includes(permission)
+}
+
+function toggleSelectAll() {
+  if (!selectedRole.value) return
+
+  if (allPermissionsSelected.value) {
+    // Deselect all
+    selectedRole.value.permissions = ''
+  } else {
+    // Select all
+    selectedRole.value.permissions = permissionGroups.join(',')
+  }
 }
 
 async function saveRole() {
@@ -612,6 +689,17 @@ onMounted(loadRoles)
 
 .delete-btn:hover {
   background-color: #fecaca;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn:disabled:hover {
+  background-color: inherit;
+  color: inherit;
+  transform: none;
 }
 
 /* Empty State */
@@ -979,16 +1067,108 @@ onMounted(loadRoles)
   background: #9ca3af;
 }
 
+/* Access Denied */
+.access-denied-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
+  padding: 1.5rem;
+}
+
+.access-denied-box {
+  background: white;
+  border-radius: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.access-denied-box i {
+  font-size: 4rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.denied-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.denied-message {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.6;
+}
+
+.denied-subtext {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.btn-back {
+  display: inline-block;
+  padding: 0.625rem 1.5rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Permissions Header with Select All */
+.permissions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.select-all-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: #f3f4f6;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.select-all-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+}
+
 /* Permissions Checkboxes */
 .permissions-checkboxes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
   padding: 1rem;
   background-color: #f9fafb;
   border-radius: 0.5rem;
   border: 1px solid #e5e7eb;
-  max-height: 300px;
+  max-height: 350px;
   overflow-y: auto;
 }
 

@@ -114,7 +114,6 @@ async function loadDropdownData() {
     countries.value = countriesRes.data.data?.data || countriesRes.data.data || []
     cities.value = citiesRes.data.data?.data || citiesRes.data.data || []
   } catch (err) {
-    console.error('Failed to load dropdown data:', err)
   }
 }
 
@@ -122,7 +121,6 @@ function loadListingData() {
   const listing = props.listing
   if (!listing) return
 
-  console.log('Loading listing data:', listing)
 
   form.title = listing.title || ''
   form.slug = listing.slug || ''
@@ -167,7 +165,6 @@ function loadListingData() {
     selectedCountry.value = form.country_id
   }
 
-  console.log('Form loaded:', {
     title: form.title,
     city_id: form.city_id,
     country_id: form.country_id,
@@ -216,7 +213,6 @@ async function submit() {
 
   // If validation failed, scroll to error and return
   if (Object.keys(errors.value).length > 0) {
-    console.log('Validation errors:', errors.value)
     // Scroll to top to show error message
     window.scrollTo({ top: 0, behavior: 'smooth' })
     return
@@ -247,7 +243,6 @@ async function submit() {
       popular_order: form.is_popular ? form.popular_order : 0,
     }
 
-    console.log('Submitting:', {
       isEditing,
       listingId: props.listing?.id,
       payload,
@@ -257,17 +252,14 @@ async function submit() {
     if (isEditing) {
       // Update existing listing
       response = await api.put(`/listings/${props.listing.id}`, payload)
-      console.log('✓ Update response:', response.data)
     } else {
       // Create new listing
       response = await api.post('/listings', payload)
-      console.log('✓ Create response:', response.data)
     }
 
     // Emit success event
     emit('save', response.data.data || response.data || form, props.listing?.title)
   } catch (err: any) {
-    console.error('❌ Save error:', err)
     const errData = err.response?.data
 
     // Scroll to error

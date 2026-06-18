@@ -26,7 +26,6 @@ onMounted(async () => {
     const listing = listings.find(l => l.slug === slug)
 
     if (listing) {
-      console.log('[CMS] Found listing:', listing.title)
       currentListing.value = listing
 
       // Set gallery heading from CMS
@@ -50,17 +49,14 @@ onMounted(async () => {
         // Exclude current listing from carousel
         const filtered = popular.filter(p => p.id !== listing.id)
         popularListings.value = filtered.length > 0 ? filtered : popular
-        console.log('[CMS] Popular listings loaded:', popularListings.value.length)
 
         // Wait for Vue to render the carousel, then inject it before CTA
         await new Promise(resolve => setTimeout(resolve, 100))
         injectPopularCarouselBeforeCTA()
       } catch (error) {
-        console.warn('[CMS] Could not load popular listings:', error)
       }
     }
   } catch (error) {
-    console.error('[CMS] Error loading listing:', error)
   }
 })
 
@@ -109,7 +105,6 @@ function populatePage(listing: PublicListing) {
     updateGalleryHeading()
     updateGallery(listing)
   } catch (error) {
-    console.error('[CMS] Error populating page:', error)
   }
 }
 

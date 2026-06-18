@@ -136,7 +136,6 @@ const filteredCities = computed(() => {
 onMounted(async () => {
   await loadDropdownData()
   if (props.listing) {
-    console.log('Component mounted with listing, loading data:', props.listing.id)
     loadListingData()
   }
 })
@@ -144,7 +143,6 @@ onMounted(async () => {
 // Watch for listing prop changes - ensures gallery loads even if listing was in cache
 watch(() => props.listing?.id, (listingId) => {
   if (listingId) {
-    console.log('Listing ID changed or updated, reloading gallery:', listingId)
     loadListingData()
   }
 }, { immediate: false })
@@ -161,7 +159,6 @@ async function loadDropdownData() {
     countries.value = countriesRes.data.data?.data || countriesRes.data.data || []
     cities.value = citiesRes.data.data?.data || citiesRes.data.data || []
   } catch (err) {
-    console.error('Failed to load dropdown data:', err)
   }
 }
 
@@ -169,20 +166,16 @@ async function loadListingData() {
   const listing = props.listing
   if (!listing) return
 
-  console.log('loadListingData called for:', listing.id, 'mediaFiles:', listing.mediaFiles?.length || 0)
 
   // If listing doesn't have mediaFiles, fetch it from API
   if (!listing.mediaFiles || listing.mediaFiles.length === 0) {
-    console.log('No mediaFiles in cache, fetching from API...')
     try {
       const response = await api.get(`/listings/${listing.id}`)
       const fullListing = response.data
-      console.log('Fetched full listing from API, mediaFiles:', fullListing.mediaFiles?.length || 0)
 
       // Use the fully loaded listing instead
       return loadListingDataInternal(fullListing)
     } catch (error) {
-      console.error('Failed to fetch full listing:', error)
       // Continue with cached data
     }
   }
@@ -231,25 +224,18 @@ function loadListingDataInternal(listing: any) {
   }
 
   // Load existing gallery images from mediaFiles (new system)
-  console.log('Loading listing gallery - mediaFiles:', listing.mediaFiles)
   if (listing.mediaFiles && Array.isArray(listing.mediaFiles) && listing.mediaFiles.length > 0) {
-    console.log('✅ Found mediaFiles, count:', listing.mediaFiles.length)
-    console.log('Sample media:', listing.mediaFiles[0])
     galleryMediaFiles.value = listing.mediaFiles
     galleryImageIds.value = listing.mediaFiles.map((media: any) => media.id)
     uploadedImages.value = listing.mediaFiles.map((media: any) => {
-      console.log('Processing media:', {id: media.id, public_url: media.public_url})
       return {
         preview: media.public_url,
         path: media.file_path,
         id: media.id,
       }
     })
-    console.log('✅ Gallery loaded, uploadedImages count:', uploadedImages.value.length)
-    console.log('uploadedImages preview URLs:', uploadedImages.value.map((u: any) => u.preview))
   } else if (listing.images && Array.isArray(listing.images)) {
     // Fallback to legacy images for backwards compatibility
-    console.log('Using fallback images')
     uploadedImages.value = listing.images.map((img: any) => ({
       preview: img.path.startsWith('http')
         ? img.path
@@ -257,7 +243,6 @@ function loadListingDataInternal(listing: any) {
       path: img.path,
     }))
   } else {
-    console.log('No gallery data found')
   }
 
   if (listing.city_id) {
@@ -323,7 +308,6 @@ async function handleFiles(event: Event) {
     try {
       await uploadImage(file, uploadedImages.value.length - 1)
     } catch (error) {
-      console.error('Failed to upload image:', error)
       errors.value.gallery = 'Failed to upload one or more images'
     }
   }
@@ -334,26 +318,20 @@ async function uploadImage(file: File, index: number) {
   formData.append('file', file)
 
   try {
-    console.log(`📤 Uploading file: ${file.name}`)
     const response = await api.post('/upload', formData)
-    console.log('✅ Upload response:', response.data)
 
     uploadedImages.value[index].path = response.data.path
     uploadedImages.value[index].preview = response.data.public_url
 
     // If upload response includes media ID, add it to galleryImageIds
     if (response.data.id) {
-      console.log(`✅ Captured media ID: ${response.data.id}`)
       uploadedImages.value[index].id = response.data.id
       if (!galleryImageIds.value.includes(response.data.id)) {
-        console.log(`✅ Added to galleryImageIds, now have: ${galleryImageIds.value.length + 1} items`)
         galleryImageIds.value.push(response.data.id)
       }
     } else {
-      console.warn('⚠️ Upload response has no ID!', response.data)
     }
   } catch (error) {
-    console.error('❌ Image upload error:', error)
     throw error
   }
 }
@@ -365,7 +343,6 @@ async function handleThumbnailUpload(event: Event) {
     try {
       await uploadThumbnailImage(file)
     } catch (error) {
-      console.error('Failed to upload thumbnail:', error)
       errors.value.thumbnail_image = 'Failed to upload thumbnail image'
     }
   }
@@ -379,7 +356,6 @@ async function uploadThumbnailImage(file: File) {
     const response = await api.post('/upload', formData)
     form.thumbnail_image = response.data.path
   } catch (error) {
-    console.error('Thumbnail upload error:', error)
     throw error
   }
 }
@@ -499,7 +475,6 @@ async function submit() {
       gallery_image_ids: galleryImageIdsArray,
     }
 
-    console.log('📤 Saving listing with payload:', {
       title: payload.title,
       gallery_image_ids: galleryImageIdsArray,
       uploadedImages_count: uploadedImages.value.length,
@@ -515,7 +490,6 @@ async function submit() {
 
     emit('save', response.data.data || response.data || form, props.listing?.title)
   } catch (err: any) {
-    console.error('Save error:', err)
     const errData = err.response?.data
     window.scrollTo({ top: 0, behavior: 'smooth' })
 
@@ -755,7 +729,6 @@ async function submit() {
             :src="getGalleryImageUrl(image)"
             class="w-full aspect-4/3 rounded-lg object-cover border border-gray-200"
             alt="Preview"
-            @error="console.warn('Gallery image failed to load:', image, getGalleryImageUrl(image))"
           />
           <div v-if="!image.path && !image.id" class="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
             <i class="pi pi-spin pi-spinner text-white text-2xl"></i>

@@ -27,8 +27,36 @@ function getApiUrl(): string {
   return 'http://localhost:8000/api/v1/admin'
 }
 
+function getAuthUrl(): string {
+  if (import.meta.env.VITE_API_URL) {
+    const baseUrl = import.meta.env.VITE_API_URL
+    return baseUrl.replace('/admin', '/auth')
+  }
+
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location
+    const port = window.location.port ? `:${window.location.port}` : ''
+
+    if ((hostname === 'localhost' || hostname === '127.0.0.1') && (window.location.port === '5173' || window.location.port === '5174')) {
+      return `${protocol}//localhost:8000/api/v1/auth`
+    }
+
+    return `${protocol}//${hostname}${port}/api/v1/auth`
+  }
+
+  return 'http://localhost:8000/api/v1/auth'
+}
+
 export const api = axios.create({
   baseURL: getApiUrl(),
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  },
+})
+
+export const authApi = axios.create({
+  baseURL: getAuthUrl(),
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -84,6 +112,27 @@ api.interceptors.response.use(
         window.location.href = '/admin/login'
       }
     } else if (error.response?.data?.message) {
+      ui.pushToast(error.response.data.message, 'danger')
+    }
+
+    return Promise.reject(error)
+  },
+)
+
+authApi.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    const isSilentError = error.config?.headers?.['X-Silent-Error'] === '1'
+
+    if (isSilentError) {
+      return Promise.reject(error)
+    }
+
+    const ui = useUiStore()
+
+    if (error.response?.data?.message) {
       ui.pushToast(error.response.data.message, 'danger')
     }
 

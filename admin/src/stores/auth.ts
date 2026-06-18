@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { api } from '@/services/api'
+import { api, authApi } from '@/services/api'
 
 export type AuthUser = {
   id: number
@@ -55,7 +55,7 @@ export const useAuthStore = defineStore('auth', {
       this.isLoading = true
 
       try {
-        const { data } = await api.post('/auth/login', payload)
+        const { data } = await authApi.post('/login', payload)
         this.setSession(data.token, data.user)
       } catch {
         const allowPreviewAuth = import.meta.env.VITE_ENABLE_PREVIEW_AUTH !== '0'
@@ -82,9 +82,10 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         if (shouldCallApi) {
-          await api.post('/auth/logout', undefined, {
+          await authApi.post('/logout', undefined, {
             headers: {
               'X-Silent-Error': '1',
+              Authorization: `Bearer ${this.token}`,
             },
           })
         }

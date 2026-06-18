@@ -23,8 +23,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::before(function (User $user): ?bool {
-            // Allow super-admin and preview users (used in development)
-            if ($user->hasRole('super-admin')) {
+            // Allow super-admin, admin, and preview users for CMS access
+            if ($user->hasAnyRole(['super-admin', 'admin', 'staff'])) {
                 return true;
             }
 

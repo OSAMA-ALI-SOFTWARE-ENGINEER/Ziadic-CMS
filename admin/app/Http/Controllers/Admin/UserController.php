@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class UserController
 {
@@ -63,6 +65,126 @@ class UserController
         return response()->json([
             'message' => 'Role assigned successfully',
             'roles' => $user->getRoleNames()->toArray(),
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Force reload user from database to ensure exists flag is set properly
+        $user = User::find($user->id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'current_password' => 'nullable|string',
+            'new_password' => 'nullable|string|min:6',
+            'new_password_confirmation' => 'nullable|string',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,gif,webp|max:5120',
+        ]);
+
+        // Validate password confirmation if changing password
+        if (!empty($validated['new_password'])) {
+            if (empty($validated['current_password'])) {
+                return response()->json([
+                    'message' => 'Current password is required to change password',
+                ], 422);
+            }
+
+            if ($validated['new_password'] !== $validated['new_password_confirmation']) {
+                return response()->json([
+                    'message' => 'Passwords do not match',
+                ], 422);
+            }
+
+            if (!Hash::check($validated['current_password'], $user->password)) {
+                return response()->json([
+                    'message' => 'Current password is incorrect',
+                ], 422);
+            }
+        }
+
+        // Prepare update data
+        $updateData = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ];
+
+        // Add password to update if provided
+        if (!empty($validated['new_password'])) {
+            $updateData['password'] = Hash::make($validated['new_password']);
+        }
+
+        // Handle profile picture upload
+        $updatedFields = ['name', 'email'];
+
+        if ($request->hasFile('profile_picture')) {
+            try {
+                // Delete old profile picture if exists
+                if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+                    Storage::disk('public')->delete($user->profile_picture);
+                }
+
+                $path = $request->file('profile_picture')->store('profiles', 'public');
+                $updateData['profile_picture'] = $path;
+                $updatedFields[] = 'profile_picture';
+            } catch (\Exception $e) {
+                \Log::error('Failed to store profile picture', ['error' => $e->getMessage()]);
+                return response()->json(['message' => 'Failed to upload profile picture'], 500);
+            }
+        }
+
+        // Update the user - use save() instead of update() to ensure proper handling
+        \Log::info('Before update - updateData:', $updateData);
+        \Log::info('User model ID:', ['id' => $user->id, 'exists' => $user->exists]);
+
+        try {
+            // Apply the update data to the model
+            foreach ($updateData as $key => $value) {
+                $user->$key = $value;
+            }
+            $user->save();
+            \Log::info('Save successful for user ' . $user->id);
+        } catch (\Exception $e) {
+            \Log::error('Save failed:', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to update profile: ' . $e->getMessage()], 500);
+        }
+
+        // Refresh to get the latest data from database
+        $user->refresh();
+        \Log::info('After refresh - user data from database:', [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $user->profile_picture,
+            'updated_at' => $user->updated_at
+        ]);
+
+        if (!empty($validated['new_password'])) {
+            $updatedFields[] = 'password';
+        }
+
+        ActivityLogger::log('user.profile_updated', $user, [
+            'updated_fields' => $updatedFields,
+        ], $request);
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'profile_picture' => $user->profile_picture ? asset('storage/' . $user->profile_picture) : null,
+                'role' => $user->getRoleNames()->first(),
+            ],
         ]);
     }
 }

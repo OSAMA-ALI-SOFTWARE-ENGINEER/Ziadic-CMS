@@ -113,6 +113,9 @@ const listingDetails: Record<string, ListingStaticData> = {
     hours: '06:00 AM - 10:00 PM',
     summary:
       'A polished cultural destination with contemporary exhibits, curated collections, and an inviting visitor experience for art lovers.',
+    phone: '+90 (212) 555-0142',
+    email: 'info@bursamuseum.com',
+    websiteUrl: 'www.bursamuseum.com',
   },
   'the-gourmet-haven-restaurant': {
     slug: 'the-gourmet-haven-restaurant',
@@ -126,6 +129,9 @@ const listingDetails: Record<string, ListingStaticData> = {
     summary:
       'A city directory and listing platform serves as a comprehensive guide, unlocking the potential of urban exploration and local business engagement. Seamlessly merging technology with the heartbeat of the modern city, these platforms empower users to navigate through a plethora of businesses, events, and services tailored to their interests.',
     contactAddress: '234 Culinary Street, Foodie Haven',
+    phone: '+90 (216) 555-0156',
+    email: 'reservations@gourmet-haven.com',
+    websiteUrl: 'www.gourmet-haven.com',
     detailsTitle: 'Restaurant Details',
     detailsParagraphs: [
       'City directory and listing platform serves as a comprehensive guide, unlocking the potential of our urban exploration and local business engagement. Our seamlessly merging new technology with the heartbeat of the city, these platforms empower all the users to navigate through a plethora of businesses, events, and services tailored to their interests. From discovering hidden gems.',
@@ -150,6 +156,9 @@ const listingDetails: Record<string, ListingStaticData> = {
     hours: '10:00 AM - 08:00 PM',
     summary:
       'A wellness-focused destination with calming treatments, restorative spaces, and friendly support for every guest.',
+    phone: '+90 (212) 555-0189',
+    email: 'bookings@tranquil-spa.com',
+    websiteUrl: 'www.tranquil-spa.com',
   },
   'natures-bounty-farmers-market': {
     slug: 'natures-bounty-farmers-market',
@@ -160,6 +169,9 @@ const listingDetails: Record<string, ListingStaticData> = {
     location: '112 Fresh Market Avenue, Greenfield, Venice, Italy',
     days: 'Monday - Saturday',
     hours: '06:00 AM - 10:00 PM',
+    phone: '+39 (41) 555-0123',
+    email: 'info@bounty-market.com',
+    websiteUrl: 'www.bounty-market.com',
     summary:
       'A lively market experience with fresh produce, local makers, and everyday essentials arranged for easy browsing.',
   },
@@ -681,9 +693,9 @@ function mapCmsListing(listing: PublicListing): ListingStaticData {
     detailsParagraphs,
     facilities: listing.facilities?.length ? listing.facilities : ['Helpful Staff', 'Easy Access', 'Visitor Friendly'],
     gallery: gallery.length ? gallery : [image],
-    phone: listing.phone || undefined,
-    email: listing.email || undefined,
-    websiteUrl: listing.website_url || undefined,
+    phone: listing.phone || listing.contact_phone || undefined,
+    email: listing.email || listing.contact_email || undefined,
+    websiteUrl: listing.website_url || listing.contact_website || undefined,
     seoTitle: listing.seo?.title || undefined,
     seoDescription: listing.seo?.description || undefined,
   }
@@ -905,6 +917,100 @@ function initializeDynamicFilters() {
   })
 }
 
+function initializeHomeSearchForm() {
+  const root = legacyRoot.value
+  if (!root) return
+
+  // Find the search form
+  const searchForm = root.querySelector<HTMLFormElement>('[data-search="form"]')
+  if (!searchForm) return
+
+  // Prevent default form submission
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault()
+    handleSearchSubmit()
+  })
+
+  // Also prevent button click navigation
+  const searchButton = root.querySelector<HTMLAnchorElement>('[data-search="button"]')
+  if (searchButton) {
+    searchButton.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      handleSearchSubmit()
+    }, true)
+  }
+
+  function handleSearchSubmit() {
+    const filters: FilterState = {
+      country: '',
+      city: '',
+      category: '',
+    }
+
+    // Get selected values from checkboxes
+    const checkboxes = searchForm.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')
+    console.log('🔍 Selected checkboxes:', checkboxes.length)
+
+    checkboxes.forEach((checkbox) => {
+      const label = checkbox.closest('label')
+      if (!label) return
+
+      const span = label.querySelector<HTMLElement>('[data-select-field]')
+      if (!span) return
+
+      const value = span.getAttribute('data-select-value')
+      const field = span.getAttribute('data-select-field')
+
+      console.log(`Found: ${field} = ${value}`)
+
+      if (value && field) {
+        // Map displayed names to actual slugs/codes
+        if (field === 'category') {
+          const category = publicCatalog.categories.find((c) => c.name.toLowerCase() === value.toLowerCase())
+          if (category) {
+            filters.category = category.slug
+            console.log(`✅ Mapped category ${value} -> ${category.slug}`)
+          }
+        } else if (field === 'country') {
+          const country = publicCatalog.countries.find((c) => c.name.toLowerCase() === value.toLowerCase())
+          if (country) {
+            filters.country = country.iso2
+            console.log(`✅ Mapped country ${value} -> ${country.iso2}`)
+          }
+        } else if (field === 'city') {
+          const cityName = value.split(',')[0] || value
+          const city = publicCatalog.cities.find((c) => c.name.toLowerCase() === cityName.toLowerCase())
+          if (city) {
+            filters.city = city.slug
+            console.log(`✅ Mapped city ${value} -> ${city.slug}`)
+          }
+        }
+      }
+    })
+
+    console.log('Final filters:', filters)
+
+    // Get search text if any
+    const searchInput = searchForm.querySelector<HTMLInputElement>('[data-search="name"]')
+    const searchText = searchInput?.value?.trim() || ''
+
+    console.log('Search text:', searchText)
+
+    // Navigate with filters
+    if (filters.country || filters.city || filters.category) {
+      console.log('Navigating with filters:', filterUrl(filters))
+      router.push(filterUrl(filters))
+    } else if (searchText) {
+      console.log('Navigating with search:', searchText)
+      router.push({ path: '/listings', query: { q: searchText } })
+    } else {
+      console.log('No filters, going to listings home')
+      router.push('/listings')
+    }
+  }
+}
+
 function listingSamplesFor(category?: string) {
   const listings = Object.values(listingsData())
   if (!category || category.toLowerCase() === 'all') return listings
@@ -934,6 +1040,10 @@ function hydrateListingDetail(root: HTMLElement) {
   if (!slug) return
 
   const listing = listingBySlug(slug) ?? fallbackListing(slug)
+
+  // Expose listing data to window for access by other components
+  ;(window as any).__listingData = listing
+
   setElementText(root.querySelector('.page-banner-title.w-dyn-bind-empty'), listing.title)
   setElementText(root.querySelector('.page-link-text.w-dyn-bind-empty'), listing.title)
   setElementText(root.querySelector('.section-title.listing'), listing.title)
@@ -968,9 +1078,44 @@ function hydrateListingDetail(root: HTMLElement) {
     richText.classList.remove('w-dyn-bind-empty')
   }
 
-  root.querySelectorAll('.contact-information-text.w-dyn-bind-empty').forEach((element) => {
-    setElementText(element, listing.contactAddress ?? listing.location)
-  })
+  // Populate contact information with dynamic data
+  const contactLists = Array.from(root.querySelectorAll('.contact-information-list'))
+
+  if (contactLists.length >= 4) {
+    // Phone
+    const finalPhone = listing.phone
+    if (finalPhone) {
+      const phoneText = contactLists[0].querySelector('.contact-information-text')
+      if (phoneText) {
+        setElementText(phoneText, finalPhone)
+      }
+    }
+
+    // Email
+    const finalEmail = listing.email
+    if (finalEmail) {
+      const emailText = contactLists[1].querySelector('.contact-information-text')
+      if (emailText) {
+        setElementText(emailText, finalEmail)
+      }
+    }
+
+    // Website
+    const finalWebsite = listing.websiteUrl
+    if (finalWebsite) {
+      const websiteText = contactLists[2].querySelector('.contact-information-text')
+      if (websiteText) {
+        setElementText(websiteText, finalWebsite)
+      }
+    }
+
+    // Address
+    const finalAddress = listing.contactAddress ?? listing.location
+    const addressText = contactLists[3].querySelector('.contact-information-text')
+    if (addressText && finalAddress) {
+      setElementText(addressText, finalAddress)
+    }
+  }
 }
 
 function hydrateListingsIndex(root: HTMLElement) {
@@ -2493,6 +2638,12 @@ onMounted(async () => {
       initializeDynamicFilters()
     } catch (err) {
       console.error('❌ Error initializing filters:', err)
+    }
+
+    try {
+      initializeHomeSearchForm()
+    } catch (err) {
+      console.error('❌ Error initializing search form:', err)
     }
 
     try {

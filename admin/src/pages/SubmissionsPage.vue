@@ -14,6 +14,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -472,7 +473,11 @@ onMounted(async () => {
 
     <!-- Data Table -->
     <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+      <div v-if="loading && filteredSubmissions.length === 0" class="p-6">
+        <SkeletonCard type="table-row" :count="5" />
+      </div>
       <DataTable
+        v-else
         :value="filteredSubmissions"
         v-model:selection="selectedSubmissions"
         :loading="loading"

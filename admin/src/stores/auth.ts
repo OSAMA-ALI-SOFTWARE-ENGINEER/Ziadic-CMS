@@ -6,6 +6,7 @@ export type AuthUser = {
   name: string
   email: string
   role: string
+  profile_picture?: string | null
 }
 
 type LoginPayload = {

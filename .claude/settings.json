@@ -26,7 +26,9 @@
       "Bash(Select-Object -First 50)",
       "Bash(php -l app/Http/Controllers/Admin/SubmittedListingController.php)",
       "Bash(php -l routes/api.php)",
-      "Bash(php -l src/pages/SubmissionsPage.vue)"
+      "Bash(php -l src/pages/SubmissionsPage.vue)",
+      "Bash(start \"http://localhost:5179/blogs\")",
+      "Bash(start \"http://localhost:5179/admin/blog-articles\")"
     ]
   }
 }

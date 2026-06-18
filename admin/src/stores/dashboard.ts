@@ -182,16 +182,24 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   /**
    * Fetch all dashboard data from APIs
+   * Enforces minimum 2-second loading time for better UX
    */
   async function fetchMetrics() {
     try {
       isLoading.value = true
+      const startTime = Date.now()
 
       // Fetch real data
       const [listings, articles] = await Promise.all([
         fetchListings(),
         fetchArticles(),
       ])
+
+      // Ensure minimum 2-second loading time
+      const elapsedTime = Date.now() - startTime
+      if (elapsedTime < 2000) {
+        await new Promise(resolve => setTimeout(resolve, 2000 - elapsedTime))
+      }
 
       const currentStats = {
         publishedListings: listings.filter((l: any) => l.status === 'published').length,

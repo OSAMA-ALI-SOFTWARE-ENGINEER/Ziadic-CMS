@@ -16,7 +16,7 @@ class CustomMediaController extends Controller
         $query = CustomMedia::query()->active();
 
         // Search
-        if ($request->has('search')) {
+        if ($request->has('search') && $request->input('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('file_name', 'like', "%{$search}%")
@@ -26,7 +26,7 @@ class CustomMediaController extends Controller
         }
 
         // Filter by type
-        if ($request->has('file_type')) {
+        if ($request->has('file_type') && $request->input('file_type')) {
             $query->where('file_type', $request->input('file_type'));
         }
 

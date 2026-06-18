@@ -1,21 +1,18 @@
 ﻿<script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { onMounted, ref, watch } from "vue"
 import Button from "primevue/button"
 import InputText from "primevue/inputtext"
 import InputNumber from "primevue/inputnumber"
-import DataTable from "primevue/datatable"
-import Column from "primevue/column"
-import Dialog from "primevue/dialog"
+import TextArea from "primevue/textarea"
 import Toast from "primevue/toast"
 import ConfirmDialog from "primevue/confirmdialog"
 import ColorPicker from "primevue/colorpicker"
 import Select from "primevue/select"
 import Accordion from "primevue/accordion"
-import AccordionTab from "primevue/accordiontab"
-import TabView from "primevue/tabview"
-import TabPanel from "primevue/tabpanel"
+import AccordionPanel from "primevue/accordionpanel"
 import { useToast } from "primevue/usetoast"
 import { useConfirm } from "primevue/useconfirm"
+import SkeletonCard from "@/components/SkeletonCard.vue"
 import { api } from "@/services/api"
 
 const toast = useToast()
@@ -23,7 +20,7 @@ const confirm = useConfirm()
 
 // General Settings
 const appSettings = ref({ app_name: "Kukaqka", app_email: "hello@kukaqka.com" })
-const appLoading = ref(false)
+const appLoading = ref(true)
 
 // Branding Settings
 const brandingSettings = ref({
@@ -34,7 +31,7 @@ const brandingSettings = ref({
   appleTouchIcon: "",
   loginPageLogo: "",
 })
-const brandingLoading = ref(false)
+const brandingLoading = ref(true)
 
 // Theme Settings
 const themeSettings = ref({
@@ -60,7 +57,7 @@ const themeSettings = ref({
   isFixedSidebar: true,
   themeMode: "light",
 })
-const themeLoading = ref(false)
+const themeLoading = ref(true)
 const themeModeOptions = [
   { label: "Light", value: "light" },
   { label: "Dark", value: "dark" },
@@ -85,42 +82,87 @@ const seoSettings = ref({
   googleVerificationCode: "",
   bingVerificationCode: "",
 })
-const seoLoading = ref(false)
+const seoLoading = ref(true)
 
 // Payments Settings
 const paymentSettings = ref({ status: "coming-soon" })
-const paymentLoading = ref(false)
+const paymentLoading = ref(true)
 const paymentStatusOptions = [
   { label: "Coming Soon", value: "coming-soon" },
   { label: "Active", value: "active" },
 ]
 
-// Cities, Countries, Categories
-const cities = ref<any[]>([])
-const citiesLoading = ref(false)
-const showCityDialog = ref(false)
-const newCity = ref({ name: "", country_id: null })
-const editingCity = ref<any>(null)
+// Debounce timer
+let appSettingsDebounce: any = null
+let brandingSettingsDebounce: any = null
+let themeSettingsDebounce: any = null
+let seoSettingsDebounce: any = null
+let paymentSettingsDebounce: any = null
 
-const countries = ref<any[]>([])
-const countriesLoading = ref(false)
-const showCountryDialog = ref(false)
-const newCountry = ref({ name: "", iso2: "", iso3: "" })
-const editingCountry = ref<any>(null)
+// Auto-save watchers with debouncing
+watch(
+  () => appSettings.value,
+  () => {
+    if (appSettingsDebounce) clearTimeout(appSettingsDebounce)
+    appSettingsDebounce = setTimeout(() => {
+      saveAppSettings()
+    }, 1500)
+  },
+  { deep: true }
+)
 
-const categories = ref<any[]>([])
-const categoriesLoading = ref(false)
-const showCategoryDialog = ref(false)
-const newCategory = ref({ name: "", description: "" })
-const editingCategory = ref<any>(null)
+watch(
+  () => brandingSettings.value,
+  () => {
+    if (brandingSettingsDebounce) clearTimeout(brandingSettingsDebounce)
+    brandingSettingsDebounce = setTimeout(() => {
+      saveBrandingSettings()
+    }, 1500)
+  },
+  { deep: true }
+)
+
+watch(
+  () => themeSettings.value,
+  () => {
+    if (themeSettingsDebounce) clearTimeout(themeSettingsDebounce)
+    themeSettingsDebounce = setTimeout(() => {
+      saveThemeSettings()
+    }, 1500)
+  },
+  { deep: true }
+)
+
+watch(
+  () => seoSettings.value,
+  () => {
+    if (seoSettingsDebounce) clearTimeout(seoSettingsDebounce)
+    seoSettingsDebounce = setTimeout(() => {
+      saveSeoSettings()
+    }, 1500)
+  },
+  { deep: true }
+)
+
+watch(
+  () => paymentSettings.value,
+  () => {
+    if (paymentSettingsDebounce) clearTimeout(paymentSettingsDebounce)
+    paymentSettingsDebounce = setTimeout(() => {
+      savePaymentSettings()
+    }, 1500)
+  },
+  { deep: true }
+)
 
 // Load all settings
 async function loadAllSettings() {
-  await Promise.all([
-    loadCities(),
-    loadCountries(),
-    loadCategories(),
-  ])
+  // Settings only - location management moved to separate page
+  appLoading.value = false
+  brandingLoading.value = false
+  themeLoading.value = false
+  seoLoading.value = false
+  paymentLoading.value = false
 }
 
 async function saveAppSettings() {
@@ -130,7 +172,7 @@ async function saveAppSettings() {
       { group: "app", key: "name", value: appSettings.value.app_name },
       { group: "app", key: "email", value: appSettings.value.app_email },
     ]
-    await api.post("/admin/settings", { settings })
+    await api.post("/settings", { settings })
     toast.add({ severity: "success", summary: "Success", detail: "Settings saved" })
   } catch (error: any) {
     console.error("Failed to save app settings:", error)
@@ -143,7 +185,7 @@ async function saveAppSettings() {
 async function saveBrandingSettings() {
   try {
     brandingLoading.value = true
-    await api.post("/admin/settings/branding", brandingSettings.value)
+    await api.post("/settings/branding", brandingSettings.value)
     toast.add({ severity: "success", summary: "Success", detail: "Branding settings saved" })
   } catch (error: any) {
     console.error("Failed to save branding settings:", error)
@@ -156,7 +198,7 @@ async function saveBrandingSettings() {
 async function saveThemeSettings() {
   try {
     themeLoading.value = true
-    await api.post("/admin/settings/theme", themeSettings.value)
+    await api.post("/settings/theme", themeSettings.value)
     toast.add({ severity: "success", summary: "Success", detail: "Theme settings saved" })
   } catch (error: any) {
     console.error("Failed to save theme settings:", error)
@@ -169,7 +211,7 @@ async function saveThemeSettings() {
 async function saveSeoSettings() {
   try {
     seoLoading.value = true
-    await api.post("/admin/settings/seo", seoSettings.value)
+    await api.post("/settings/seo", seoSettings.value)
     toast.add({ severity: "success", summary: "Success", detail: "SEO settings saved" })
   } catch (error: any) {
     console.error("Failed to save SEO settings:", error)
@@ -182,7 +224,7 @@ async function saveSeoSettings() {
 async function savePaymentSettings() {
   try {
     paymentLoading.value = true
-    await api.post("/admin/settings/payments", paymentSettings.value)
+    await api.post("/settings/payments", paymentSettings.value)
     toast.add({ severity: "success", summary: "Success", detail: "Payment settings saved" })
   } catch (error: any) {
     console.error("Failed to save payment settings:", error)
@@ -192,185 +234,6 @@ async function savePaymentSettings() {
   }
 }
 
-async function loadCities() {
-  try {
-    citiesLoading.value = true
-    const response = await api.get("/public/cities")
-    cities.value = Array.isArray(response.data) ? response.data : response.data?.data || []
-  } catch (error: any) {
-    console.warn("Failed to load cities:", error.message)
-  } finally {
-    citiesLoading.value = false
-  }
-}
-
-async function loadCountries() {
-  try {
-    countriesLoading.value = true
-    const response = await api.get("/public/countries")
-    countries.value = Array.isArray(response.data) ? response.data : response.data?.data || []
-  } catch (error: any) {
-    console.warn("Failed to load countries:", error.message)
-  } finally {
-    countriesLoading.value = false
-  }
-}
-
-async function loadCategories() {
-  try {
-    categoriesLoading.value = true
-    const response = await api.get("/public/categories")
-    categories.value = Array.isArray(response.data) ? response.data : response.data?.data || []
-  } catch (error: any) {
-    console.warn("Failed to load categories:", error.message)
-  } finally {
-    categoriesLoading.value = false
-  }
-}
-
-async function addCity() {
-  if (!newCity.value.name.trim()) {
-    toast.add({ severity: "warn", summary: "Warning", detail: "Enter city name" })
-    return
-  }
-
-  try {
-    if (editingCity.value) {
-      await api.put(`/admin/cities/${editingCity.value.id}`, newCity.value)
-      toast.add({ severity: "success", summary: "Success", detail: "City updated" })
-    } else {
-      await api.post("/admin/cities", newCity.value)
-      toast.add({ severity: "success", summary: "Success", detail: "City added" })
-    }
-    showCityDialog.value = false
-    newCity.value = { name: "", country_id: null }
-    editingCity.value = null
-    await loadCities()
-  } catch (error: any) {
-    console.error("Failed to save city:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save city" })
-  }
-}
-
-function editCity(city: any) {
-  editingCity.value = city
-  newCity.value = { name: city.name, country_id: city.country_id || null }
-  showCityDialog.value = true
-}
-
-function deleteCity(city: any) {
-  confirm.require({
-    message: `Delete "${city.name}"?`,
-    header: "Delete City",
-    icon: "pi pi-trash",
-    accept: async () => {
-      try {
-        await api.delete(`/admin/cities/${city.id}`)
-        toast.add({ severity: "success", summary: "Success", detail: "City deleted" })
-        await loadCities()
-      } catch (error: any) {
-        console.error("Failed to delete city:", error)
-        toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to delete city" })
-      }
-    },
-  })
-}
-
-async function addCountry() {
-  if (!newCountry.value.name.trim()) {
-    toast.add({ severity: "warn", summary: "Warning", detail: "Enter country name" })
-    return
-  }
-
-  try {
-    if (editingCountry.value) {
-      await api.put(`/admin/countries/${editingCountry.value.id}`, newCountry.value)
-      toast.add({ severity: "success", summary: "Success", detail: "Country updated" })
-    } else {
-      await api.post("/admin/countries", newCountry.value)
-      toast.add({ severity: "success", summary: "Success", detail: "Country added" })
-    }
-    showCountryDialog.value = false
-    newCountry.value = { name: "", iso2: "", iso3: "" }
-    editingCountry.value = null
-    await loadCountries()
-  } catch (error: any) {
-    console.error("Failed to save country:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save country" })
-  }
-}
-
-function editCountry(country: any) {
-  editingCountry.value = country
-  newCountry.value = { name: country.name, iso2: country.iso2 || "", iso3: country.iso3 || "" }
-  showCountryDialog.value = true
-}
-
-function deleteCountry(country: any) {
-  confirm.require({
-    message: `Delete "${country.name}"?`,
-    header: "Delete Country",
-    icon: "pi pi-trash",
-    accept: async () => {
-      try {
-        await api.delete(`/admin/countries/${country.id}`)
-        toast.add({ severity: "success", summary: "Success", detail: "Country deleted" })
-        await loadCountries()
-      } catch (error: any) {
-        console.error("Failed to delete country:", error)
-        toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to delete country" })
-      }
-    },
-  })
-}
-
-async function addCategory() {
-  if (!newCategory.value.name.trim()) {
-    toast.add({ severity: "warn", summary: "Warning", detail: "Enter category name" })
-    return
-  }
-
-  try {
-    if (editingCategory.value) {
-      await api.put(`/admin/categories/${editingCategory.value.id}`, newCategory.value)
-      toast.add({ severity: "success", summary: "Success", detail: "Category updated" })
-    } else {
-      await api.post("/admin/categories", newCategory.value)
-      toast.add({ severity: "success", summary: "Success", detail: "Category added" })
-    }
-    showCategoryDialog.value = false
-    newCategory.value = { name: "", description: "" }
-    editingCategory.value = null
-    await loadCategories()
-  } catch (error: any) {
-    console.error("Failed to save category:", error)
-    toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to save category" })
-  }
-}
-
-function editCategory(category: any) {
-  editingCategory.value = category
-  newCategory.value = { name: category.name, description: category.description || "" }
-  showCategoryDialog.value = true
-}
-
-function deleteCategory(category: any) {
-  confirm.require({
-    message: `Delete "${category.name}"?`,
-    header: "Delete Category",
-    icon: "pi pi-trash",
-    accept: async () => {
-      try {
-        await api.delete(`/admin/categories/${category.id}`)
-        toast.add({ severity: "success", summary: "Success", detail: "Category deleted" })
-        await loadCategories()
-      } catch (error: any) {
-        console.error("Failed to delete category:", error)
-        toast.add({ severity: "error", summary: "Error", detail: error.response?.data?.message || "Failed to delete category" })
-      }
-    },
-  })
-}
 
 onMounted(async () => {
   await loadAllSettings()
@@ -381,15 +244,24 @@ onMounted(async () => {
   <div class="settings-page">
     <Toast />
     <ConfirmDialog />
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-      <p class="text-gray-500">Manage application configuration and content</p>
+    <div class="settings-header">
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">Settings</h1>
+      <p class="text-gray-600">Manage application configuration and content</p>
     </div>
 
-    <Accordion class="bg-white rounded-lg border border-gray-200">
+    <Accordion class="settings-accordion">
       <!-- General Settings -->
-      <AccordionTab header="⚙️ General Settings">
-        <div class="p-6 max-w-2xl">
+      <AccordionPanel>
+        <template #header>
+          <span class="flex items-center gap-3">
+            <span class="text-xl">⚙️</span>
+            <span class="font-semibold text-gray-900">General Settings</span>
+          </span>
+        </template>
+        <div v-if="appLoading" class="p-6">
+          <SkeletonCard type="table-row" :count="3" />
+        </div>
+        <div v-else class="p-6 max-w-2xl">
           <div class="space-y-6">
             <div>
               <label class="block font-semibold mb-2 text-gray-700">App Name</label>
@@ -404,11 +276,20 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-      </AccordionTab>
+      </AccordionPanel>
 
       <!-- Branding Settings -->
-      <AccordionTab header="🎨 Branding Settings">
-        <div class="p-6 max-w-2xl">
+      <AccordionPanel>
+        <template #header>
+          <span class="flex items-center gap-3">
+            <span class="text-xl">🎨</span>
+            <span class="font-semibold text-gray-900">Branding Settings</span>
+          </span>
+        </template>
+        <div v-if="brandingLoading" class="p-6">
+          <SkeletonCard type="table-row" :count="3" />
+        </div>
+        <div v-else class="p-6 max-w-2xl">
           <div class="space-y-4">
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Main Logo URL</label>
@@ -431,27 +312,36 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-      </AccordionTab>
+      </AccordionPanel>
 
       <!-- Theme Settings -->
-      <AccordionTab header="🎭 Theme Settings">
-        <div class="p-6 max-w-3xl">
+      <AccordionPanel>
+        <template #header>
+          <span class="flex items-center gap-3">
+            <span class="text-xl">🎭</span>
+            <span class="font-semibold text-gray-900">Theme Settings</span>
+          </span>
+        </template>
+        <div v-if="themeLoading" class="p-6">
+          <SkeletonCard type="table-row" :count="3" />
+        </div>
+        <div v-else class="p-6 max-w-3xl">
           <div class="grid grid-cols-2 gap-6">
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Primary Color</label>
-              <ColorPicker v-model="themeSettings.primaryColor" inline="false" class="w-full" />
+              <ColorPicker v-model="themeSettings.primaryColor" :inline="false" class="w-full" />
             </div>
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Secondary Color</label>
-              <ColorPicker v-model="themeSettings.secondaryColor" inline="false" class="w-full" />
+              <ColorPicker v-model="themeSettings.secondaryColor" :inline="false" class="w-full" />
             </div>
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Success Color</label>
-              <ColorPicker v-model="themeSettings.successColor" inline="false" class="w-full" />
+              <ColorPicker v-model="themeSettings.successColor" :inline="false" class="w-full" />
             </div>
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Error Color</label>
-              <ColorPicker v-model="themeSettings.errorColor" inline="false" class="w-full" />
+              <ColorPicker v-model="themeSettings.errorColor" :inline="false" class="w-full" />
             </div>
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Theme Mode</label>
@@ -466,11 +356,20 @@ onMounted(async () => {
             <Button label="Save Theme" icon="pi pi-save" class="p-button-success" @click="saveThemeSettings" :loading="themeLoading" />
           </div>
         </div>
-      </AccordionTab>
+      </AccordionPanel>
 
       <!-- SEO Settings -->
-      <AccordionTab header="🔍 SEO Settings">
-        <div class="p-6 max-w-2xl">
+      <AccordionPanel>
+        <template #header>
+          <span class="flex items-center gap-3">
+            <span class="text-xl">🔍</span>
+            <span class="font-semibold text-gray-900">SEO Settings</span>
+          </span>
+        </template>
+        <div v-if="seoLoading" class="p-6">
+          <SkeletonCard type="table-row" :count="3" />
+        </div>
+        <div v-else class="p-6 max-w-2xl">
           <div class="space-y-4">
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Meta Title</label>
@@ -493,11 +392,20 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-      </AccordionTab>
+      </AccordionPanel>
 
       <!-- Payments Settings -->
-      <AccordionTab header="💳 Payment Settings">
-        <div class="p-6 max-w-2xl">
+      <AccordionPanel>
+        <template #header>
+          <span class="flex items-center gap-3">
+            <span class="text-xl">💳</span>
+            <span class="font-semibold text-gray-900">Payment Settings</span>
+          </span>
+        </template>
+        <div v-if="paymentLoading" class="p-6">
+          <SkeletonCard type="table-row" :count="2" />
+        </div>
+        <div v-else class="p-6 max-w-2xl">
           <div class="space-y-4">
             <div>
               <label class="block font-semibold mb-2 text-gray-700">Payment Status</label>
@@ -508,153 +416,166 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-      </AccordionTab>
-
-      <!-- Location Management (with nested tabs) -->
-      <AccordionTab header="🌍 Location Management">
-        <div class="p-6">
-          <TabView class="nested-tabs">
-            <TabPanel header="Cities">
-              <div class="p-6">
-                <div class="mb-6">
-                  <Button label="+ Add City" icon="pi pi-plus" class="p-button-success" @click="() => { editingCity = null; newCity = { name: '', country_id: null }; showCityDialog = true }" />
-                </div>
-                <DataTable :value="cities" :loading="citiesLoading" striped-rows hover :rows="15" paginator>
-                  <Column field="name" header="City Name" sortable />
-                  <Column field="country.name" header="Country" />
-                  <Column field="places_count" header="Listings" />
-                  <Column header="Actions" style="width: 150px">
-                    <template #body="{ data }">
-                      <div class="flex gap-2">
-                        <Button icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-info p-button-sm" @click="editCity(data)" v-tooltip="'Edit'" />
-                        <Button icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger p-button-sm" @click="deleteCity(data)" v-tooltip="'Delete'" />
-                      </div>
-                    </template>
-                  </Column>
-                </DataTable>
-              </div>
-            </TabPanel>
-
-            <TabPanel header="Countries">
-              <div class="p-6">
-                <div class="mb-6">
-                  <Button label="+ Add Country" icon="pi pi-plus" class="p-button-success" @click="() => { editingCountry = null; newCountry = { name: '', iso2: '', iso3: '' }; showCountryDialog = true }" />
-                </div>
-                <DataTable :value="countries" :loading="countriesLoading" striped-rows hover :rows="15" paginator>
-                  <Column field="name" header="Country Name" sortable />
-                  <Column field="iso2" header="ISO2" />
-                  <Column field="iso3" header="ISO3" />
-                  <Column field="places_count" header="Listings" />
-                  <Column header="Actions" style="width: 150px">
-                    <template #body="{ data }">
-                      <div class="flex gap-2">
-                        <Button icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-info p-button-sm" @click="editCountry(data)" v-tooltip="'Edit'" />
-                        <Button icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger p-button-sm" @click="deleteCountry(data)" v-tooltip="'Delete'" />
-                      </div>
-                    </template>
-                  </Column>
-                </DataTable>
-              </div>
-            </TabPanel>
-          </TabView>
-        </div>
-      </AccordionTab>
-
-      <!-- Categories -->
-      <AccordionTab header="🏷️ Categories">
-        <div class="p-6">
-          <div class="mb-6">
-            <Button label="+ Add Category" icon="pi pi-plus" class="p-button-success" @click="() => { editingCategory = null; newCategory = { name: '', description: '' }; showCategoryDialog = true }" />
-          </div>
-          <DataTable :value="categories" :loading="categoriesLoading" striped-rows hover :rows="15" paginator>
-            <Column field="name" header="Category Name" sortable />
-            <Column field="description" header="Description" />
-            <Column field="places_count" header="Listings" />
-            <Column header="Actions" style="width: 150px">
-              <template #body="{ data }">
-                <div class="flex gap-2">
-                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-info p-button-sm" @click="editCategory(data)" v-tooltip="'Edit'" />
-                  <Button icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger p-button-sm" @click="deleteCategory(data)" v-tooltip="'Delete'" />
-                </div>
-              </template>
-            </Column>
-          </DataTable>
-        </div>
-      </AccordionTab>
+      </AccordionPanel>
     </Accordion>
-
-    <!-- City Dialog -->
-    <Dialog v-model:visible="showCityDialog" :header="editingCity ? 'Edit City' : 'Add City'" modal :style="{ width: '400px' }">
-      <div class="space-y-4">
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">City Name</label>
-          <InputText v-model="newCity.name" class="w-full" placeholder="e.g., New York" />
-        </div>
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">Country</label>
-          <select v-model="newCity.country_id" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
-            <option :value="null">Select Country</option>
-            <option v-for="country in countries" :key="country.id" :value="country.id">{{ country.name }}</option>
-          </select>
-        </div>
-        <div class="flex gap-2 justify-end">
-          <Button label="Cancel" class="p-button-text" @click="showCityDialog = false" />
-          <Button label="Save" class="p-button-success" @click="addCity" />
-        </div>
-      </div>
-    </Dialog>
-
-    <!-- Country Dialog -->
-    <Dialog v-model:visible="showCountryDialog" :header="editingCountry ? 'Edit Country' : 'Add Country'" modal :style="{ width: '400px' }">
-      <div class="space-y-4">
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">Country Name</label>
-          <InputText v-model="newCountry.name" class="w-full" placeholder="e.g., United States" />
-        </div>
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">ISO2 Code</label>
-          <InputText v-model="newCountry.iso2" class="w-full" placeholder="e.g., US" maxlength="2" />
-        </div>
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">ISO3 Code</label>
-          <InputText v-model="newCountry.iso3" class="w-full" placeholder="e.g., USA" maxlength="3" />
-        </div>
-        <div class="flex gap-2 justify-end">
-          <Button label="Cancel" class="p-button-text" @click="showCountryDialog = false" />
-          <Button label="Save" class="p-button-success" @click="addCountry" />
-        </div>
-      </div>
-    </Dialog>
-
-    <!-- Category Dialog -->
-    <Dialog v-model:visible="showCategoryDialog" :header="editingCategory ? 'Edit Category' : 'Add Category'" modal :style="{ width: '400px' }">
-      <div class="space-y-4">
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">Category Name</label>
-          <InputText v-model="newCategory.name" class="w-full" placeholder="e.g., Restaurants" />
-        </div>
-        <div>
-          <label class="block font-semibold mb-2 text-gray-700">Description</label>
-          <InputText v-model="newCategory.description" class="w-full" placeholder="Optional description" />
-        </div>
-        <div class="flex gap-2 justify-end">
-          <Button label="Cancel" class="p-button-text" @click="showCategoryDialog = false" />
-          <Button label="Save" class="p-button-success" @click="addCategory" />
-        </div>
-      </div>
-    </Dialog>
   </div>
 </template>
 
 <style scoped>
-.settings-page { padding: 0; }
-:deep(.p-accordion .p-accordion-header) { background-color: #f9fafb; border-color: #e5e7eb; }
-:deep(.p-accordion .p-accordion-header:not(.p-disabled).p-highlight > button) { background-color: #3b82f6; color: white; }
-:deep(.p-accordion .p-accordion-header button) { padding: 1.25rem; font-weight: 600; }
-:deep(.p-accordion .p-accordion-content) { padding: 0; background-color: white; }
-:deep(.nested-tabs .p-tabview-nav) { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.25rem; }
-:deep(.nested-tabs .p-tabview-nav .p-tabview-nav-btn) { padding: 0.75rem 1rem; font-size: 0.875rem; }
-:deep(.p-datatable .p-datatable-thead > tr > th) { background-color: #f9fafb; border-color: #e5e7eb; padding: 0.875rem; font-weight: 700; color: #374151; font-size: 0.8rem; text-transform: uppercase; }
-:deep(.p-datatable .p-datatable-tbody > tr > td) { border-color: #e5e7eb; padding: 0.875rem; }
-:deep(.p-datatable .p-datatable-tbody > tr:hover) { background-color: #f9fafb; }
+.settings-page {
+  padding: 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+.settings-header {
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.settings-accordion {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.p-accordion) {
+  border: none;
+}
+
+:deep(.p-accordion .p-accordion-header) {
+  background-color: white;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0;
+}
+
+:deep(.p-accordion .p-accordion-header button) {
+  padding: 1.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1f2937;
+  transition: all 0.3s ease;
+}
+
+:deep(.p-accordion .p-accordion-header:hover button) {
+  background-color: #f3f4f6;
+}
+
+:deep(.p-accordion .p-accordion-header.p-highlight button) {
+  background-color: #f0f9ff;
+  color: #0369a1;
+}
+
+:deep(.p-accordion .p-accordion-content) {
+  padding: 0;
+  background-color: white;
+  border: none;
+}
+
+:deep(.p-accordion .p-accordion-content > p) {
+  padding: 1.5rem;
+}
+
+:deep(.nested-tabs .p-tabs) {
+  border: none;
+}
+
+:deep(.nested-tabs .p-tablist) {
+  background-color: #f9fafb;
+  border: none;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 0;
+}
+
+:deep(.nested-tabs .p-tab button) {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  border: none;
+}
+
+:deep(.nested-tabs .p-tab button.p-highlight) {
+  color: #0369a1;
+  border-bottom: 3px solid #0369a1;
+}
+
+:deep(.nested-tabs .p-tabpanels) {
+  background-color: white;
+  border: none;
+  padding: 0;
+}
+
+:deep(.p-datatable) {
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.p-datatable .p-datatable-thead > tr > th) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-weight: 700;
+  border: none;
+  padding: 1rem;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  border-color: #e5e7eb;
+  padding: 1rem;
+  color: #374151;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr:hover) {
+  background-color: #f9fafb;
+}
+
+:deep(.p-inputtext),
+:deep(.p-select),
+:deep(.p-inputnumber) {
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  transition: all 0.3s ease;
+}
+
+:deep(.p-inputtext:focus),
+:deep(.p-select:focus),
+:deep(.p-inputnumber:focus) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+:deep(.p-button) {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+:deep(.p-button-success) {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+}
+
+:deep(.p-button-success:hover) {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+:deep(.p-dialog) {
+  border-radius: 12px;
+}
+
+:deep(.p-dialog .p-dialog-header) {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 12px 12px 0 0;
+}
+
+:deep(.p-colorpicker) {
+  border-radius: 6px;
+}
 </style>

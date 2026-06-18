@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { api } from '@/services/api'
 import Editor from 'primevue/editor'
+import SkeletonCard from '@/components/SkeletonCard.vue'
+import { withMinimumLoadingTime } from '@/utils/loadingHelper'
 
 interface Article {
   id: number
@@ -43,14 +45,20 @@ async function load() {
   try {
     loading.value = true
     error.value = ''
-    const [articlesRes, authorsRes, categoriesRes] = await Promise.all([
-      api.get('/articles'),
-      api.get('/authors'),
-      api.get('/article-categories'),
-    ])
-    articles.value = articlesRes.data.data?.data || articlesRes.data.data || []
-    authors.value = authorsRes.data.data?.data || authorsRes.data.data || []
-    categories.value = categoriesRes.data.data?.data || categoriesRes.data.data || []
+
+    await withMinimumLoadingTime(
+      (async () => {
+        const [articlesRes, authorsRes, categoriesRes] = await Promise.all([
+          api.get('/articles'),
+          api.get('/authors'),
+          api.get('/article-categories'),
+        ])
+        articles.value = articlesRes.data.data?.data || articlesRes.data.data || []
+        authors.value = authorsRes.data.data?.data || authorsRes.data.data || []
+        categories.value = categoriesRes.data.data?.data || categoriesRes.data.data || []
+      })(),
+      2000
+    )
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load data'
     console.error(err)
@@ -59,21 +67,52 @@ async function load() {
   }
 }
 
+// Generate slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
 async function saveArticle() {
   try {
     error.value = ''
     success.value = ''
 
+    // Validate required fields
+    if (!form.value.title.trim()) {
+      error.value = 'Title is required'
+      return
+    }
+    if (!form.value.content?.trim()) {
+      error.value = 'Content is required'
+      return
+    }
+    if (!form.value.author_id) {
+      error.value = 'Author is required'
+      return
+    }
+
     const formData = new FormData()
-    formData.append('title', form.value.title)
-    formData.append('excerpt', form.value.excerpt || '')
-    formData.append('content', form.value.content)
+    formData.append('title', form.value.title.trim())
+    formData.append('slug', generateSlug(form.value.title))
+    formData.append('excerpt', form.value.excerpt?.trim() || '')
+    formData.append('content', form.value.content.trim())
     formData.append('author_id', String(form.value.author_id))
-    formData.append('category_id', form.value.category_id ? String(form.value.category_id) : '')
-    formData.append('seo_title', form.value.seo_title || '')
+    formData.append('category_id', form.value.category_id ? String(form.value.category_id) : '0')
+    formData.append('seo_title', form.value.seo_title?.trim() || '')
     formData.append('seo_description', '')
     formData.append('seo_keywords', '')
     formData.append('og_image', '')
+    formData.append('status', 'draft')
+
+    // For PUT requests, add _method field for Laravel form spoofing
+    if (editingId.value) {
+      formData.append('_method', 'PUT')
+    }
 
     // Only append featured_image if it's a new File (not a URL string)
     if (form.value.featured_image && form.value.featured_image instanceof File) {
@@ -81,41 +120,48 @@ async function saveArticle() {
     }
 
     // Log formData for debugging
-    console.log('Submitting FormData:', {
+    console.log('📤 Submitting article:', {
       title: form.value.title,
-      excerpt: form.value.excerpt,
-      content: form.value.content?.substring(0, 50),
+      slug: generateSlug(form.value.title),
+      excerpt: form.value.excerpt?.substring(0, 30),
       author_id: form.value.author_id,
-      category_id: form.value.category_id,
-      seo_title: form.value.seo_title,
-      featured_image: form.value.featured_image instanceof File ? 'File object' : 'empty',
+      category_id: form.value.category_id || '0',
+      status: 'draft',
+      featured_image: form.value.featured_image instanceof File ? 'File' : 'none',
+      editing: !!editingId.value,
     })
 
     if (editingId.value) {
-      await api.put(`/articles/${editingId.value}`, formData, {
+      console.log(`✏️ Updating article ${editingId.value}...`)
+      await api.post(`/articles/${editingId.value}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       success.value = 'Article updated successfully'
     } else {
+      console.log('✨ Creating new article...')
       await api.post('/articles', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       success.value = 'Article created successfully'
     }
 
+    console.log('✅ Success!')
     showForm.value = false
     editingId.value = null
     resetForm()
     await load()
   } catch (err: any) {
-    console.error('Save article error:', {
+    console.error('❌ Save article error:', {
       status: err.response?.status,
+      statusText: err.response?.statusText,
       message: err.response?.data?.message,
       errors: err.response?.data?.errors,
     })
     const errors = err.response?.data?.errors
     if (errors && typeof errors === 'object') {
-      error.value = Object.entries(errors).map(([field, msgs]: any) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`).join(' | ')
+      error.value = Object.entries(errors)
+        .map(([field, msgs]: any) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+        .join('\n')
     } else {
       error.value = err.response?.data?.message || 'Failed to save article'
     }
@@ -324,11 +370,11 @@ onMounted(load)
 
     <!-- Articles Table -->
     <div class="cms-card">
-      <div v-if="loading" class="cms-loading">
-        <i class="pi pi-spin pi-spinner"></i> Loading articles...
+      <div v-if="loading && articles.length === 0" class="p-6">
+        <SkeletonCard type="table-row" :count="8" />
       </div>
 
-      <table v-else class="cms-table">
+      <table v-else-if="!loading || articles.length > 0" class="cms-table">
         <thead class="cms-table__head">
           <tr>
             <th>Title</th>

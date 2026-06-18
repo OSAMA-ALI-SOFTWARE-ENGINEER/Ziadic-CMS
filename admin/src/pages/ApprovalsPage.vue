@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { api } from '@/services/api'
 import { useUiStore } from '@/stores/ui'
+import { withMinimumLoadingTime } from '@/utils/loadingHelper'
 
 interface PendingListing {
   id: number
@@ -39,22 +41,28 @@ const filteredListings = computed(() => {
 async function loadPendingListings() {
   try {
     loading.value = true
-    const response = await api.get('/listings', {
-      params: { status: 'pending', per_page: 100 },
-    })
-    const data = response.data.data || response.data
 
-    pendingListings.value = (Array.isArray(data) ? data : data.data || []).map((listing: any) => ({
-      id: listing.id,
-      title: listing.title || listing.business_name || '',
-      business_name: listing.business_name,
-      category_name: listing.categories?.[0]?.name || 'Uncategorized',
-      city_name: listing.city?.name || listing.address || 'N/A',
-      owner_name: listing.owner?.name || 'Unknown',
-      status: listing.status || 'pending',
-      created_at: listing.created_at,
-      updated_at: listing.updated_at,
-    }))
+    await withMinimumLoadingTime(
+      (async () => {
+        const response = await api.get('/listings', {
+          params: { status: 'pending', per_page: 100 },
+        })
+        const data = response.data.data || response.data
+
+        pendingListings.value = (Array.isArray(data) ? data : data.data || []).map((listing: any) => ({
+          id: listing.id,
+          title: listing.title || listing.business_name || '',
+          business_name: listing.business_name,
+          category_name: listing.categories?.[0]?.name || 'Uncategorized',
+          city_name: listing.city?.name || listing.address || 'N/A',
+          owner_name: listing.owner?.name || 'Unknown',
+          status: listing.status || 'pending',
+          created_at: listing.created_at,
+          updated_at: listing.updated_at,
+        }))
+      })(),
+      2000
+    )
   } catch (err) {
     console.error('Failed to load pending listings:', err)
     ui.pushToast('Failed to load pending listings', 'danger')
@@ -187,14 +195,13 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Listings Table -->
-    <div v-if="pendingListings.length > 0" class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center py-12">
-        <i class="pi pi-spin pi-spinner text-2xl text-blue-500"></i>
-      </div>
+    <div v-if="loading && pendingListings.length === 0" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+      <SkeletonCard type="table-row" :count="5" />
+    </div>
 
+    <div v-else-if="pendingListings.length > 0" class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
       <!-- Table -->
-      <div v-else class="overflow-x-auto">
+      <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>

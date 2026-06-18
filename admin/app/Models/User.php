@@ -42,6 +42,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         'status',
         'email_verified_at',
         'last_login_at',
+        'profile_picture',
     ];
 
     protected $hidden = [

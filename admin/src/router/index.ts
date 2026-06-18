@@ -5,12 +5,14 @@ import AuthLayout from '@/layouts/AuthLayout.vue'
 import BlogArticlesPage from '@/pages/BlogArticlesPage.vue'
 import CategoriesPage from '@/pages/CategoriesPage.vue'
 import ContentPage from '@/pages/ContentPage.vue'
+import LocationManagementPage from '@/pages/LocationManagementPage.vue'
 import DashboardPage from '@/pages/DashboardPage.vue'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage.vue'
 import ListingsPage from '@/pages/ListingsPage.vue'
 import LoginPage from '@/pages/auth/LoginPage.vue'
 import MediaPage from '@/pages/MediaPage.vue'
 import PaymentsPage from '@/pages/PaymentsPage.vue'
+import ProfilePage from '@/pages/ProfilePage.vue'
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.vue'
 import RolesPage from '@/pages/RolesPage.vue'
 import SettingsPage from '@/pages/SettingsPage.vue'
@@ -84,7 +86,7 @@ const router = createRouter({
           name: 'dashboard',
           component: DashboardPage,
           meta: {
-            title: 'Dashboard | Zaidic CMS',
+            title: 'Dashboard | Kukaqka CMS',
           },
         },
         {
@@ -129,6 +131,14 @@ const router = createRouter({
           component: CategoriesPage,
           meta: {
             title: 'Categories | Kukaqka CMS',
+          },
+        },
+        {
+          path: 'location-management',
+          name: 'location-management',
+          component: LocationManagementPage,
+          meta: {
+            title: 'Location Management | Kukaqka CMS',
           },
         },
         {
@@ -188,11 +198,19 @@ const router = createRouter({
           },
         },
         {
+          path: 'profile',
+          name: 'profile',
+          component: ProfilePage,
+          meta: {
+            title: 'Profile Settings | Kukaqka CMS',
+          },
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: SettingsPage,
           meta: {
-            title: 'Settings | Kukaqka CMS',
+            title: 'System Settings | Kukaqka CMS',
           },
         },
       ],
@@ -211,7 +229,7 @@ router.beforeEach((to) => {
     return { name: 'dashboard' }
   }
 
-  document.title = String(to.meta.title || 'Zaidic CMS')
+  document.title = String(to.meta.title || 'Kukaqka CMS')
 })
 
 export default router

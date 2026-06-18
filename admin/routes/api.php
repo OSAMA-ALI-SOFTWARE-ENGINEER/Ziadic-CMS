@@ -628,4 +628,23 @@ Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
 
     // Pages Management
     Route::apiResource('pages', PageController::class);
+
+    // Profile Management (authenticated user)
+    Route::post('user/update-profile', [UserController::class, 'updateProfile']);
 });
+
+// Public storage file serving route (for profile pictures and other assets)
+Route::get('/storage/{path}', function ($path) {
+    $file = storage_path('app/public/' . $path);
+
+    if (!file_exists($file)) {
+        return response()->json(['error' => 'File not found'], 404);
+    }
+
+    // Only allow serving image files from profiles directory
+    if (strpos($path, 'profiles/') !== 0 || !preg_match('/\.(png|jpg|jpeg|gif|webp)$/i', $path)) {
+        return response()->json(['error' => 'Forbidden'], 403);
+    }
+
+    return response()->file($file);
+})->where('path', '.*');

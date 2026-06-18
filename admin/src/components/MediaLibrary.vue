@@ -378,27 +378,33 @@ function getMediaUrl(item: Media): string {
 
 <style scoped>
 .media-library {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 1.5rem;
+  max-width: 100%;
 }
 
 .media-header {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
 }
 
 .media-title h2 {
   margin: 0 0 0.5rem 0;
   color: #1f2937;
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .media-title p {
   color: #6b7280;
   margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 .upload-area {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
 }
 
 .upload-zone {
@@ -406,134 +412,202 @@ function getMediaUrl(item: Media): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
-  border: 2px dashed #d1d5db;
-  border-radius: 0.5rem;
+  padding: 4rem 2rem;
+  border: 2px dashed #e5e7eb;
+  border-radius: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: #f9fafb;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .upload-zone:hover {
   border-color: #3b82f6;
-  background-color: #eff6ff;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
 }
 
 .upload-zone i {
-  font-size: 3rem;
+  font-size: 3.5rem;
   color: #3b82f6;
   margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 .upload-zone strong {
   display: block;
   color: #1f2937;
   margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .upload-zone span {
   color: #6b7280;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
 }
 
 .media-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  gap: 1rem;
+  margin-bottom: 2.5rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
+  padding: 0 0.5rem;
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f3f4f6;
 }
 
 .search-filter {
   display: flex;
   gap: 1rem;
   flex: 1;
-  min-width: 300px;
+  min-width: 280px;
+  align-items: center;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex: 1;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.5rem;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  transition: all 0.2s;
+}
+
+.search-box:focus-within {
   background: white;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .search-box i {
   color: #9ca3af;
+  font-size: 1rem;
 }
 
 .search-box input {
   border: none;
   outline: none;
   flex: 1;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  background: transparent;
+  min-width: 0;
 }
 
 .filter-select {
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
   background: white;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-select:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .bulk-actions,
 .bulk-actions-empty {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .selection-count {
   color: #6b7280;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
 }
 
 .btn-icon {
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  padding: 0.625rem;
+  border: 1px solid #e5e7eb;
   background: white;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
 }
 
 .btn-icon:hover {
-  background: #f3f4f6;
+  background: #f9fafb;
+  border-color: #3b82f6;
+  color: #3b82f6;
 }
 
 .btn-text {
-  padding: 0.5rem 1rem;
+  padding: 0.625rem 1.25rem;
   background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #374151;
   transition: all 0.2s;
 }
 
 .btn-text:hover {
-  background: #f3f4f6;
+  background: #f9fafb;
+  border-color: #3b82f6;
+  color: #3b82f6;
 }
 
 .btn-danger {
-  padding: 0.5rem 1rem;
-  background: #ef4444;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
   transition: all 0.2s;
 }
 
 .btn-danger:hover {
-  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .loading,
@@ -561,11 +635,12 @@ function getMediaUrl(item: Media): string {
 .media-grid {
   display: grid;
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
 }
 
 .media-grid.grid {
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .media-grid.list {
@@ -574,27 +649,30 @@ function getMediaUrl(item: Media): string {
 
 .media-item {
   border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .media-item:hover {
   border-color: #3b82f6;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.12);
+  transform: translateY(-4px);
 }
 
 .media-preview {
   position: relative;
   width: 100%;
   padding-top: 100%;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   overflow: hidden;
 }
 
 .media-grid.list .media-preview {
   padding-top: 0;
-  height: 80px;
+  height: 100px;
 }
 
 .preview-image,
@@ -611,19 +689,20 @@ function getMediaUrl(item: Media): string {
 }
 
 .preview-placeholder {
-  background: #f3f4f6;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
   color: #9ca3af;
-  font-size: 2rem;
+  font-size: 2.5rem;
 }
 
 .media-checkbox {
   position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
+  top: 0.75rem;
+  left: 0.75rem;
   z-index: 10;
   width: 1.25rem;
   height: 1.25rem;
   cursor: pointer;
+  accent-color: #3b82f6;
 }
 
 .preview-actions {
@@ -633,10 +712,11 @@ function getMediaUrl(item: Media): string {
   bottom: 0;
   left: 0;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -648,41 +728,56 @@ function getMediaUrl(item: Media): string {
 .preview-actions .btn-icon {
   background: white;
   color: #1f2937;
+  border: none;
+  padding: 0.75rem;
+  font-size: 1.125rem;
+}
+
+.preview-actions .btn-icon:hover {
+  background: #f0f9ff;
+  color: #3b82f6;
 }
 
 .media-info {
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
 .media-info h4 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.625rem 0;
   color: #1f2937;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .file-type {
-  margin: 0.25rem 0;
-  color: #9ca3af;
-  font-size: 0.75rem;
+  margin: 0.5rem 0;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .upload-date {
-  margin: 0.25rem 0;
-  color: #d1d5db;
-  font-size: 0.75rem;
+  margin: 0.5rem 0 0;
+  color: #9ca3af;
+  font-size: 0.8125rem;
 }
 
 .alt-text {
-  margin: 0.5rem 0 0 0;
+  margin: 0.75rem 0 0 0;
   color: #6b7280;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-style: italic;
 }
 
 .pagination {

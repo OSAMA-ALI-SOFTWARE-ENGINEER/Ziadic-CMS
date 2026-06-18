@@ -5,10 +5,12 @@ import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import DataTable from '@/components/DataTable.vue'
 import ListingForm from '@/components/ListingFormExpanded.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import type { ListingRow } from '@/data/cms'
 import { useCmsStore } from '@/stores/cms'
 import { useUiStore } from '@/stores/ui'
 import { api } from '@/services/api'
+import { withMinimumLoadingTime } from '@/utils/loadingHelper'
 
 const cms = useCmsStore()
 const ui = useUiStore()
@@ -51,34 +53,39 @@ const filteredListings = computed(() => {
 async function loadListings() {
   try {
     loading.value = true
-    const params = selectedStatus.value ? { status: selectedStatus.value } : {}
-    const response = await api.get('/listings', { params })
-    const data = response.data.data || response.data
 
-    const allListings = Array.isArray(data) ? data : data.data || []
+    await withMinimumLoadingTime(
+      (async () => {
+        const params = selectedStatus.value ? { status: selectedStatus.value } : {}
+        const response = await api.get('/listings', { params })
+        const data = response.data.data || response.data
 
-    // Clear previous data
-    fullListings.value.clear()
+        const allListings = Array.isArray(data) ? data : data.data || []
 
-    // Transform API response to ListingRow format and store full objects
-    listings.value = allListings.map((listing: any) => {
-      // Store full listing object by ID
-      if (listing.id) {
-        fullListings.value.set(listing.id, listing)
-        console.log(`Cached listing ${listing.id}: ${listing.title} - mediaFiles:`, listing.mediaFiles?.length || 0)
-      }
+        // Clear previous data
+        fullListings.value.clear()
 
-      return {
-        id: listing.id, // Keep ID for reference
-        title: listing.title || listing.business_name || '',
-        category: listing.categories?.[0]?.name || 'Uncategorized',
-        city: listing.city?.name || listing.address || 'N/A',
-        owner: listing.owner?.name || 'Unknown',
-        status: formatStatus(listing.status),
-        tone: getStatusTone(listing.status),
-        updatedAt: formatDate(listing.updated_at),
-      }
-    })
+        // Transform API response to ListingRow format and store full objects
+        listings.value = allListings.map((listing: any) => {
+          // Store full listing object by ID
+          if (listing.id) {
+            fullListings.value.set(listing.id, listing)
+          }
+
+          return {
+            id: listing.id,
+            title: listing.title || listing.business_name || '',
+            category: listing.categories?.[0]?.name || 'Uncategorized',
+            city: listing.city?.name || listing.address || 'N/A',
+            owner: listing.owner?.name || 'Unknown',
+            status: formatStatus(listing.status),
+            tone: getStatusTone(listing.status),
+            updatedAt: formatDate(listing.updated_at),
+          }
+        })
+      })(),
+      2000
+    )
   } catch (err) {
     console.error('Failed to load listings:', err)
     ui.pushToast('Failed to load listings', 'danger')
@@ -245,7 +252,11 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Stats Cards -->
-    <section class="grid gap-4 md:grid-cols-3">
+    <section v-if="loading && listings.length === 0" class="grid gap-4 md:grid-cols-3">
+      <SkeletonCard type="metric" :count="3" />
+    </section>
+
+    <section v-else class="grid gap-4 md:grid-cols-3">
       <div class="cms-card p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
         <div class="flex items-center justify-between">
           <div>
@@ -325,7 +336,15 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- Listings Table -->
+    <div v-if="loading && listings.length === 0" class="cms-card p-6">
+      <div class="mb-6">
+        <h2 class="m-0 text-lg font-semibold">All listings</h2>
+      </div>
+      <SkeletonCard type="table-row" :count="10" />
+    </div>
+
     <DataTable
+      v-else
       :rows="filteredListings"
       :columns="columns"
       :searchable-keys="['title', 'category', 'city', 'owner', 'status']"
@@ -343,11 +362,6 @@ onBeforeUnmount(() => {
       </template>
       <template #cell-status="{ row }">
         <StatusBadge :label="row.status" :tone="row.tone" />
-      </template>
-      <template v-if="loading" #loading>
-        <div class="flex justify-center items-center py-8">
-          <i class="pi pi-spin pi-spinner text-2xl"></i>
-        </div>
       </template>
       <template v-if="!loading && listings.length === 0" #empty>
         <div class="text-center py-8">

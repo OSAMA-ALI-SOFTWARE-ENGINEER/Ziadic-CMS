@@ -41,6 +41,7 @@ class AuthController
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'status' => $user->status,
+                'profile_picture' => $user->profile_picture ? asset('storage/' . $user->profile_picture) : null,
                 'roles' => $user->getRoleNames()->toArray(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
             ],
@@ -103,6 +104,7 @@ class AuthController
             'email' => $user->email,
             'phone' => $user->phone,
             'status' => $user->status,
+            'profile_picture' => $user->profile_picture ? asset('storage/' . $user->profile_picture) : null,
             'roles' => $user->getRoleNames()->toArray(),
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
         ]);

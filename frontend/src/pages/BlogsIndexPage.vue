@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import LegacyWebflowPage from '@/components/legacy/LegacyWebflowPage.vue'
 
 interface Article {
   id: number
@@ -13,7 +13,6 @@ interface Article {
   published_at: string
 }
 
-const router = useRouter()
 const articles = ref<Article[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -22,29 +21,36 @@ async function loadArticles() {
   try {
     loading.value = true
     error.value = ''
+
     const response = await fetch('http://localhost:8000/api/v1/public/articles')
-    if (!response.ok) throw new Error('Failed to load articles')
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
+    }
 
     const data = await response.json()
-    articles.value = data.data?.data || data.data || []
+
+    // Handle different response structures
+    const articlesData = data.data?.data || data.data || data || []
+    articles.value = Array.isArray(articlesData) ? articlesData : []
+
+    if (articles.value.length === 0) {
+      error.value = 'No articles found'
+    }
   } catch (err: any) {
     error.value = err.message || 'Failed to load articles'
-    console.error(err)
   } finally {
     loading.value = false
   }
 }
 
+
 function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric'
   })
-}
-
-function goToArticle(slug: string) {
-  router.push({ name: 'blog-detail', params: { slug } })
 }
 
 function getImageUrl(imagePath: string | undefined): string {
@@ -53,271 +59,251 @@ function getImageUrl(imagePath: string | undefined): string {
   return `http://localhost:8000${imagePath}`
 }
 
-onMounted(loadArticles)
+// Flag to prevent simultaneous category population calls
+let isPopulatingCategories = false
+
+// Function to populate category filter tabs dynamically
+async function populateCategoryTabs() {
+  // Prevent multiple simultaneous calls
+  if (isPopulatingCategories) {
+    return
+  }
+
+  isPopulatingCategories = true
+
+  try {
+    // Wait a moment for DOM to settle
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // Find ALL filter forms (there might be multiple)
+    const filterForms = document.querySelectorAll('.cms-form')
+
+    let processedCount = 0
+
+    filterForms.forEach((filterForm, formIndex) => {
+      // Get the form element within this filter
+      const form = filterForm.querySelector('form')
+      if (!form) {
+        return
+      }
+
+      // Get the collection list wrapper for category items
+      const collectionList = form.querySelector('.collection-list-wrapper .w-dyn-items')
+      if (!collectionList) {
+        return
+      }
+
+      // Extract unique categories from articles
+      const categorySet = new Set<string>()
+      categorySet.add('All')
+      articles.value.forEach(article => {
+        if (article.category?.name) {
+          categorySet.add(article.category.name)
+        }
+      })
+
+      const categories = Array.from(categorySet)
+
+      // Get all existing items to use as template
+      const allExistingItems = Array.from(collectionList.querySelectorAll('.w-dyn-item'))
+
+      if (allExistingItems.length === 0) {
+        return
+      }
+
+      // Save first item as template before clearing
+      const templateCategoryItem = allExistingItems[0].cloneNode(true) as HTMLElement
+
+      // Clear ALL existing items
+      allExistingItems.forEach((item) => {
+        item.remove()
+      })
+
+      // Create new category filter items from scratch
+      categories.forEach((category, index) => {
+        const newCategoryItem = templateCategoryItem.cloneNode(true) as HTMLElement
+
+        // Find ONLY the first label in the item (to avoid duplicates)
+        const firstLabel = newCategoryItem.querySelector('label')
+        if (!firstLabel) {
+          return
+        }
+
+        // Remove any extra labels to prevent duplicates
+        const allLabels = Array.from(newCategoryItem.querySelectorAll('label'))
+        allLabels.slice(1).forEach(label => label.remove())
+
+        // Update the single label
+        const input = firstLabel.querySelector('input[type="radio"]') as HTMLInputElement
+        if (input) {
+          const uniqueId = `radio-${formIndex}-${index}`
+          input.id = uniqueId
+          input.value = category
+          input.name = 'Blog'
+
+          const labelText = firstLabel.querySelector('[fs-cmsfilter-field="category"]')
+          if (labelText) {
+            labelText.textContent = category
+          }
+
+          firstLabel.setAttribute('for', uniqueId)
+
+          if (index === 0) {
+            firstLabel.classList.add('w--current', 'fs-cmsfilter_active')
+            input.checked = true
+          } else {
+            firstLabel.classList.remove('w--current', 'fs-cmsfilter_active')
+            input.checked = false
+          }
+        }
+
+        collectionList.appendChild(newCategoryItem)
+      })
+
+      processedCount++
+    })
+
+    // Reinitialize Finsweet filter
+    if ((window as any).fsAttributes?.push) {
+      ;(window as any).fsAttributes.push(['cmsfilter', () => {}])
+    }
+  } catch (error) {
+    // Silent error handling
+  } finally {
+    isPopulatingCategories = false
+  }
+}
+
+// Function to populate legacy template with real-time CMS data
+async function populateLegacyBlogTemplate() {
+  try {
+    // Wait for legacy template to load
+    let attempts = 0
+    while (!document.querySelector('.blog-collection-list') && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
+
+    const blogList = document.querySelector('.blog-collection-list')
+    if (!blogList) {
+      return
+    }
+
+    // Get template item
+    const templateItem = blogList.querySelector('.blog-collection-item')
+    if (!templateItem) {
+      return
+    }
+
+    // Clear all items (keep template for cloning)
+    const allItems = Array.from(blogList.querySelectorAll('.blog-collection-item'))
+    if (allItems.length > 1) {
+      allItems.slice(1).forEach(item => item.remove())
+    }
+
+    // Fetch articles
+    await loadArticles()
+
+    if (articles.value.length === 0) {
+      return
+    }
+
+    // Create articles from API data
+    articles.value.forEach((article, index) => {
+      const newItem = templateItem.cloneNode(true) as HTMLElement
+
+      // Update image
+      const img = newItem.querySelector('.blog-img') as HTMLImageElement
+      if (img) {
+        const imageUrl = getImageUrl(article.featured_image)
+        img.src = imageUrl
+        img.alt = article.title
+      }
+
+      // Update title
+      const title = newItem.querySelector('.blog-title')
+      if (title) title.textContent = article.title
+
+      // Update excerpt
+      const excerpt = newItem.querySelector('.blog-details')
+      if (excerpt) excerpt.textContent = article.excerpt || ''
+
+      // Update date
+      const dateText = newItem.querySelectorAll('.blog-post-details-text')[0]
+      if (dateText) dateText.textContent = formatDate(article.published_at)
+
+      // Update author
+      const authorText = newItem.querySelectorAll('.blog-post-details-text')[1]
+      if (authorText) authorText.textContent = article.author?.name || 'Unknown'
+
+      // Update category for filtering
+      const categoryField = newItem.querySelector('[fs-cmsfilter-field="category"]')
+      if (categoryField) {
+        categoryField.textContent = article.category?.name || 'All'
+      }
+
+      // Update article links
+      const links = newItem.querySelectorAll('a')
+      links.forEach(link => {
+        const href = link.getAttribute('href')
+        if (href?.includes('/blogs/')) {
+          link.setAttribute('href', `/blog/${article.slug}`)
+        }
+      })
+
+      if (index === 0) {
+        templateItem.replaceWith(newItem)
+      } else {
+        blogList.appendChild(newItem)
+      }
+    })
+
+    // Populate category filter tabs
+    populateCategoryTabs()
+
+    // Reinitialize Finsweet filter
+    if ((window as any).fsAttributes?.push) {
+      ;(window as any).fsAttributes.push(['cmsfilter', () => {}])
+    }
+  } catch (error) {
+    // Silent error handling
+  }
+}
+
+onMounted(() => {
+  // Populate legacy template with real CMS data
+  populateLegacyBlogTemplate()
+
+
+  // Auto-refresh every 30 seconds for real-time CMS updates
+  const refreshInterval = setInterval(() => {
+    populateLegacyBlogTemplate()
+  }, 30000)
+
+  return () => {
+    clearInterval(refreshInterval)
+  }
+})
 </script>
 
 <template>
-  <div class="blogs-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="container">
-        <h1 class="hero-title">Blog & Insights</h1>
-        <p class="hero-subtitle">Discover articles, tips, and latest updates</p>
-      </div>
-    </div>
-
-    <!-- Articles Section -->
-    <div class="container py-5">
-      <!-- Loading State -->
-      <div v-if="loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>Loading articles...</p>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="error-state">
-        <p>{{ error }}</p>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="articles.length === 0" class="empty-state">
-        <p>No articles published yet. Check back soon!</p>
-      </div>
-
-      <!-- Articles Grid -->
-      <div v-else class="articles-grid">
-        <article
-          v-for="article in articles"
-          :key="article.id"
-          class="article-card"
-          @click="goToArticle(article.slug)"
-        >
-          <!-- Featured Image -->
-          <div class="article-image" v-if="article.featured_image">
-            <img :src="getImageUrl(article.featured_image)" :alt="article.title" />
-          </div>
-          <div v-else class="article-image-placeholder">
-            <span>📄</span>
-          </div>
-
-          <!-- Article Content -->
-          <div class="article-content">
-            <div class="article-meta">
-              <span v-if="article.category" class="category-badge">
-                {{ article.category.name }}
-              </span>
-              <span class="date">{{ formatDate(article.published_at) }}</span>
-            </div>
-
-            <h2 class="article-title">{{ article.title }}</h2>
-            <p class="article-excerpt">{{ article.excerpt || 'No description available' }}</p>
-
-            <div class="article-footer">
-              <span v-if="article.author" class="author">
-                By {{ article.author.name }}
-              </span>
-              <span class="read-more">Read More →</span>
-            </div>
-          </div>
-        </article>
-      </div>
-    </div>
-  </div>
+  <!-- Legacy Blog Template with Dynamic CMS Data -->
+  <LegacyWebflowPage legacy-path="/legacy/template-pages/blogs.html" loading-label="Loading Blogs..." />
 </template>
 
-<style scoped>
-.blogs-page {
-  min-height: 100vh;
-  background: #f9fafb;
+<style>
+/* Add spacing between category filter tabs */
+.listings-page-tab-link {
+  margin-right: 1rem !important;
+  margin-left: 1rem !important;
 }
 
-.hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 4rem 0;
-  text-align: center;
+.w-dyn-items .w-dyn-item:first-child .listings-page-tab-link {
+  margin-left: 0 !important;
 }
 
-.hero-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-}
-
-.hero-subtitle {
-  font-size: 1.125rem;
-  opacity: 0.9;
-  margin: 0;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.py-5 {
-  padding: 2rem 0;
-}
-
-.loading-state,
-.error-state,
-.empty-state {
-  text-align: center;
-  padding: 3rem 1rem;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.error-state {
-  background: #fee2e2;
-  color: #dc2626;
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-}
-
-.empty-state {
-  color: #6b7280;
-  font-size: 1.125rem;
-}
-
-.articles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 2rem;
-}
-
-.article-card {
-  background: white;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-}
-
-.article-card:hover {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  transform: translateY(-4px);
-}
-
-.article-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background: #f3f4f6;
-}
-
-.article-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.article-image-placeholder {
-  width: 100%;
-  height: 200px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-}
-
-.article-content {
-  padding: 1.5rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.article-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.category-badge {
-  background: #e0e7ff;
-  color: #667eea;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-weight: 600;
-}
-
-.date {
-  color: #9ca3af;
-}
-
-.article-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0 0 0.75rem 0;
-  color: #1f2937;
-  line-height: 1.4;
-}
-
-.article-excerpt {
-  color: #6b7280;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin: 0 0 1rem 0;
-  flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.article-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 1rem;
-  border-top: 1px solid #f3f4f6;
-  font-size: 0.875rem;
-}
-
-.author {
-  color: #667eea;
-  font-weight: 500;
-}
-
-.read-more {
-  color: #667eea;
-  font-weight: 600;
-  transition: transform 0.2s;
-}
-
-.article-card:hover .read-more {
-  transform: translateX(4px);
-}
-
-@media (max-width: 768px) {
-  .hero-title {
-    font-size: 1.875rem;
-  }
-
-  .articles-grid {
-    grid-template-columns: 1fr;
-  }
+/* Ensure proper spacing in the filter form */
+.tab-menu {
+  gap: 1rem !important;
 }
 </style>

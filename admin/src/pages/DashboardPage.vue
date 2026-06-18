@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref, computed } from 'vue'
 import CmsTable from '@/components/CmsTable.vue'
 import ChartPanel from '@/components/ChartPanel.vue'
 import StatCard from '@/components/StatCard.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { useDashboardStore } from '@/stores/dashboard'
 
 const dashboard = useDashboardStore()
@@ -37,31 +38,25 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Dashboard Header with Last Updated & Refresh -->
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-      <div>
-        <h1 class="m-0 text-3xl font-bold text-(--admin-ink)">Dashboard</h1>
-        <p class="m-0 mt-2 text-sm text-(--admin-muted)">
-          <span class="inline-flex items-center gap-1">
-            <i class="pi pi-circle-fill text-green-500 text-xs"></i>
-            Last updated: <span class="font-medium text-(--admin-ink)">{{ dashboard.formattedLastUpdated }}</span>
-          </span>
-        </p>
-      </div>
-      <button
-        class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all duration-200 font-medium"
-        type="button"
-        :disabled="dashboard.isLoading"
-        @click="dashboard.refreshDashboard"
-      >
-        <i :class="dashboard.isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" aria-hidden="true"></i>
-        {{ dashboard.isLoading ? 'Refreshing...' : 'Refresh' }}
-      </button>
+  <div class="space-y-6 w-full overflow-hidden">
+    <!-- Dashboard Header with Last Updated -->
+    <div class="min-w-0">
+      <h1 class="m-0 text-2xl sm:text-3xl font-bold text-(--admin-ink) truncate">Dashboard</h1>
+      <p class="m-0 mt-2 text-xs sm:text-sm text-(--admin-muted) overflow-hidden">
+        <span class="inline-flex items-center gap-1 flex-wrap">
+          <i class="pi pi-circle-fill text-green-500 text-xs shrink-0"></i>
+          <span class="truncate">Last updated:</span>
+          <span class="font-medium text-(--admin-ink) truncate">{{ dashboard.formattedLastUpdated }}</span>
+        </span>
+      </p>
     </div>
 
     <!-- Metrics Grid -->
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section v-if="dashboard.isLoading && dashboard.metrics.length === 0" class="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 w-full">
+      <SkeletonCard type="metric" :count="4" />
+    </section>
+
+    <section v-else class="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 w-full">
       <div
         v-for="metric in dashboard.metrics"
         :key="metric.id"
@@ -123,40 +118,54 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- Chart Panel -->
-    <ChartPanel />
+    <div v-if="dashboard.isLoading && dashboard.recentListings.length === 0" class="w-full overflow-hidden">
+      <SkeletonCard type="chart" />
+    </div>
+    <div v-else class="w-full overflow-x-auto">
+      <ChartPanel />
+    </div>
 
     <!-- Recent Listings & Activity -->
-    <section class="grid gap-6 xl:grid-cols-[1.5fr_0.8fr]">
+    <section class="grid gap-4 sm:gap-6 grid-cols-1 xl:grid-cols-[1.5fr_0.8fr] w-full">
       <!-- Recent Listings Table -->
-      <div class="cms-card p-6">
-        <div class="mb-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-1">Recent listings</h2>
-          <p class="text-sm text-gray-600">Approval workflow, city data, and featured listing status.</p>
+      <div class="cms-card p-4 sm:p-6 min-w-0">
+        <div class="mb-4 sm:mb-6 min-w-0">
+          <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">Recent listings</h2>
+          <p class="text-xs sm:text-sm text-gray-600 line-clamp-2">Approval workflow, city data, and featured listing status.</p>
         </div>
 
-        <div class="overflow-x-auto">
+        <div v-if="dashboard.isLoading && dashboard.recentListings.length === 0">
+          <SkeletonCard type="table-row" :count="5" />
+        </div>
+        <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="border-b border-gray-200">
+            <thead class="border-b border-gray-200 hidden sm:table-header-group">
               <tr>
-                <th class="text-left py-3 px-3 font-semibold text-gray-700">Title</th>
-                <th class="text-left py-3 px-3 font-semibold text-gray-700">Category</th>
-                <th class="text-left py-3 px-3 font-semibold text-gray-700">City</th>
-                <th class="text-left py-3 px-3 font-semibold text-gray-700">Status</th>
-                <th class="text-left py-3 px-3 font-semibold text-gray-700">Updated</th>
+                <th class="text-left py-2 sm:py-3 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Title</th>
+                <th class="text-left py-2 sm:py-3 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Category</th>
+                <th class="text-left py-2 sm:py-3 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">City</th>
+                <th class="text-left py-2 sm:py-3 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Status</th>
+                <th class="text-left py-2 sm:py-3 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Updated</th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="(listing, idx) in dashboard.recentListings.slice(0, 5)"
                 :key="idx"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors block sm:table-row mb-3 sm:mb-0 p-3 sm:p-0 rounded-lg sm:rounded-none bg-gray-50 sm:bg-transparent"
               >
-                <td class="py-3 px-3 font-medium text-gray-900">{{ listing.title }}</td>
-                <td class="py-3 px-3 text-gray-600">{{ listing.category }}</td>
-                <td class="py-3 px-3 text-gray-600">{{ listing.city }}</td>
-                <td class="py-3 px-3">
+                <td class="py-1 sm:py-3 px-0 sm:px-3 font-medium text-gray-900 text-xs sm:text-sm block sm:table-cell before:content-['Title:'] before:font-semibold before:mr-2 sm:before:content-none">
+                  <span class="wrap-break-word">{{ listing.title }}</span>
+                </td>
+                <td class="py-1 sm:py-3 px-0 sm:px-3 text-gray-600 text-xs sm:text-sm block sm:table-cell before:content-['Category:'] before:font-semibold before:mr-2 sm:before:content-none">
+                  {{ listing.category }}
+                </td>
+                <td class="py-1 sm:py-3 px-0 sm:px-3 text-gray-600 text-xs sm:text-sm hidden md:table-cell before:content-['City:'] before:font-semibold before:mr-2 md:before:content-none">
+                  {{ listing.city }}
+                </td>
+                <td class="py-1 sm:py-3 px-0 sm:px-3 block sm:table-cell before:content-['Status:'] before:font-semibold before:mr-2 sm:before:content-none">
                   <span :class="[
-                    'inline-block px-3 py-1 rounded-full text-xs font-semibold',
+                    'inline-block px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold',
                     {
                       'bg-green-100 text-green-700': listing.status === 'published',
                       'bg-yellow-100 text-yellow-700': listing.status === 'pending',
@@ -167,7 +176,9 @@ onBeforeUnmount(() => {
                     {{ listing.status }}
                   </span>
                 </td>
-                <td class="py-3 px-3 text-gray-500">{{ listing.updatedAt }}</td>
+                <td class="py-1 sm:py-3 px-0 sm:px-3 text-gray-500 text-xs sm:text-sm hidden lg:table-cell before:content-['Updated:'] before:font-semibold before:mr-2 lg:before:content-none">
+                  {{ listing.updatedAt }}
+                </td>
               </tr>
               <tr v-if="dashboard.recentListings.length === 0">
                 <td colspan="5" class="py-8 px-3 text-center text-gray-500">No listings found</td>
@@ -178,23 +189,23 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- CMS Activity -->
-      <div class="cms-card p-6">
-        <div class="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900 mb-1">CMS activity</h2>
-            <p class="text-sm text-gray-600">Latest admin actions</p>
+      <div class="cms-card p-4 sm:p-6 min-w-0">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">CMS activity</h2>
+            <p class="text-xs sm:text-sm text-gray-600">Latest admin actions</p>
           </div>
-          <div class="p-3 rounded-lg bg-blue-100 text-blue-600">
-            <i class="pi pi-history"></i>
+          <div class="p-2 sm:p-3 rounded-lg bg-blue-100 text-blue-600 shrink-0">
+            <i class="pi pi-history text-lg"></i>
           </div>
         </div>
 
         <!-- Activity Filter -->
-        <div class="flex gap-2 mb-4 flex-wrap">
+        <div class="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4 flex-wrap">
           <button
             @click="activeActivityFilter = 'all'"
             :class="[
-              'px-3 py-1 rounded-full text-xs font-medium transition-all',
+              'px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap',
               activeActivityFilter === 'all'
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -207,7 +218,7 @@ onBeforeUnmount(() => {
             :key="type"
             @click="activeActivityFilter = type"
             :class="[
-              'px-3 py-1 rounded-full text-xs font-medium transition-all capitalize',
+              'px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium transition-all capitalize whitespace-nowrap',
               activeActivityFilter === type
                 ? 'bg-blue-500 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -246,7 +257,10 @@ onBeforeUnmount(() => {
         <p class="text-sm text-gray-600">Pages, services, and blog posts ready for publishing.</p>
       </div>
 
-      <div class="overflow-x-auto">
+      <div v-if="dashboard.isLoading && dashboard.contentPipeline.length === 0">
+        <SkeletonCard type="table-row" :count="5" />
+      </div>
+      <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="border-b border-gray-200">
             <tr>

@@ -28,8 +28,20 @@ const success = ref('')
 
 const activeTab = ref('articles')
 const showForm = ref(false)
+const showCategoryModal = ref(false)
+const editingCategoryId = ref<number | null>(null)
 const editingId = ref<number | null>(null)
 const imagePreview = ref('')
+
+interface CategoryForm {
+  name: string
+  slug: string
+}
+
+const categoryForm = ref<CategoryForm>({
+  name: '',
+  slug: '',
+})
 
 const form = ref({
   title: '',
@@ -283,16 +295,67 @@ function handleImageUpload(e: any) {
   }
 }
 
-async function addCategory() {
-  if (!newCategory.value.trim()) return
+function generateSlugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+function openCategoryModal(category?: any) {
+  if (category) {
+    editingCategoryId.value = category.id
+    categoryForm.value = {
+      name: category.name,
+      slug: category.slug || generateSlugFromName(category.name),
+    }
+  } else {
+    editingCategoryId.value = null
+    categoryForm.value = {
+      name: '',
+      slug: '',
+    }
+  }
+  showCategoryModal.value = true
+}
+
+function closeCategoryModal() {
+  showCategoryModal.value = false
+  editingCategoryId.value = null
+  categoryForm.value = {
+    name: '',
+    slug: '',
+  }
+}
+
+async function saveCategory() {
+  if (!categoryForm.value.name.trim()) {
+    error.value = 'Category name is required'
+    return
+  }
+
   try {
     error.value = ''
-    await api.post('/article-categories', { name: newCategory.value })
-    success.value = 'Category added successfully'
-    newCategory.value = ''
+    const slug = categoryForm.value.slug || generateSlugFromName(categoryForm.value.name)
+    const payload = {
+      name: categoryForm.value.name.trim(),
+      slug: slug,
+    }
+
+    if (editingCategoryId.value) {
+      await api.put(`/article-categories/${editingCategoryId.value}`, payload)
+      success.value = 'Category updated successfully'
+    } else {
+      await api.post('/article-categories', payload)
+      success.value = 'Category added successfully'
+    }
+
+    closeCategoryModal()
     await load()
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to add category'
+    error.value = err.response?.data?.message || 'Failed to save category'
   }
 }
 
@@ -415,51 +478,85 @@ onMounted(load)
 
     <!-- CATEGORIES TAB -->
     <template v-if="activeTab === 'categories'">
+      <div class="cms-page__actions">
+        <button @click="openCategoryModal()" class="cms-button cms-button--primary">
+          <i class="pi pi-plus"></i> Add Category
+        </button>
+      </div>
+
       <div class="cms-card">
-        <div class="cms-modal__body">
-          <div class="cms-form__group">
-            <label class="cms-form__label">Add New Category</label>
-            <div style="display: flex; gap: 0.5rem;">
-              <input
-                v-model="newCategory"
-                type="text"
-                placeholder="Category name..."
-                class="cms-form__input"
-                @keyup.enter="addCategory"
-              />
-              <button @click="addCategory" class="cms-button cms-button--primary">
-                <i class="pi pi-plus"></i> Add
-              </button>
-            </div>
+        <div class="cms-table-wrapper">
+          <table class="cms-table">
+            <thead class="cms-table__head">
+              <tr>
+                <th>Category Name</th>
+                <th>Slug</th>
+                <th>Articles</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="categories.length === 0">
+                <td colspan="4" class="cms-table__empty">No categories found. Create your first category!</td>
+              </tr>
+              <tr v-for="cat in categories" :key="cat.id" class="cms-table__row">
+                <td class="cms-table__cell">{{ cat.name }}</td>
+                <td class="cms-table__cell">{{ cat.slug }}</td>
+                <td class="cms-table__cell">{{ cat.articles_count || 0 }}</td>
+                <td class="cms-table__cell cms-table__cell--actions">
+                  <button @click="openCategoryModal(cat)" class="cms-action-btn" title="Edit">✏️</button>
+                  <button @click="deleteCategory(cat.id, cat.name)" class="cms-action-btn cms-action-btn--danger" title="Delete">🗑️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Category Modal -->
+      <div v-if="showCategoryModal" class="cms-modal">
+        <div class="cms-modal__overlay" @click="closeCategoryModal"></div>
+        <div class="cms-modal__content">
+          <div class="cms-modal__header">
+            <h2>{{ editingCategoryId ? '✏️ Edit Category' : '➕ Add New Category' }}</h2>
+            <button @click="closeCategoryModal" class="cms-modal__close">
+              <i class="pi pi-times"></i>
+            </button>
           </div>
 
-          <div class="cms-table-wrapper">
-            <table class="cms-table">
-              <thead class="cms-table__head">
-                <tr>
-                  <th>Category Name</th>
-                  <th>Slug</th>
-                  <th>Articles</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="categories.length === 0">
-                  <td colspan="4" class="cms-table__empty">No categories found</td>
-                </tr>
-                <tr v-for="cat in categories" :key="cat.id" class="cms-table__row">
-                  <td class="cms-table__cell">{{ cat.name }}</td>
-                  <td class="cms-table__cell">{{ cat.slug }}</td>
-                  <td class="cms-table__cell">{{ cat.articles_count || 0 }}</td>
-                  <td class="cms-table__cell cms-table__cell--actions">
-                    <button @click="deleteCategory(cat.id, cat.name)" class="cms-action-btn cms-action-btn--danger" title="Delete">
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <form class="cms-modal__body" @submit.prevent="saveCategory">
+            <div class="cms-form__group">
+              <label class="cms-form__label">Category Name *</label>
+              <input
+                v-model="categoryForm.name"
+                type="text"
+                placeholder="e.g., Technology, Travel"
+                class="cms-form__input"
+                @input="categoryForm.slug = generateSlugFromName(categoryForm.name)"
+                required
+              />
+            </div>
+
+            <div class="cms-form__group">
+              <label class="cms-form__label">Slug</label>
+              <input
+                v-model="categoryForm.slug"
+                type="text"
+                placeholder="Auto-generated slug"
+                class="cms-form__input"
+              />
+              <p class="cms-form__hint">Auto-generated from name, can be edited</p>
+            </div>
+
+            <div class="cms-form__actions">
+              <button type="button" @click="closeCategoryModal" class="cms-button cms-button--secondary">
+                Cancel
+              </button>
+              <button type="submit" class="cms-button cms-button--primary">
+                {{ editingCategoryId ? 'Update Category' : 'Add Category' }}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </template>

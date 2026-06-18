@@ -141,7 +141,7 @@
                 <input
                   :id="`perm-${permission}`"
                   type="checkbox"
-                  :checked="selectedRole.permissions.includes(permission)"
+                  :checked="(selectedRole.permissions || '').includes(permission)"
                   @change="togglePermission(permission)"
                   class="checkbox-input"
                 />
@@ -249,9 +249,21 @@ async function loadRoles() {
 }
 
 function openRole(role?: Role) {
-  selectedRole.value = role
-    ? { ...role }
-    : { id: 0, name: '', permissions: '', status: 'active', user_count: 0 }
+  if (role) {
+    selectedRole.value = {
+      ...role,
+      permissions: role.permissions || '',
+      status: role.status || 'active'
+    }
+  } else {
+    selectedRole.value = {
+      id: 0,
+      name: '',
+      permissions: '',
+      status: 'active',
+      user_count: 0
+    }
+  }
 }
 
 function togglePermission(permission: string) {

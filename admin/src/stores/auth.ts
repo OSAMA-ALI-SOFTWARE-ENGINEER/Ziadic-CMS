@@ -55,9 +55,12 @@ export const useAuthStore = defineStore('auth', {
       this.isLoading = true
 
       try {
+        console.log('[AUTH] Attempting backend login...')
         const { data } = await authApi.post('/login', payload)
+        console.log('[AUTH] Backend login successful!', data)
         this.setSession(data.token, data.user)
-      } catch {
+      } catch (error) {
+        console.warn('[AUTH] Backend login failed, falling back to preview mode', error)
         const allowPreviewAuth = import.meta.env.VITE_ENABLE_PREVIEW_AUTH !== '0'
 
         if (!allowPreviewAuth) {
@@ -72,6 +75,7 @@ export const useAuthStore = defineStore('auth', {
           throw new Error('Invalid static credentials for preview mode.')
         }
 
+        console.log('[AUTH] Using preview mode token for:', credential.email)
         this.setSession(`local-preview-token-${credential.user.role}`, credential.user)
       } finally {
         this.isLoading = false
@@ -100,12 +104,14 @@ export const useAuthStore = defineStore('auth', {
       this.user = user
       localStorage.setItem('cms-token', token)
       localStorage.setItem('cms-user', JSON.stringify(user))
+      console.log(`[AUTH] Session set. Token: ${token.substring(0, 20)}..., User: ${user.email}`)
     },
     clearSession() {
       this.token = ''
       this.user = null
       localStorage.removeItem('cms-token')
       localStorage.removeItem('cms-user')
+      console.log('[AUTH] Session cleared')
     },
   },
 })

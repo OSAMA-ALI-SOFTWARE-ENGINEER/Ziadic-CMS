@@ -2258,18 +2258,6 @@ async function handleLegacySubmit(event: SubmitEvent) {
     if (categoryId) submissionData.append('category_id', categoryId)
     if (cityId) submissionData.append('city_id', cityId)
 
-      title,
-      business_name: title,
-      description,
-      contact_name: contactName,
-      contact_email: contactEmail,
-      contact_phone: contactPhone,
-      website,
-      category_id: categoryId || '(empty)',
-      city_id: cityId || '(empty)',
-    })
-
-
     const response = await fetch(`${apiBase}/api/v1/public/listings/submit`, {
       method: 'POST',
       body: submissionData,

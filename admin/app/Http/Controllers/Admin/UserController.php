@@ -187,4 +187,142 @@ class UserController
             ],
         ]);
     }
+
+    public function store(Request $request)
+    {
+        Gate::authorize('isAdmin');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'nullable|string|min:6',
+            'role' => 'required|string|in:super-admin,admin,staff,client',
+            'status' => 'required|string|in:active,pending,suspended',
+        ]);
+
+        try {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => $validated['password'] ? Hash::make($validated['password']) : Hash::make('password123'),
+                'status' => $validated['status'],
+            ]);
+
+            if ($validated['role']) {
+                $user->syncRoles([$validated['role']]);
+            }
+
+            ActivityLogger::log('user.created', $user, [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'role' => $validated['role'],
+                'status' => $validated['status'],
+            ], $request);
+
+            return response()->json([
+                'message' => 'User created successfully',
+                'data' => $this->formatUserResponse($user),
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to create user: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function update(Request $request, User $user)
+    {
+        Gate::authorize('isAdmin');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'role' => 'required|string|in:super-admin,admin,staff,client',
+            'status' => 'required|string|in:active,pending,suspended',
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        try {
+            $oldData = [
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'role' => $user->getRoleNames()->first(),
+            ];
+
+            $updateData = [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'status' => $validated['status'],
+            ];
+
+            if ($validated['password']) {
+                $updateData['password'] = Hash::make($validated['password']);
+            }
+
+            $user->update($updateData);
+
+            if ($validated['role']) {
+                $user->syncRoles([$validated['role']]);
+            }
+
+            ActivityLogger::log('user.updated', $user, [
+                'old' => $oldData,
+                'new' => [
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'status' => $validated['status'],
+                    'role' => $validated['role'],
+                ],
+            ], $request);
+
+            return response()->json([
+                'message' => 'User updated successfully',
+                'data' => $this->formatUserResponse($user),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to update user: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy(Request $request, User $user)
+    {
+        Gate::authorize('isAdmin');
+
+        // Prevent self-deletion
+        if (auth()->id() === $user->id) {
+            return response()->json(['message' => 'Cannot delete your own user account'], 422);
+        }
+
+        try {
+            $userData = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'role' => $user->getRoleNames()->first(),
+            ];
+
+            ActivityLogger::log('user.deleted', $user, $userData, $request);
+
+            $user->delete();
+
+            return response()->json([
+                'message' => 'User deleted successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete user: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function formatUserResponse(User $user)
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'status' => $user->status,
+            'role' => $user->getRoleNames()->first() ?? 'client',
+            'created_at' => $user->created_at->toIso8601String(),
+            'updated_at' => $user->updated_at->toIso8601String(),
+        ];
+    }
 }

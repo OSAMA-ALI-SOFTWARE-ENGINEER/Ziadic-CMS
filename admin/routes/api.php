@@ -575,12 +575,17 @@ Route::prefix('v1/admin')->middleware(['admin-auth'])->group(function (): void {
 
     Route::apiResource('posts', PostController::class);
     Route::apiResource('pages', PageController::class);
+    Route::apiResource('content', PageController::class);
     Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('roles', \App\Http\Controllers\Admin\RoleController::class);
     Route::apiResource('cities', \App\Http\Controllers\Admin\CityController::class);
     Route::apiResource('countries', \App\Http\Controllers\Admin\CountryController::class);
 
     Route::get('users', [UserController::class, 'index']);
+    Route::post('users', [UserController::class, 'store']);
     Route::get('users/{user}', [UserController::class, 'show']);
+    Route::put('users/{user}', [UserController::class, 'update']);
+    Route::delete('users/{user}', [UserController::class, 'destroy']);
     Route::patch('users/{user}/role', [UserController::class, 'assignRole']);
 
     Route::get('settings', [SettingController::class, 'index']);

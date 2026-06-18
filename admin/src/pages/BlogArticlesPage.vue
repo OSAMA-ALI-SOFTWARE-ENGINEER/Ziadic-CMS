@@ -130,17 +130,6 @@ async function saveArticle() {
       formData.append('featured_image', form.value.featured_image)
     }
 
-    // Log formData for debugging
-      title: form.value.title,
-      slug: generateSlug(form.value.title),
-      excerpt: form.value.excerpt?.substring(0, 30),
-      author_id: form.value.author_id,
-      category_id: form.value.category_id || '0',
-      status: 'draft',
-      featured_image: form.value.featured_image instanceof File ? 'File' : 'none',
-      editing: !!editingId.value,
-    })
-
     if (editingId.value) {
       await api.post(`/articles/${editingId.value}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }

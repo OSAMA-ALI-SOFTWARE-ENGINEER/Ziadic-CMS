@@ -47,7 +47,7 @@ function handleSidebarDrag(e: MouseEvent) {
 
   if (newWidth < 150) {
     isCollapsed.value = true
-    sidebarWidth.value = 60
+    sidebarWidth.value = 80
   } else {
     isCollapsed.value = false
     sidebarWidth.value = newWidth
@@ -183,7 +183,7 @@ window.addEventListener('pending-count-updated', () => {
     <aside
       class="cms-sidebar relative transition-all duration-200"
       :class="{ 'cms-sidebar--open': isSidebarOpen, 'cms-sidebar--collapsed': isCollapsed }"
-      :style="{ width: isCollapsed ? '60px' : `${sidebarWidth}px` }"
+      :style="{ width: isCollapsed ? '80px' : `${sidebarWidth}px` }"
     >
       <!-- Draggable resize handle -->
       <div
@@ -226,11 +226,11 @@ window.addEventListener('pending-count-updated', () => {
           <div v-for="item in group.items" :key="item.label" class="grid gap-0.5">
             <!-- Parent item with children -->
             <div v-if="item.children && item.children.length > 0" class="grid gap-0.5">
-              <div class="cms-nav-link flex items-center gap-3 px-2 py-2 cursor-default text-(--admin-muted) relative group" :title="isCollapsed ? item.label : undefined">
+              <div :class="['cms-nav-link flex items-center cursor-default text-(--admin-muted) relative group', isCollapsed ? 'justify-center px-3 py-2' : 'gap-3 px-2 py-2']" :title="isCollapsed ? item.label : undefined">
                 <i :class="item.icon" aria-hidden="true"></i>
                 <span v-show="!isCollapsed" class="text-sm font-semibold">{{ item.label }}</span>
                 <!-- Tooltip on hover when collapsed -->
-                <span v-if="isCollapsed" class="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                <span v-if="isCollapsed" class="absolute left-full ml-3 px-3 py-2 bg-linear-to-r from-gray-900 to-gray-800 text-white text-xs rounded-lg shadow-lg font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 border border-gray-700">
                   {{ item.label }}
                 </span>
               </div>
@@ -239,7 +239,7 @@ window.addEventListener('pending-count-updated', () => {
                 v-for="child in item.children"
                 :key="child.label"
                 :to="child.to"
-                class="cms-nav-link ml-8 relative group"
+                :class="['cms-nav-link relative group', isCollapsed ? 'ml-0 justify-center px-3 py-2 flex items-center' : 'ml-8 flex items-center gap-3 px-2 py-2']"
                 :data-label="child.label"
                 active-class="cms-nav-link--active"
                 @click="isSidebarOpen = false"
@@ -257,7 +257,7 @@ window.addEventListener('pending-count-updated', () => {
             <RouterLink
               v-else
               :to="item.to"
-              class="cms-nav-link relative group"
+              :class="['cms-nav-link relative group flex items-center', isCollapsed ? 'justify-center px-3 py-2' : 'gap-3 px-2 py-2']"
               :data-label="item.label"
               active-class="cms-nav-link--active"
               @click="isSidebarOpen = false"
@@ -278,7 +278,7 @@ window.addEventListener('pending-count-updated', () => {
     
     </aside>
 
-    <div :style="{ paddingLeft: isCollapsed ? '60px' : `${sidebarWidth}px` }" class="transition-all duration-200">
+    <div :style="{ paddingLeft: isCollapsed ? '80px' : `${sidebarWidth}px` }" class="transition-all duration-200">
       <header class="cms-topbar">
         <div class="flex min-w-0 flex-1 items-center gap-3">
           <button class="icon-button xl:hidden!" type="button" aria-label="Open sidebar" @click="isSidebarOpen = true">

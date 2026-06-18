@@ -136,13 +136,20 @@
 
           <div class="form-group">
             <label class="form-label">Permissions</label>
-            <textarea
-              v-model="selectedRole.permissions"
-              class="form-input form-textarea"
-              placeholder="List permissions (comma-separated)"
-              rows="6"
-            ></textarea>
-            <p class="form-hint">e.g., users.view,users.create,users.update,listings.approve</p>
+            <div class="permissions-checkboxes">
+              <div v-for="permission in permissionGroups" :key="permission" class="checkbox-item">
+                <input
+                  :id="`perm-${permission}`"
+                  type="checkbox"
+                  :checked="selectedRole.permissions.includes(permission)"
+                  @change="togglePermission(permission)"
+                  class="checkbox-input"
+                />
+                <label :for="`perm-${permission}`" class="checkbox-label">
+                  {{ permission }}
+                </label>
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
@@ -245,6 +252,24 @@ function openRole(role?: Role) {
   selectedRole.value = role
     ? { ...role }
     : { id: 0, name: '', permissions: '', status: 'active', user_count: 0 }
+}
+
+function togglePermission(permission: string) {
+  if (!selectedRole.value) return
+
+  const perms = selectedRole.value.permissions
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p)
+
+  const index = perms.indexOf(permission)
+  if (index > -1) {
+    perms.splice(index, 1)
+  } else {
+    perms.push(permission)
+  }
+
+  selectedRole.value.permissions = perms.join(',')
 }
 
 async function saveRole() {
@@ -940,5 +965,52 @@ onMounted(loadRoles)
 
 .roles-table-wrapper::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* Permissions Checkboxes */
+.permissions-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 0.375rem;
+}
+
+.checkbox-item:hover {
+  background-color: #f3f4f6;
+}
+
+.checkbox-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  accent-color: #8b5cf6;
+}
+
+.checkbox-label {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+  user-select: none;
+  margin: 0;
+}
+
+.checkbox-item:hover .checkbox-label {
+  color: #1f2937;
 }
 </style>

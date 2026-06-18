@@ -475,12 +475,6 @@ async function submit() {
       gallery_image_ids: galleryImageIdsArray,
     }
 
-      title: payload.title,
-      gallery_image_ids: galleryImageIdsArray,
-      uploadedImages_count: uploadedImages.value.length,
-      galleryImageIds_count: galleryImageIdsArray.length,
-    })
-
     let response
     if (isEditing) {
       response = await api.put(`/listings/${props.listing.id}`, payload)

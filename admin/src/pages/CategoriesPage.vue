@@ -189,8 +189,7 @@ async function loadCategories() {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     categories.value = response.data.data || response.data || []
-  } catch (error) {
-    console.error('Failed to load categories:', error)
+  } catch (error: any) {
     categories.value = []
   } finally {
     loading.value = false
@@ -217,8 +216,7 @@ async function saveCategory() {
     selectedCategory.value = null
     await loadCategories()
   } catch (error: any) {
-    console.error('Failed to save category:', error)
-    alert(error.response?.data?.message || 'Failed to save category')
+    selectedCategory.value = null
   } finally {
     isSaving.value = false
   }
@@ -231,8 +229,6 @@ async function deleteCategory(category: Category) {
     await axios.delete(`${apiBase()}/api/v1/admin/categories/${category.id}`)
     await loadCategories()
   } catch (error: any) {
-    console.error('Failed to delete category:', error)
-    alert(error.response?.data?.message || 'Failed to delete category')
   }
 }
 

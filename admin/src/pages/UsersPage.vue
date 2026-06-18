@@ -207,8 +207,7 @@ async function loadUsers() {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     users.value = response.data.data || response.data || []
-  } catch (error) {
-    console.error('Failed to load users:', error)
+  } catch (error: any) {
     users.value = []
   } finally {
     loading.value = false
@@ -235,8 +234,7 @@ async function saveUser() {
     selectedUser.value = null
     await loadUsers()
   } catch (error: any) {
-    console.error('Failed to save user:', error)
-    alert(error.response?.data?.message || 'Failed to save user')
+    selectedUser.value = null
   } finally {
     isSaving.value = false
   }
@@ -249,8 +247,6 @@ async function deleteUser(user: User) {
     await axios.delete(`${apiBase()}/api/v1/admin/users/${user.id}`)
     await loadUsers()
   } catch (error: any) {
-    console.error('Failed to delete user:', error)
-    alert(error.response?.data?.message || 'Failed to delete user')
   }
 }
 

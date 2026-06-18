@@ -246,8 +246,7 @@ async function loadContents() {
     pages.value = contents.value.filter(c => c.type === 'page')
     posts.value = contents.value.filter(c => c.type === 'post')
     services.value = contents.value.filter(c => c.type === 'service')
-  } catch (error) {
-    console.error('Failed to load content:', error)
+  } catch (error: any) {
     contents.value = []
   } finally {
     loading.value = false
@@ -275,8 +274,7 @@ async function saveContent() {
     showModal.value = false
     await loadContents()
   } catch (error: any) {
-    console.error('Failed to save content:', error)
-    alert(error.response?.data?.message || 'Failed to save content')
+    showModal.value = false
   } finally {
     isSaving.value = false
   }
@@ -289,8 +287,6 @@ async function deleteContent(content: Content) {
     await axios.delete(`${apiBase()}/api/v1/admin/content/${content.id}`)
     await loadContents()
   } catch (error: any) {
-    console.error('Failed to delete content:', error)
-    alert(error.response?.data?.message || 'Failed to delete content')
   }
 }
 

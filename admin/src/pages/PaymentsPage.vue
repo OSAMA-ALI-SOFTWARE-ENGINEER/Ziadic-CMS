@@ -328,8 +328,7 @@ async function checkPaymentsEnabled() {
   try {
     const response = await axios.get(`${apiBase()}/api/v1/admin/settings/payments-enabled`)
     paymentsEnabled.value = response.data?.enabled || false
-  } catch (error) {
-    // Default to false if endpoint doesn't exist
+  } catch (error: any) {
     paymentsEnabled.value = false
   }
 }
@@ -346,8 +345,7 @@ async function loadPayments() {
       }
     })
     payments.value = response.data.data || response.data || []
-  } catch (error) {
-    console.error('Failed to load payments:', error)
+  } catch (error: any) {
     payments.value = []
   } finally {
     loading.value = false

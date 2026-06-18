@@ -228,8 +228,7 @@ async function loadRoles() {
       params: searchQuery.value ? { search: searchQuery.value } : {}
     })
     roles.value = response.data.data || response.data || []
-  } catch (error) {
-    console.error('Failed to load roles:', error)
+  } catch (error: any) {
     roles.value = []
   } finally {
     loading.value = false
@@ -256,8 +255,7 @@ async function saveRole() {
     selectedRole.value = null
     await loadRoles()
   } catch (error: any) {
-    console.error('Failed to save role:', error)
-    alert(error.response?.data?.message || 'Failed to save role')
+    selectedRole.value = null
   } finally {
     isSaving.value = false
   }
@@ -270,8 +268,6 @@ async function deleteRole(role: Role) {
     await axios.delete(`${apiBase()}/api/v1/admin/roles/${role.id}`)
     await loadRoles()
   } catch (error: any) {
-    console.error('Failed to delete role:', error)
-    alert(error.response?.data?.message || 'Failed to delete role')
   }
 }
 

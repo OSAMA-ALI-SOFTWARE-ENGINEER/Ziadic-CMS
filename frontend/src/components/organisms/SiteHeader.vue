@@ -9,7 +9,7 @@ const showUserMenu = ref(false)
 const isMobileMenuOpen = ref(false)
 
 const adminUrl = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5174'
-const adminLoginUrl = `${adminUrl}/admin/login`
+const adminLoginUrl = `${adminUrl}/login`
 
 
 const navItems = [
@@ -91,7 +91,7 @@ watch(
         </nav>
 
         <div class="site-header__mobile-actions">
-          <a v-if="!authStore.isAuthenticated" href="http://localhost:5174/admin/login" target="_blank" class="style-button site-header__animated-button site-header__animated-button--login site-header__mobile-login">
+          <a v-if="!authStore.isAuthenticated" :href="adminLoginUrl" target="_blank" class="style-button site-header__animated-button site-header__animated-button--login site-header__mobile-login">
             <span class="style-button-text">Login</span>
             <span class="button-color"></span>
           </a>

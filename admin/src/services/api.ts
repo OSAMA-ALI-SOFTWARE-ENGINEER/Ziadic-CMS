@@ -3,10 +3,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 
 // Auto-detect API URL based on current environment
-function getApiUrl(): string {
-  // First priority: environment variable
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL
+function getApiBaseUrl(): string {
+  // First priority: environment variable (set by vite.config.ts)
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
   }
 
   // Second priority: auto-detect from window location
@@ -16,35 +16,25 @@ function getApiUrl(): string {
 
     // If running on localhost/127.0.0.1 on Vite dev (5173, 5174, etc), API is on port 8000
     if ((hostname === 'localhost' || hostname === '127.0.0.1') && (window.location.port === '5173' || window.location.port === '5174')) {
-      return `${protocol}//localhost:8000/api/v1/admin`
+      return `${protocol}//127.0.0.1:8000/api/v1`
     }
 
     // Otherwise assume API is on same domain/host
-    return `${protocol}//${hostname}${port}/api/v1/admin`
+    return `${protocol}//${hostname}${port}/api/v1`
   }
 
-  // Fallback
-  return 'http://localhost:8000/api/v1/admin'
+  // Final fallback: should never be reached in production as env var is set
+  return '/api/v1'
+}
+
+function getApiUrl(): string {
+  const baseUrl = getApiBaseUrl()
+  return `${baseUrl}/admin`
 }
 
 function getAuthUrl(): string {
-  if (import.meta.env.VITE_API_URL) {
-    const baseUrl = import.meta.env.VITE_API_URL
-    return baseUrl.replace('/admin', '/auth')
-  }
-
-  if (typeof window !== 'undefined') {
-    const { hostname, protocol } = window.location
-    const port = window.location.port ? `:${window.location.port}` : ''
-
-    if ((hostname === 'localhost' || hostname === '127.0.0.1') && (window.location.port === '5173' || window.location.port === '5174')) {
-      return `${protocol}//localhost:8000/api/v1/auth`
-    }
-
-    return `${protocol}//${hostname}${port}/api/v1/auth`
-  }
-
-  return 'http://localhost:8000/api/v1/auth'
+  const baseUrl = getApiBaseUrl()
+  return `${baseUrl}/auth`
 }
 
 export const api = axios.create({
@@ -108,8 +98,8 @@ api.interceptors.response.use(
       const auth = useAuthStore()
       auth.clearSession()
       ui.pushToast('Session expired. Please sign in again.', 'warning')
-      if (typeof window !== 'undefined' && !window.location.pathname.endsWith('/admin/login')) {
-        window.location.href = '/admin/login'
+      if (typeof window !== 'undefined' && !window.location.pathname.endsWith('/login')) {
+        window.location.href = '/login'
       }
     } else if (error.response?.data?.message) {
       ui.pushToast(error.response.data.message, 'danger')

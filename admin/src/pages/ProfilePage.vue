@@ -455,7 +455,7 @@ onMounted(() => {
             <i class="pi pi-info-circle"></i>
             <span>Super Admin Only</span>
           </div>
-          <p>As a Super Admin, you can manage user roles and permissions from the <RouterLink to="/admin/roles" class="admin-link">Roles & Permissions page</RouterLink>.</p>
+          <p>As a Super Admin, you can manage user roles and permissions from the <RouterLink to="/roles" class="admin-link">Roles & Permissions page</RouterLink>.</p>
         </div>
       </div>
     </div>

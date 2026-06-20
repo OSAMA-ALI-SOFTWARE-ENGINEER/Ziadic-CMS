@@ -74,8 +74,7 @@ const emit = defineEmits<{
 }>()
 
 function getBackendUrl(): string {
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-  return backendUrl.replace('/api/v1/admin', '')
+  return import.meta.env.VITE_API_URL || 'https://admin.kukaqka.com'
 }
 
 const step = ref(1)

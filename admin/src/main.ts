@@ -43,7 +43,7 @@ axios.interceptors.response.use(
           window.location.href = loginUrl
         }
       } catch (e) {
-        window.location.href = '/admin/login'
+        window.location.href = '/login'
       }
     }
     return Promise.reject(error)

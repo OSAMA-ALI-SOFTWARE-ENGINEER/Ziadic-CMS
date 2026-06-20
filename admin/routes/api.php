@@ -34,7 +34,7 @@ use App\Http\Controllers\PublicListingSubmissionController;
 use App\Http\Controllers\PublicArticleController;
 
 // DEBUG ENDPOINTS - Check database status (no auth required for debugging)
-Route::get('api/v1/admin/debug/submissions-status', function () {
+Route::get('v1/admin/debug/submissions-status', function () {
     $submissions = \App\Models\ListingSubmission::select('id', 'title', 'status', 'reviewed_at')->orderBy('id', 'desc')->limit(20)->get();
 
     return response()->json([
@@ -45,7 +45,7 @@ Route::get('api/v1/admin/debug/submissions-status', function () {
 });
 
 // DEBUG - Test what approvals query returns
-Route::get('api/v1/admin/debug/approved-listings', function (Request $request) {
+Route::get('v1/admin/debug/approved-listings', function (Request $request) {
     $status = $request->input('status', 'approved');
 
     \Log::info('DEBUG approved-listings query', ['status' => $status]);
@@ -69,7 +69,7 @@ Route::get('api/v1/admin/debug/approved-listings', function (Request $request) {
     ]);
 });
 
-Route::prefix('api/v1')->group(function (): void {
+Route::prefix('v1')->group(function (): void {
     Route::get('health', fn() => ['status' => 'ok']);
 
     Route::get('public/countries', function () {
@@ -247,7 +247,7 @@ Route::get('v1/admin/submissions/count', function () {
 // callers we return a 401 JSON response.
 Route::any('login', function () {
     return response()->json(['message' => 'Unauthenticated.'], 401);
-})->name('login');
+});
 
 // Development-only helper: return activity logs without auth for quick local testing.
 // Only enabled in local environment to avoid exposing logs in production.

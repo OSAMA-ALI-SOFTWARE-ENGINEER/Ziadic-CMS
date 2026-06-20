@@ -37,11 +37,7 @@ class DatabaseSeeder extends Seeder
         $superAdmin = $this->createUser(
             'superadmin@kukaqka.com',
             'Super Admin',
-            'Super Admin User',
             '+1 (555) 123-0000',
-            'Administrator',
-            'System Management',
-            'New York, USA',
             'password'
         );
         $superAdmin->assignRole('super-admin');
@@ -50,11 +46,7 @@ class DatabaseSeeder extends Seeder
         $admin = $this->createUser(
             env('ADMIN_EMAIL', 'admin@kukaqka.com'),
             env('ADMIN_NAME', 'Admin User'),
-            'System administrator responsible for content and user management',
             '+1 (555) 234-0000',
-            'Administration',
-            'Content Management',
-            'Los Angeles, USA',
             env('ADMIN_PASSWORD', 'password')
         );
         $admin->assignRole('admin');
@@ -63,11 +55,7 @@ class DatabaseSeeder extends Seeder
         $staff = $this->createUser(
             'staff@kukaqka.com',
             'Staff Editor',
-            'Content editor and listing moderator',
             '+1 (555) 345-0000',
-            'Content',
-            'Editing & Moderation',
-            'Chicago, USA',
             'password'
         );
         $staff->assignRole('staff');
@@ -76,11 +64,7 @@ class DatabaseSeeder extends Seeder
         $client = $this->createUser(
             'client@kukaqka.com',
             'Client Account',
-            'Standard client user account',
             '+1 (555) 456-0000',
-            'Business',
-            'Listing Management',
-            'Houston, USA',
             'password'
         );
         $client->assignRole('client');
@@ -100,6 +84,9 @@ class DatabaseSeeder extends Seeder
         // Step 5: Seed sample content
         $this->seedListings($admin, $countries, $categories, $tags);
         $this->seedPosts($admin, $categories, $tags);
+        $this->seedArticles($admin);
+        $this->seedMedia();
+        $this->seedNewsletterSubscribers();
 
         $this->command->info('Database seeding completed successfully!');
         $this->command->table(['Email', 'Password', 'Role'], [
@@ -111,16 +98,12 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Create a user with complete profile information.
+     * Create a user with basic profile information.
      */
     private function createUser(
         string $email,
         string $name,
-        string $bio,
         string $phone,
-        string $department,
-        string $location,
-        string $address,
         string $password
     ): User {
         return User::query()->firstOrCreate(
@@ -130,9 +113,6 @@ class DatabaseSeeder extends Seeder
                 'email' => $email,
                 'password' => Hash::make($password),
                 'phone' => $phone,
-                'bio' => $bio,
-                'department' => $department,
-                'location' => $address,
                 'status' => 'active',
                 'email_verified_at' => now(),
             ],
@@ -568,5 +548,176 @@ class DatabaseSeeder extends Seeder
         );
 
         $post->tags()->syncWithoutDetaching([$tags['featured']->id]);
+    }
+
+    /**
+     * Seed blog articles with authors and categories.
+     */
+    private function seedArticles(User $admin): void
+    {
+        // Create authors
+        $authors = [];
+        foreach (['John Smith', 'Sarah Johnson', 'Mike Chen'] as $name) {
+            $authors[] = \App\Models\Author::query()->firstOrCreate(
+                ['slug' => Str::slug($name)],
+                [
+                    'name' => $name,
+                    'email' => Str::slug($name) . '@kukaqka.com',
+                    'bio' => 'Experienced writer and content creator',
+                    'avatar' => null,
+                ],
+            );
+        }
+
+        // Create article categories
+        $articleCategories = [];
+        foreach (['Technology', 'Travel', 'Lifestyle', 'Business'] as $name) {
+            $articleCategories[$name] = \App\Models\ArticleCategory::query()->firstOrCreate(
+                ['slug' => Str::slug($name)],
+                ['name' => $name, 'description' => $name . ' articles and insights'],
+            );
+        }
+
+        // Create sample articles
+        $articles = [
+            [
+                'title' => 'The Future of Travel Technology',
+                'slug' => 'future-travel-technology',
+                'excerpt' => 'Exploring emerging technologies transforming the travel industry',
+                'content' => 'Travel technology is evolving rapidly with AI, IoT, and blockchain innovations...',
+                'author' => $authors[0],
+                'category' => $articleCategories['Technology'],
+            ],
+            [
+                'title' => 'Hidden Gems in European Cities',
+                'slug' => 'hidden-gems-european-cities',
+                'excerpt' => 'Discover lesser-known attractions in popular European destinations',
+                'content' => 'Beyond the famous landmarks lie incredible experiences waiting to be discovered...',
+                'author' => $authors[1],
+                'category' => $articleCategories['Travel'],
+            ],
+            [
+                'title' => 'Sustainable Business Practices',
+                'slug' => 'sustainable-business-practices',
+                'excerpt' => 'How modern businesses are adopting eco-friendly strategies',
+                'content' => 'Sustainability is no longer optional but essential for business success...',
+                'author' => $authors[2],
+                'category' => $articleCategories['Business'],
+            ],
+            [
+                'title' => 'Work-Life Balance in Remote Era',
+                'slug' => 'work-life-balance-remote',
+                'excerpt' => 'Tips for maintaining healthy boundaries while working from home',
+                'content' => 'Remote work offers flexibility but requires discipline and boundaries...',
+                'author' => $authors[0],
+                'category' => $articleCategories['Lifestyle'],
+            ],
+        ];
+
+        foreach ($articles as $data) {
+            \App\Models\Article::query()->firstOrCreate(
+                ['slug' => $data['slug']],
+                [
+                    'title' => $data['title'],
+                    'slug' => $data['slug'],
+                    'excerpt' => $data['excerpt'],
+                    'content' => $data['content'],
+                    'featured_image' => null,
+                    'author_id' => $data['author']->id,
+                    'category_id' => $data['category']->id,
+                    'status' => 'published',
+                    'created_by' => $admin->id,
+                ],
+            );
+        }
+    }
+
+    /**
+     * Seed custom media files and link them to listings.
+     */
+    private function seedMedia(): void
+    {
+        $mediaFiles = [
+            [
+                'file_name' => 'museum.jpg',
+                'stored_name' => 'museum_' . time() . '.jpg',
+                'file_path' => 'uploads/listings/museum.jpg',
+                'mime_type' => 'image/jpeg',
+                'file_type' => 'image',
+                'file_size' => 1024000,
+                'extension' => 'jpg',
+                'alt_text' => 'Museum Exterior',
+                'title' => 'Museum',
+                'listing_slug' => 'bursa-modern-art-museum',
+            ],
+            [
+                'file_name' => 'restaurant.jpg',
+                'stored_name' => 'restaurant_' . time() . '.jpg',
+                'file_path' => 'uploads/listings/restaurant.jpg',
+                'mime_type' => 'image/jpeg',
+                'file_type' => 'image',
+                'file_size' => 1024000,
+                'extension' => 'jpg',
+                'alt_text' => 'Restaurant Interior',
+                'title' => 'Restaurant',
+                'listing_slug' => 'the-gourmet-haven-restaurant',
+            ],
+            [
+                'file_name' => 'spa.jpg',
+                'stored_name' => 'spa_' . time() . '.jpg',
+                'file_path' => 'uploads/listings/spa.jpg',
+                'mime_type' => 'image/jpeg',
+                'file_type' => 'image',
+                'file_size' => 1024000,
+                'extension' => 'jpg',
+                'alt_text' => 'Spa Relaxation',
+                'title' => 'Spa',
+                'listing_slug' => 'tranquil-sunny-spa-and-wellness',
+            ],
+        ];
+
+        foreach ($mediaFiles as $data) {
+            $listing_slug = $data['listing_slug'];
+            unset($data['listing_slug']);
+
+            $media = \App\Models\CustomMedia::query()->firstOrCreate(
+                ['file_name' => $data['file_name']],
+                array_merge($data, [
+                    'status' => 'active',
+                    'related_module' => 'listing',
+                ]),
+            );
+
+            // Link media to listing
+            $listing = \App\Models\Listing::where('slug', $listing_slug)->first();
+            if ($listing) {
+                $listing->mediaFiles()->syncWithoutDetaching([$media->id]);
+            }
+        }
+    }
+
+    /**
+     * Seed newsletter subscribers.
+     */
+    private function seedNewsletterSubscribers(): void
+    {
+        $emails = [
+            'subscriber1@example.com',
+            'subscriber2@example.com',
+            'subscriber3@example.com',
+            'subscriber4@example.com',
+            'subscriber5@example.com',
+        ];
+
+        foreach ($emails as $email) {
+            \App\Models\NewsletterSubscriber::query()->firstOrCreate(
+                ['email' => $email],
+                [
+                    'email' => $email,
+                    'status' => 'subscribed',
+                    'subscribed_at' => now(),
+                ],
+            );
+        }
     }
 }

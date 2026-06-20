@@ -22,19 +22,15 @@ import UsersPage from '@/pages/UsersPage.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
-  history: createWebHistory('/admin/'),
+  history: createWebHistory('/'),
   routes: [
-    {
-      path: '/',
-      name: 'admin-root',
-      redirect: { name: 'login' },
-    },
     {
       path: '/',
       component: AuthLayout,
       meta: {
         guest: true,
       },
+      redirect: '/login',
       children: [
         {
           path: 'login',

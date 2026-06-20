@@ -232,9 +232,10 @@ async function editArticle(article: Article) {
 
     // Show existing image preview if available - use full URL
     if (fullArticle.featured_image) {
+      const backendUrl = import.meta.env.VITE_API_URL || 'https://admin.kukaqka.com'
       const imageUrl = fullArticle.featured_image.startsWith('http')
         ? fullArticle.featured_image
-        : `http://localhost:8000${fullArticle.featured_image}`
+        : `${backendUrl}${fullArticle.featured_image}`
       imagePreview.value = imageUrl
     }
     showForm.value = true

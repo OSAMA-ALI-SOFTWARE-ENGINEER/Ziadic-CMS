@@ -202,9 +202,8 @@ function getMediaUrl(item: Media): string {
     if (item.file_path.startsWith('http')) {
       return item.file_path
     }
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-    const baseUrl = backendUrl.replace('/api/v1/admin', '')
-    return `${baseUrl}/${item.file_path.replace(/^\/+/, '')}`
+    const backendUrl = import.meta.env.VITE_API_URL || 'https://admin.kukaqka.com'
+    return `${backendUrl}/${item.file_path.replace(/^\/+/, '')}`
   }
   return ''
 }

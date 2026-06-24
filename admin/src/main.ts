@@ -10,6 +10,19 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios'
 
+// Optimize font loading strategy
+const style = document.createElement('style')
+style.textContent = `
+  @font-face {
+    font-family: 'primeicons';
+    src: url('/assets/fonts/primeicons.woff2') format('woff2'),
+         url('/assets/fonts/primeicons.woff') format('woff');
+    font-display: swap;
+    font-weight: 400;
+  }
+`
+document.head.appendChild(style)
+
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)

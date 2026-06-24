@@ -1,25 +1,56 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import ApprovalsPage from '@/pages/ApprovalsPage.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import BlogArticlesPage from '@/pages/BlogArticlesPage.vue'
-// import ContentPage from '@/pages/ContentPage.vue' // Hidden: Content Management
-import CategoriesPage from '@/pages/CategoriesPage.vue'
-import LocationManagementPage from '@/pages/LocationManagementPage.vue'
 import DashboardPage from '@/pages/DashboardPage.vue'
-import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage.vue'
-import ListingsPage from '@/pages/ListingsPage.vue'
 import LoginPage from '@/pages/auth/LoginPage.vue'
-import MediaPage from '@/pages/MediaPage.vue'
-import PaymentsPage from '@/pages/PaymentsPage.vue'
-import ProfilePage from '@/pages/ProfilePage.vue'
-import ResetPasswordPage from '@/pages/auth/ResetPasswordPage.vue'
-import RolesPage from '@/pages/RolesPage.vue'
-import SettingsPage from '@/pages/SettingsPage.vue'
-import SignupPage from '@/pages/auth/SignupPage.vue'
-import SubscriptionsPage from '@/pages/SubscriptionsPage.vue'
-import UsersPage from '@/pages/UsersPage.vue'
 import { useAuthStore } from '@/stores/auth'
+
+// Lazy load pages to reduce main bundle
+const ApprovalsPage = () => import(
+  /* webpackChunkName: "approvals" */ '@/pages/ApprovalsPage.vue'
+)
+const BlogArticlesPage = () => import(
+  /* webpackChunkName: "blog-articles" */ '@/pages/BlogArticlesPage.vue'
+)
+const CategoriesPage = () => import(
+  /* webpackChunkName: "categories" */ '@/pages/CategoriesPage.vue'
+)
+const LocationManagementPage = () => import(
+  /* webpackChunkName: "locations" */ '@/pages/LocationManagementPage.vue'
+)
+const ForgotPasswordPage = () => import(
+  /* webpackChunkName: "forgot-password" */ '@/pages/auth/ForgotPasswordPage.vue'
+)
+const ListingsPage = () => import(
+  /* webpackChunkName: "listings" */ '@/pages/ListingsPage.vue'
+)
+const MediaPage = () => import(
+  /* webpackChunkName: "media" */ '@/pages/MediaPage.vue'
+)
+const PaymentsPage = () => import(
+  /* webpackChunkName: "payments" */ '@/pages/PaymentsPage.vue'
+)
+const ProfilePage = () => import(
+  /* webpackChunkName: "profile" */ '@/pages/ProfilePage.vue'
+)
+const ResetPasswordPage = () => import(
+  /* webpackChunkName: "reset-password" */ '@/pages/auth/ResetPasswordPage.vue'
+)
+const RolesPage = () => import(
+  /* webpackChunkName: "roles" */ '@/pages/RolesPage.vue'
+)
+const SettingsPage = () => import(
+  /* webpackChunkName: "settings" */ '@/pages/SettingsPage.vue'
+)
+const SignupPage = () => import(
+  /* webpackChunkName: "signup" */ '@/pages/auth/SignupPage.vue'
+)
+const SubscriptionsPage = () => import(
+  /* webpackChunkName: "subscriptions" */ '@/pages/SubscriptionsPage.vue'
+)
+const UsersPage = () => import(
+  /* webpackChunkName: "users" */ '@/pages/UsersPage.vue'
+)
 
 const router = createRouter({
   history: createWebHistory('/'),

@@ -12,16 +12,9 @@ const ui = useUiStore()
 const baseUrl = import.meta.env.BASE_URL
 
 const form = reactive({
-  email: 'admin@kukaqka.com',
-  password: 'password',
+  email: '',
+  password: '',
 })
-
-const credentials = ref([
-  { label: 'Super Admin', email: 'superadmin@kukaqka.com', password: 'password' },
-  { label: 'Admin', email: 'admin@kukaqka.com', password: 'password' },
-  { label: 'Staff', email: 'staff@kukaqka.com', password: 'password' },
-  { label: 'Client', email: 'client@kukaqka.com', password: 'password' },
-])
 
 async function submit() {
   try {
@@ -31,11 +24,6 @@ async function submit() {
   } catch (error) {
     ui.pushToast(error instanceof Error ? error.message : 'Unable to sign in.', 'danger')
   }
-}
-
-function useCredential(email: string, password: string) {
-  form.email = email
-  form.password = password
 }
 
 function handleGoogleSignUp() {
@@ -103,110 +91,9 @@ onMounted(() => {
     <button class="submit-button" type="submit" :disabled="auth.isLoading">
       {{ auth.isLoading ? 'Signing in...' : 'Sign In' }}
     </button>
-
-    <!-- Demo Credentials Section -->
-    <div class="demo-credentials-box">
-      <p class="demo-title">🧪 Demo Credentials</p>
-      <small class="demo-hint">Click any credential to auto-fill the form (development only)</small>
-      <div class="demo-credentials-grid">
-        <button
-          v-for="cred in credentials"
-          :key="cred.email"
-          type="button"
-          class="demo-credential-btn"
-          @click="useCredential(cred.email, cred.password)"
-        >
-          <span>
-            <strong>{{ cred.label }}</strong>
-            <small>{{ cred.email }}</small>
-          </span>
-          <code>{{ cred.password }}</code>
-        </button>
-      </div>
-    </div>
   </form>
 </template>
 
 <style scoped>
-.demo-credentials-box {
-  border: 2px solid #fbbf24;
-  background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  margin-top: 1.5rem;
-}
-
-.demo-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #92400e;
-  margin: 0 0 0.5rem 0;
-}
-
-.demo-hint {
-  font-size: 0.8rem;
-  color: #b45309;
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.demo-credentials-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.75rem;
-}
-
-.demo-credential-btn {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: white;
-  border: 1px solid #fcd34d;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  font-size: 0.8rem;
-}
-
-.demo-credential-btn:hover {
-  background: #fef3c7;
-  border-color: #f59e0b;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-}
-
-.demo-credential-btn strong {
-  color: #92400e;
-  font-size: 0.875rem;
-}
-
-.demo-credential-btn small {
-  color: #b45309;
-  font-size: 0.75rem;
-}
-
-.demo-credential-btn code {
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  background: #fef9e7;
-  padding: 0.25rem 0.375rem;
-  border-radius: 0.25rem;
-  color: #92400e;
-  font-size: 0.75rem;
-}
-
-@media (max-width: 640px) {
-  .demo-credentials-box {
-    padding: 1rem;
-  }
-
-  .demo-credentials-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .demo-title {
-    font-size: 0.9rem;
-  }
-}
+/* Login page styles */
 </style>

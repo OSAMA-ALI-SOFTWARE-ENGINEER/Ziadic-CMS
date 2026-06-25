@@ -1,31 +1,46 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import AppModal from '@/components/AppModal.vue'
+import Modal from '@/components/common/Modal.vue'
+import Button from '@/components/common/Button.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import DataTable from '@/components/DataTable.vue'
 import ListingForm from '@/components/ListingFormExpanded.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import type { ListingRow } from '@/data/cms'
-import { useCmsStore } from '@/stores/cms'
 import { useUiStore } from '@/stores/ui'
-import { api } from '@/services/api'
-import { withMinimumLoadingTime } from '@/utils/loadingHelper'
+import { listingsApi } from '@/services/api/listings.api'
+import { useFetch } from '@/composables/useFetch'
 
-const cms = useCmsStore()
 const ui = useUiStore()
 const isModalOpen = ref(false)
 const editingListing = ref<any | null>(null)
 const listings = ref<ListingRow[]>([])
-const fullListings = ref<Map<number, any>>(new Map()) // Store full listing objects
-const loading = ref(false)
+const fullListings = ref<Map<number, any>>(new Map())
 const selectedStatus = ref<string>('')
-const pollInterval = ref<NodeJS.Timeout | null>(null)
+const pollInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 // Delete modal state
 const deleteModalOpen = ref(false)
 const listingToDelete = ref<any | null>(null)
-const isDeleting = ref(false)
+
+// Use fetch composable for loading listings
+const { loading, execute: loadListingsRequest } = useFetch(
+  async () => {
+    const filters = selectedStatus.value ? { status: selectedStatus.value } : {}
+    return await listingsApi.getListings(filters)
+  },
+  { showErrorToast: false }
+)
+
+// Delete operation
+const { loading: isDeleting, execute: deleteListingRequest } = useFetch(
+  async () => {
+    if (!listingToDelete.value) throw new Error('No listing selected')
+    return await listingsApi.deleteListing(listingToDelete.value.id)
+  },
+  { showErrorToast: false }
+)
 
 const columns: Array<{ key: keyof ListingRow; label: string }> = [
   { key: 'title', label: 'Title' },
@@ -49,49 +64,6 @@ const filteredListings = computed(() => {
   if (!selectedStatus.value) return listings.value
   return listings.value.filter(l => l.status === selectedStatus.value)
 })
-
-async function loadListings() {
-  try {
-    loading.value = true
-
-    await withMinimumLoadingTime(
-      (async () => {
-        const params = selectedStatus.value ? { status: selectedStatus.value } : {}
-        const response = await api.get('/listings', { params })
-        const data = response.data.data || response.data
-
-        const allListings = Array.isArray(data) ? data : data.data || []
-
-        // Clear previous data
-        fullListings.value.clear()
-
-        // Transform API response to ListingRow format and store full objects
-        listings.value = allListings.map((listing: any) => {
-          // Store full listing object by ID
-          if (listing.id) {
-            fullListings.value.set(listing.id, listing)
-          }
-
-          return {
-            id: listing.id,
-            title: listing.title || listing.business_name || '',
-            category: listing.categories?.[0]?.name || 'Uncategorized',
-            city: listing.city?.name || listing.address || 'N/A',
-            owner: listing.owner?.name || 'Unknown',
-            status: formatStatus(listing.status),
-            tone: getStatusTone(listing.status),
-            updatedAt: formatDate(listing.updated_at),
-          }
-        })
-      })(),
-      2000
-    )
-  } catch (err) {
-    ui.pushToast('Failed to load listings', 'danger')
-  } finally {
-    loading.value = false
-  }
-}
 
 function formatStatus(status: string): string {
   const statusMap: Record<string, string> = {
@@ -127,6 +99,34 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+async function loadListings() {
+  try {
+    const response = await loadListingsRequest()
+    const allListings = response.data || []
+
+    fullListings.value.clear()
+
+    listings.value = allListings.map((listing: any) => {
+      if (listing.id) {
+        fullListings.value.set(listing.id, listing)
+      }
+
+      return {
+        id: listing.id,
+        title: listing.title || listing.business_name || '',
+        category: listing.categories?.[0]?.name || 'Uncategorized',
+        city: listing.city?.name || listing.address || 'N/A',
+        owner: listing.owner?.name || 'Unknown',
+        status: formatStatus(listing.status),
+        tone: getStatusTone(listing.status),
+        updatedAt: formatDate(listing.updated_at),
+      }
+    })
+  } catch (err) {
+    ui.pushToast('Failed to load listings', 'danger')
+  }
+}
+
 function createListing() {
   editingListing.value = null
   isModalOpen.value = true
@@ -134,7 +134,6 @@ function createListing() {
 
 function editListing(listingRow: any) {
   try {
-    // Get the full listing object from the map
     const fullListing = listingRow.id ? fullListings.value.get(listingRow.id) : null
 
     if (!fullListing) {
@@ -151,7 +150,6 @@ function editListing(listingRow: any) {
 
 function saveListing(listing: any, originalTitle?: string) {
   isModalOpen.value = false
-  ui.pushToast('✓ Listing saved successfully', 'success')
   loadListings()
 }
 
@@ -168,31 +166,22 @@ async function confirmDelete() {
   if (!listingToDelete.value) return
 
   try {
-    isDeleting.value = true
-    const listingId = listingToDelete.value.id
+    const listingId = (listingToDelete.value as any).id
     const listingTitle = listingToDelete.value.title
 
-    // Make API DELETE call
-    await api.delete(`/listings/${listingId}`)
+    await deleteListingRequest()
 
-    // Remove from cache
     fullListings.value.delete(listingId)
+    listings.value = listings.value.filter((l: any) => l.id !== listingId)
 
-    // Remove from local listings array
-    listings.value = listings.value.filter(l => l.id !== listingId)
+    ui.pushToast(`"${listingTitle}" deleted successfully`, 'success')
 
-    ui.pushToast(`✓ "${listingTitle}" deleted successfully`, 'success')
-
-    // Close modal
     deleteModalOpen.value = false
     listingToDelete.value = null
 
-    // Refresh to sync with backend
     await loadListings()
   } catch (err: any) {
-    ui.pushToast(err.response?.data?.message || 'Failed to delete listing', 'danger')
-  } finally {
-    isDeleting.value = false
+    ui.pushToast(err.message || 'Failed to delete listing', 'danger')
   }
 }
 
@@ -201,12 +190,7 @@ function cancelDelete() {
   listingToDelete.value = null
 }
 
-function refreshListings() {
-  loadListings()
-}
-
 function startPolling() {
-  // Poll for updates every 15 seconds
   pollInterval.value = setInterval(() => {
     loadListings()
   }, 15000)
@@ -237,14 +221,16 @@ onBeforeUnmount(() => {
         <h1 class="text-2xl font-bold text-(--admin-ink)">Listings Management</h1>
         <p class="text-sm text-(--admin-muted) mt-1">Manage and approve business listings</p>
       </div>
-      <button
-        @click="refreshListings"
+      <Button
+        @click="loadListings"
         :disabled="loading"
-        class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all duration-200"
+        :is-loading="loading"
+        variant="primary"
+        size="md"
       >
         <i :class="['pi', loading ? 'pi-spin pi-spinner' : 'pi-refresh']"></i>
         <span>{{ loading ? 'Loading...' : 'Refresh' }}</span>
-      </button>
+      </Button>
     </div>
 
     <!-- Stats Cards -->
@@ -286,10 +272,10 @@ onBeforeUnmount(() => {
 
     <!-- Action Buttons -->
     <section class="flex gap-3 flex-wrap">
-      <button class="primary-action" type="button" @click="createListing">
+      <Button variant="primary" size="md" @click="createListing">
         <i class="pi pi-plus"></i>
         <span>Create listing</span>
-      </button>
+      </Button>
       <RouterLink class="secondary-action no-underline" to="/approvals">
         <i class="pi pi-check-circle"></i>
         <span>Review approvals</span>
@@ -339,6 +325,16 @@ onBeforeUnmount(() => {
       <SkeletonCard type="table-row" :count="10" />
     </div>
 
+    <div v-else-if="!loading && listings.length === 0" class="cms-card p-6">
+      <div class="mb-6">
+        <h2 class="m-0 text-lg font-semibold">All listings</h2>
+      </div>
+      <div class="text-center py-8">
+        <i class="pi pi-inbox text-4xl opacity-30 block mb-3"></i>
+        <p class="text-(--admin-muted)">No listings found</p>
+      </div>
+    </div>
+
     <DataTable
       v-else
       :rows="filteredListings"
@@ -359,18 +355,12 @@ onBeforeUnmount(() => {
       <template #cell-status="{ row }">
         <StatusBadge :label="row.status" :tone="row.tone" />
       </template>
-      <template v-if="!loading && listings.length === 0" #empty>
-        <div class="text-center py-8">
-          <i class="pi pi-inbox text-4xl opacity-30 block mb-3"></i>
-          <p class="text-(--admin-muted)">No listings found</p>
-        </div>
-      </template>
     </DataTable>
 
     <!-- Create/Edit Modal -->
-    <AppModal :open="isModalOpen" :title="editingListing ? 'Edit listing' : 'Create listing'" @close="isModalOpen = false">
+    <Modal :is-open="isModalOpen" :title="editingListing ? 'Edit listing' : 'Create listing'" @close="isModalOpen = false">
       <ListingForm :listing="editingListing" @save="saveListing" @cancel="isModalOpen = false" />
-    </AppModal>
+    </Modal>
 
     <!-- Delete Confirmation Modal -->
     <DeleteConfirmModal
@@ -391,7 +381,6 @@ onBeforeUnmount(() => {
   max-width: 100%;
 }
 
-.primary-action,
 .secondary-action {
   display: inline-flex;
   align-items: center;
@@ -403,20 +392,6 @@ onBeforeUnmount(() => {
   border: none;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.primary-action {
-  background: #3b82f6;
-  color: white;
-}
-
-.primary-action:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.secondary-action {
   background: var(--admin-soft);
   color: var(--admin-ink);
   text-decoration: none;
@@ -444,7 +419,6 @@ onBeforeUnmount(() => {
     padding: 1.5rem;
   }
 
-  .primary-action,
   .secondary-action {
     padding: 0.625rem 1.25rem;
     font-size: 0.95rem;
@@ -475,14 +449,12 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .primary-action,
   .secondary-action {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
     gap: 0.375rem;
   }
 
-  .primary-action i,
   .secondary-action i {
     font-size: 0.95rem;
   }
@@ -540,7 +512,6 @@ onBeforeUnmount(() => {
     gap: 0.5rem;
   }
 
-  .primary-action,
   .secondary-action {
     width: 100%;
     justify-content: center;
@@ -548,7 +519,6 @@ onBeforeUnmount(() => {
     font-size: 0.875rem;
   }
 
-  .primary-action i,
   .secondary-action i {
     font-size: 0.9rem;
   }
